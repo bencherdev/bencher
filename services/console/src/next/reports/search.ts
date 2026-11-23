@@ -49,6 +49,7 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"go_bench",
 	"go_bench_json",
 	"go_bench_text",
+	"http_gatling",
 	"http_k6",
 	"http_k6_json",
 	"http_k6_json_summary",

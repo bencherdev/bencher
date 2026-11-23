@@ -1,0 +1,103 @@
+[info] entering thin client - BEEP WHIRR
+[info] starting sbt server in the background
+[info] use 'sbt shutdown' to shutdown the server
+[info]  
+[info] welcome to sbt 2.1.0 (Eclipse Adoptium Java 21.0.13.1)
+[info] loading project definition from /tmp/bench/sbt2-multi/project
+[info] set current project to gatling-sbt-plugin-demo (in build file:/tmp/bench/sbt2-multi/)
+[info] [gatlingSbtPluginDemo] compiling 2 Scala sources to /tmp/bench/sbt2-multi/target/out/jvm/scala-2.13.18/gatling-sbt-plugin-demo/test-classes ...
+[info] [gatlingSbtPluginDemo] done compiling
+
+========================================================================================================================
+2026-11-23 04:27:08 GMT                                                                               3s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |    73,880 |         0 |    73,880
+> drop                                                                               |    73,880 |         0 |    73,880
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                     73,880   (100%)
+
+---- drop --------------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:         2
+========================================================================================================================
+
+Parsing log file(s)...
+Parsing log file(s) done in 0s.
+Generating reports...
+
+========================================================================================================================
+---- Global Information -------------------------------------------------------------|---Total---|-----OK----|----KO----
+> request count                                                                      |    73,880 |         - |    73,880
+> min response time (ms)                                                             |         0 |         - |         0
+> max response time (ms)                                                             |         4 |         - |         4
+> mean response time (ms)                                                            |         0 |         - |         0
+> response time std deviation (ms)                                                   |         0 |         - |         0
+> response time 50th percentile (ms)                                                 |         0 |         - |         0
+> response time 75th percentile (ms)                                                 |         0 |         - |         0
+> response time 95th percentile (ms)                                                 |         1 |         - |         1
+> response time 99th percentile (ms)                                                 |         1 |         - |         1
+> mean throughput (rps)                                                              |    18,470 |         - |    18,470
+---- Response Time Distribution ----------------------------------------------------------------------------------------
+> OK: t < 800 ms                                                                                              0     (0%)
+> OK: 800 ms <= t < 1200 ms                                                                                   0     (0%)
+> OK: t >= 1200 ms                                                                                            0     (0%)
+> KO                                                                                                     73,880   (100%)
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                     73,880   (100%)
+========================================================================================================================
+
+Reports generated, please open the following file: file:///tmp/bench/sbt2-multi/target/out/jvm/scala-2.13.18/gatling-sbt-plugin-demo/gatling/dropsimulation-20261123042704709/index.html
+[info] Simulation DropSimulation successful.
+
+========================================================================================================================
+2026-11-23 04:27:13 GMT                                                                               3s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |   205,680 |   205,562 |       118
+> Global                                                                             |       118 |       118 |         0
+> closed                                                                             |   204,972 |   204,972 |         0
+> a | b | c                                                                          |       118 |         0 |       118
+> a request name long enough that the console table cuts it short, past eighty-tw... |       118 |       118 |         0
+> a request name long enough that the console table cuts it short, past eighty-tw... |       118 |       118 |         0
+> café ☕                                                                             |       118 |       118 |         0
+> outer / inner / deep                                                               |       118 |       118 |         0
+---- Errors ------------------------------------------------------------------------------------------------------------
+> status.find.in([200, 209], 304), found 500                                                                118   (100%)
+
+---- open --------------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:         2
+---- closed ------------------------------------------------------------------------------------------------------------
+          active:         0  / done:         2
+========================================================================================================================
+
+Parsing log file(s)...
+Parsing log file(s) done in 0s.
+Generating reports...
+
+========================================================================================================================
+---- Global Information -------------------------------------------------------------|---Total---|-----OK----|----KO----
+> request count                                                                      |   205,680 |   205,562 |       118
+> min response time (ms)                                                             |         0 |         0 |         0
+> max response time (ms)                                                             |        51 |        51 |         1
+> mean response time (ms)                                                            |         0 |         0 |         0
+> response time std deviation (ms)                                                   |         1 |         1 |         0
+> response time 50th percentile (ms)                                                 |         0 |         0 |         0
+> response time 75th percentile (ms)                                                 |         0 |         0 |         0
+> response time 95th percentile (ms)                                                 |         0 |         0 |         0
+> response time 99th percentile (ms)                                                 |         1 |         1 |         1
+> mean throughput (rps)                                                              |    51,420 |  51,390.5 |      29.5
+---- Response Time Distribution ----------------------------------------------------------------------------------------
+> OK: t < 800 ms                                                                                        205,562 (99.94%)
+> OK: 800 ms <= t < 1200 ms                                                                                   0     (0%)
+> OK: t >= 1200 ms                                                                                            0     (0%)
+> KO                                                                                                        118  (0.06%)
+---- Errors ------------------------------------------------------------------------------------------------------------
+> status.find.in([200, 209], 304), found 500                                                                118   (100%)
+========================================================================================================================
+
+Reports generated, please open the following file: file:///tmp/bench/sbt2-multi/target/out/jvm/scala-2.13.18/gatling-sbt-plugin-demo/gatling/namessimulation-20261123042709225/index.html
+[info] Simulation NamesSimulation successful.
+[info] Simulation(s) execution ended.
+[info] passed: total 2, failed 0, errors 0, passed 2, cached 0
+[success] elapsed time: 12 s, cache 53%, 7 disk cache hits, 6 onsite tasks
+[0J

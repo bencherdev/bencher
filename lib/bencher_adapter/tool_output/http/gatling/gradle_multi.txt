@@ -1,0 +1,105 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.9.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :compileJava NO-SOURCE
+> Task :processResources NO-SOURCE
+> Task :classes UP-TO-DATE
+> Task :compileTestJava NO-SOURCE
+> Task :processTestResources NO-SOURCE
+> Task :testClasses UP-TO-DATE
+> Task :compileGatlingJava
+> Task :processGatlingResources
+> Task :gatlingClasses
+
+> Task :gatlingRun
+
+========================================================================================================================
+2026-11-23 04:24:57 GMT                                                                               3s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |    73,387 |         0 |    73,387
+> drop                                                                               |    73,387 |         0 |    73,387
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                     73,387   (100%)
+
+---- drop --------------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:         2
+========================================================================================================================
+
+Parsing log file(s)...
+Parsing log file(s) done in 0s.
+Generating reports...
+
+========================================================================================================================
+---- Global Information -------------------------------------------------------------|---Total---|-----OK----|----KO----
+> request count                                                                      |    73,387 |         - |    73,387
+> min response time (ms)                                                             |         0 |         - |         0
+> max response time (ms)                                                             |         5 |         - |         5
+> mean response time (ms)                                                            |         0 |         - |         0
+> response time std deviation (ms)                                                   |         0 |         - |         0
+> response time 50th percentile (ms)                                                 |         0 |         - |         0
+> response time 75th percentile (ms)                                                 |         0 |         - |         0
+> response time 95th percentile (ms)                                                 |         1 |         - |         1
+> response time 99th percentile (ms)                                                 |         1 |         - |         1
+> mean throughput (rps)                                                              | 18,346.75 |         - | 18,346.75
+---- Response Time Distribution ----------------------------------------------------------------------------------------
+> OK: t < 800 ms                                                                                              0     (0%)
+> OK: 800 ms <= t < 1200 ms                                                                                   0     (0%)
+> OK: t >= 1200 ms                                                                                            0     (0%)
+> KO                                                                                                     73,387   (100%)
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                     73,387   (100%)
+========================================================================================================================
+
+Reports generated, please open the following file: file:///tmp/bench/gradle-multi/build/reports/gatling/dropsimulation-20261123042453827/index.html
+
+========================================================================================================================
+2026-11-23 04:25:02 GMT                                                                               3s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |   184,451 |   184,333 |       118
+> closed                                                                             |   183,743 |   183,743 |         0
+> Global                                                                             |       118 |       118 |         0
+> a | b | c                                                                          |       118 |         0 |       118
+> a request name long enough that the console table cuts it short, past eighty-tw... |       118 |       118 |         0
+> a request name long enough that the console table cuts it short, past eighty-tw... |       118 |       118 |         0
+> café ☕                                                                             |       118 |       118 |         0
+> outer / inner / deep                                                               |       118 |       118 |         0
+---- Errors ------------------------------------------------------------------------------------------------------------
+> status.find.in([200, 209], 304), found 500                                                                118   (100%)
+
+---- open --------------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:         2
+---- closed ------------------------------------------------------------------------------------------------------------
+          active:         0  / done:         2
+========================================================================================================================
+
+Parsing log file(s)...
+Parsing log file(s) done in 0s.
+Generating reports...
+
+========================================================================================================================
+---- Global Information -------------------------------------------------------------|---Total---|-----OK----|----KO----
+> request count                                                                      |   184,451 |   184,333 |       118
+> min response time (ms)                                                             |         0 |         0 |         0
+> max response time (ms)                                                             |        52 |        52 |         1
+> mean response time (ms)                                                            |         0 |         0 |         0
+> response time std deviation (ms)                                                   |         1 |         1 |         0
+> response time 50th percentile (ms)                                                 |         0 |         0 |         0
+> response time 75th percentile (ms)                                                 |         0 |         0 |         0
+> response time 95th percentile (ms)                                                 |         0 |         0 |         1
+> response time 99th percentile (ms)                                                 |         1 |         1 |         1
+> mean throughput (rps)                                                              | 46,112.75 | 46,083.25 |      29.5
+---- Response Time Distribution ----------------------------------------------------------------------------------------
+> OK: t < 800 ms                                                                                        184,333 (99.94%)
+> OK: 800 ms <= t < 1200 ms                                                                                   0     (0%)
+> OK: t >= 1200 ms                                                                                            0     (0%)
+> KO                                                                                                        118  (0.06%)
+---- Errors ------------------------------------------------------------------------------------------------------------
+> status.find.in([200, 209], 304), found 500                                                                118   (100%)
+========================================================================================================================
+
+Reports generated, please open the following file: file:///tmp/bench/gradle-multi/build/reports/gatling/namessimulation-20261123042458597/index.html
+
+BUILD SUCCESSFUL in 13s
+3 actionable tasks: 3 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.9.2/userguide/configuration_cache_enabling.html

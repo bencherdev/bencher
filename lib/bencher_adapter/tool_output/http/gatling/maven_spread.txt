@@ -1,0 +1,787 @@
+[INFO] Scanning for projects...
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-maven-plugin/4.22.3/gatling-maven-plugin-4.22.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-maven-plugin/4.22.3/gatling-maven-plugin-4.22.3.pom (9.5 kB at 49 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-maven-plugin/4.22.3/gatling-maven-plugin-4.22.3.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-maven-plugin/4.22.3/gatling-maven-plugin-4.22.3.jar (56 kB at 1.7 MB/s)
+[INFO] 
+[INFO] -----------------------------< bench:gat >------------------------------
+[INFO] Building gat 1
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-resources-plugin/3.4.0/maven-resources-plugin-3.4.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-resources-plugin/3.4.0/maven-resources-plugin-3.4.0.pom (7.9 kB at 375 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-plugins/45/maven-plugins-45.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-plugins/45/maven-plugins-45.pom (8.4 kB at 380 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/45/maven-parent-45.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/45/maven-parent-45.pom (53 kB at 2.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/apache/35/apache-35.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/apache/35/apache-35.pom (24 kB at 1.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.13.1/junit-bom-5.13.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.13.1/junit-bom-5.13.1.pom (5.6 kB at 297 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-resources-plugin/3.4.0/maven-resources-plugin-3.4.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-resources-plugin/3.4.0/maven-resources-plugin-3.4.0.jar (31 kB at 1.5 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-compiler-plugin/3.13.0/maven-compiler-plugin-3.13.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-compiler-plugin/3.13.0/maven-compiler-plugin-3.13.0.pom (10 kB at 402 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-plugins/41/maven-plugins-41.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-plugins/41/maven-plugins-41.pom (7.4 kB at 294 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/41/maven-parent-41.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/41/maven-parent-41.pom (50 kB at 2.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/apache/31/apache-31.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/apache/31/apache-31.pom (24 kB at 980 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-compiler-plugin/3.13.0/maven-compiler-plugin-3.13.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-compiler-plugin/3.13.0/maven-compiler-plugin-3.13.0.jar (83 kB at 3.6 MB/s)
+[INFO] 
+[INFO] >>> gatling:4.22.3:test (default-cli) > test-compile @ gat >>>
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/highcharts/gatling-charts-highcharts/3.16.1/gatling-charts-highcharts-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/highcharts/gatling-charts-highcharts/3.16.1/gatling-charts-highcharts-3.16.1.pom (3.7 kB at 152 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/2.13.18/scala-library-2.13.18.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/2.13.18/scala-library-2.13.18.pom (1.6 kB at 76 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-app/3.16.1/gatling-app-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-app/3.16.1/gatling-app-3.16.1.pom (5.0 kB at 239 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-core/3.16.1/gatling-core-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-core/3.16.1/gatling-core-3.16.1.pom (9.6 kB at 399 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-netty-util/3.16.1/gatling-netty-util-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-netty-util/3.16.1/gatling-netty-util-3.16.1.pom (5.7 kB at 270 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-util_2.13/0.1.0/gatling-shared-util_2.13-0.1.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-util_2.13/0.1.0/gatling-shared-util_2.13-0.1.0.pom (3.1 kB at 135 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-buffer/4.2.20.Final/netty-buffer-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-buffer/4.2.20.Final/netty-buffer-4.2.20.Final.pom (6.0 kB at 263 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-parent/4.2.20.Final/netty-parent-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-parent/4.2.20.Final/netty-parent-4.2.20.Final.pom (95 kB at 3.4 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/sonatype/oss/oss-parent/9/oss-parent-9.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/sonatype/oss/oss-parent/9/oss-parent-9.pom (6.6 kB at 313 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/bouncycastle/bc-jdk18on-bom/1.84/bc-jdk18on-bom-1.84.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/bouncycastle/bc-jdk18on-bom/1.84/bc-jdk18on-bom-1.84.pom (3.1 kB at 134 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-common/4.2.20.Final/netty-common-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-common/4.2.20.Final/netty-common-4.2.20.Final.pom (12 kB at 593 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-epoll/4.2.20.Final/netty-transport-native-epoll-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-epoll/4.2.20.Final/netty-transport-native-epoll-4.2.20.Final.pom (32 kB at 1.6 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport/4.2.20.Final/netty-transport-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport/4.2.20.Final/netty-transport-4.2.20.Final.pom (4.1 kB at 207 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver/4.2.20.Final/netty-resolver-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver/4.2.20.Final/netty-resolver-4.2.20.Final.pom (2.7 kB at 123 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-unix-common/4.2.20.Final/netty-transport-native-unix-common-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-unix-common/4.2.20.Final/netty-transport-native-unix-common-4.2.20.Final.pom (34 kB at 1.4 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-classes-epoll/4.2.20.Final/netty-transport-classes-epoll-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-classes-epoll/4.2.20.Final/netty-transport-classes-epoll-4.2.20.Final.pom (2.9 kB at 136 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-io_uring/4.2.20.Final/netty-transport-native-io_uring-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-io_uring/4.2.20.Final/netty-transport-native-io_uring-4.2.20.Final.pom (20 kB at 845 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-classes-io_uring/4.2.20.Final/netty-transport-classes-io_uring-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-classes-io_uring/4.2.20.Final/netty-transport-classes-io_uring-4.2.20.Final.pom (5.8 kB at 277 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-quicklens/3.16.1/gatling-quicklens-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-quicklens/3.16.1/gatling-quicklens-3.16.1.pom (3.7 kB at 159 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-commons/3.16.1/gatling-commons-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-commons/3.16.1/gatling-commons-3.16.1.pom (5.8 kB at 274 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/typesafe/config/1.4.10/config-1.4.10.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/typesafe/config/1.4.10/config-1.4.10.pom (2.0 kB at 104 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/github/metarank/cfor_2.13/0.4/cfor_2.13-0.4.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/github/metarank/cfor_2.13/0.4/cfor_2.13-0.4.pom (2.0 kB at 98 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-reflect/2.13.18/scala-reflect-2.13.18.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-reflect/2.13.18/scala-reflect-2.13.18.pom (1.8 kB at 73 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-api/2.0.20/slf4j-api-2.0.20.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-api/2.0.20/slf4j-api-2.0.20.pom (2.8 kB at 135 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-parent/2.0.20/slf4j-parent-2.0.20.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-parent/2.0.20/slf4j-parent-2.0.20.pom (14 kB at 616 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-bom/2.0.20/slf4j-bom-2.0.20.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-bom/2.0.20/slf4j-bom-2.0.20.pom (7.9 kB at 272 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/jul-to-slf4j/2.0.20/jul-to-slf4j-2.0.20.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/jul-to-slf4j/2.0.20/jul-to-slf4j-2.0.20.pom (1.1 kB at 48 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/typesafe/scala-logging/scala-logging_2.13/3.9.6/scala-logging_2.13-3.9.6.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/typesafe/scala-logging/scala-logging_2.13/3.9.6/scala-logging_2.13-3.9.6.pom (2.8 kB at 127 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/2.13.16/scala-library-2.13.16.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/2.13.16/scala-library-2.13.16.pom (1.6 kB at 76 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-reflect/2.13.16/scala-reflect-2.13.16.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-reflect/2.13.16/scala-reflect-2.13.16.pom (1.8 kB at 92 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.pom (2.7 kB at 119 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-parent/1.7.36/slf4j-parent-1.7.36.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-parent/1.7.36/slf4j-parent-1.7.36.pom (14 kB at 671 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/ch/qos/logback/logback-classic/1.6.7/logback-classic-1.6.7.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/ch/qos/logback/logback-classic/1.6.7/logback-classic-1.6.7.pom (15 kB at 733 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/ch/qos/logback/logback-parent/1.6.7/logback-parent-1.6.7.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/ch/qos/logback/logback-parent/1.6.7/logback-parent-1.6.7.pom (19 kB at 928 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/ch/qos/logback/logback-core/1.6.7/logback-core-1.6.7.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/ch/qos/logback/logback-core/1.6.7/logback-core-1.6.7.pom (8.9 kB at 470 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-api/2.0.19/slf4j-api-2.0.19.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-api/2.0.19/slf4j-api-2.0.19.pom (2.8 kB at 149 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-parent/2.0.19/slf4j-parent-2.0.19.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-parent/2.0.19/slf4j-parent-2.0.19.pom (14 kB at 616 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-bom/2.0.19/slf4j-bom-2.0.19.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-bom/2.0.19/slf4j-bom-2.0.19.pom (7.9 kB at 394 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-jsonpath/3.16.1/gatling-jsonpath-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-jsonpath/3.16.1/gatling-jsonpath-3.16.1.pom (5.1 kB at 232 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/scala-lang/modules/scala-parser-combinators_2.13/2.5.0/scala-parser-combinators_2.13-2.5.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/scala-lang/modules/scala-parser-combinators_2.13/2.5.0/scala-parser-combinators_2.13-2.5.0.pom (2.3 kB at 115 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.23.0/jackson-databind-2.23.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.23.0/jackson-databind-2.23.0.pom (23 kB at 1.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/jackson-base/2.23.0/jackson-base-2.23.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/jackson-base/2.23.0/jackson-base-2.23.0.pom (13 kB at 636 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/jackson-bom/2.23.0/jackson-bom-2.23.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/jackson-bom/2.23.0/jackson-bom-2.23.0.pom (20 kB at 963 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/jackson-parent/2.23/jackson-parent-2.23.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/jackson-parent/2.23/jackson-parent-2.23.pom (6.9 kB at 313 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/oss-parent/81/oss-parent-81.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/oss-parent/81/oss-parent-81.pom (24 kB at 1.2 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.14.3/junit-bom-5.14.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.14.3/junit-bom-5.14.3.pom (5.7 kB at 298 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.23/jackson-annotations-2.23.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.23/jackson-annotations-2.23.pom (7.2 kB at 399 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-core/2.23.0/jackson-core-2.23.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-core/2.23.0/jackson-core-2.23.0.pom (9.7 kB at 462 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-model_2.13/0.2.0/gatling-shared-model_2.13-0.2.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-model_2.13/0.2.0/gatling-shared-model_2.13-0.2.0.pom (3.5 kB at 157 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-util_2.13/0.0.14/gatling-shared-util_2.13-0.0.14.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-util_2.13/0.0.14/gatling-shared-util_2.13-0.0.14.pom (1.9 kB at 92 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/suzaku/boopickle_2.13/1.5.0/boopickle_2.13-1.5.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/suzaku/boopickle_2.13/1.5.0/boopickle_2.13-1.5.0.pom (2.0 kB at 86 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/2.13.14/scala-library-2.13.14.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/2.13.14/scala-library-2.13.14.pom (1.6 kB at 69 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-cli/0.1.0/gatling-shared-cli-0.1.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-cli/0.1.0/gatling-shared-cli-0.1.0.pom (2.9 kB at 125 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/jspecify/jspecify/1.0.1/jspecify-1.0.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/jspecify/jspecify/1.0.1/jspecify-1.0.1.pom (1.9 kB at 97 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/simpleflatmapper/lightning-csv/9.0.2/lightning-csv-9.0.2.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/simpleflatmapper/lightning-csv/9.0.2/lightning-csv-9.0.2.pom (2.5 kB at 85 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/simpleflatmapper/sfm-util/9.0.2/sfm-util-9.0.2.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/simpleflatmapper/sfm-util/9.0.2/sfm-util-9.0.2.pom (2.0 kB at 81 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/github/ben-manes/caffeine/caffeine/3.3.1/caffeine-3.3.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/github/ben-manes/caffeine/caffeine/3.3.1/caffeine-3.3.1.pom (2.1 kB at 98 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/google/errorprone/error_prone_annotations/2.50.0/error_prone_annotations-2.50.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/google/errorprone/error_prone_annotations/2.50.0/error_prone_annotations-2.50.0.pom (4.3 kB at 213 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/google/errorprone/error_prone_parent/2.50.0/error_prone_parent-2.50.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/google/errorprone/error_prone_parent/2.50.0/error_prone_parent-2.50.0.pom (16 kB at 756 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/pebbletemplates/pebble/4.1.3/pebble-4.1.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/pebbletemplates/pebble/4.1.3/pebble-4.1.3.pom (4.5 kB at 223 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/pebbletemplates/pebble-project/4.1.3/pebble-project-4.1.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/pebbletemplates/pebble-project/4.1.3/pebble-project-4.1.3.pom (5.4 kB at 259 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/unbescape/unbescape/1.1.7.RELEASE/unbescape-1.1.7.RELEASE.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/unbescape/unbescape/1.1.7.RELEASE/unbescape-1.1.7.RELEASE.pom (18 kB at 798 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/github/scopt/scopt_2.13/4.2.0/scopt_2.13-4.2.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/github/scopt/scopt_2.13/4.2.0/scopt_2.13-4.2.0.pom (1.7 kB at 86 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-handler/4.2.20.Final/netty-handler-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-handler/4.2.20.Final/netty-handler-4.2.20.Final.pom (7.0 kB at 333 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-base/4.2.20.Final/netty-codec-base-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-base/4.2.20.Final/netty-codec-base-4.2.20.Final.pom (3.6 kB at 172 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-classes/2.0.85.Final/netty-tcnative-classes-2.0.85.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-classes/2.0.85.Final/netty-tcnative-classes-2.0.85.Final.pom (2.0 kB at 91 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-parent/2.0.85.Final/netty-tcnative-parent-2.0.85.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-parent/2.0.85.Final/netty-tcnative-parent-2.0.85.Final.pom (44 kB at 2.0 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-boringssl-static/2.0.85.Final/netty-tcnative-boringssl-static-2.0.85.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-boringssl-static/2.0.85.Final/netty-tcnative-boringssl-static-2.0.85.Final.pom (5.8 kB at 274 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/net/sf/saxon/Saxon-HE/12.10/Saxon-HE-12.10.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/net/sf/saxon/Saxon-HE/12.10/Saxon-HE-12.10.pom (3.2 kB at 155 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/xmlresolver/xmlresolver/5.3.3/xmlresolver-5.3.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/xmlresolver/xmlresolver/5.3.3/xmlresolver-5.3.3.pom (1.5 kB at 67 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/xmlresolver/xmlresolver/6.1.1/xmlresolver-6.1.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/xmlresolver/xmlresolver/6.1.1/xmlresolver-6.1.1.pom (1.1 kB at 51 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/jodd-lagarto/6.1.0/jodd-lagarto-6.1.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/jodd-lagarto/6.1.0/jodd-lagarto-6.1.0.pom (1.9 kB at 87 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/jodd/jodd-util/6.3.0/jodd-util-6.3.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/jodd/jodd-util/6.3.0/jodd-util-6.3.0.pom (1.4 kB at 71 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/burt/jmespath-jackson/0.6.0/jmespath-jackson-0.6.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/burt/jmespath-jackson/0.6.0/jmespath-jackson-0.6.0.pom (1.2 kB at 66 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/burt/jmespath/0.6.0/jmespath-0.6.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/burt/jmespath/0.6.0/jmespath-0.6.0.pom (7.4 kB at 354 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/burt/jmespath-core/0.6.0/jmespath-core-0.6.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/burt/jmespath-core/0.6.0/jmespath-core-0.6.0.pom (3.0 kB at 136 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.15.3/jackson-databind-2.15.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.15.3/jackson-databind-2.15.3.pom (19 kB at 878 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/jackson-base/2.15.3/jackson-base-2.15.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/jackson-base/2.15.3/jackson-base-2.15.3.pom (11 kB at 490 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/jackson-bom/2.15.3/jackson-bom-2.15.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/jackson-bom/2.15.3/jackson-bom-2.15.3.pom (18 kB at 857 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/jackson-parent/2.15/jackson-parent-2.15.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/jackson-parent/2.15/jackson-parent-2.15.pom (6.5 kB at 284 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/oss-parent/50/oss-parent-50.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/oss-parent/50/oss-parent-50.pom (24 kB at 1.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.9.2/junit-bom-5.9.2.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.9.2/junit-bom-5.9.2.pom (5.6 kB at 268 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.15.3/jackson-annotations-2.15.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.15.3/jackson-annotations-2.15.3.pom (7.1 kB at 321 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-core/2.15.3/jackson-core-2.15.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-core/2.15.3/jackson-core-2.15.3.pom (9.8 kB at 489 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-core-java/3.16.1/gatling-core-java-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-core-java/3.16.1/gatling-core-java-3.16.1.pom (5.9 kB at 295 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/net/jodah/typetools/0.7.0/typetools-0.7.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/net/jodah/typetools/0.7.0/typetools-0.7.0.pom (31 kB at 1.4 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.14.4/junit-bom-5.14.4.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.14.4/junit-bom-5.14.4.pom (5.7 kB at 315 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/assertj/assertj-bom/3.27.7/assertj-bom-3.27.7.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/assertj/assertj-bom/3.27.7/assertj-bom-3.27.7.pom (3.3 kB at 159 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-http/3.16.1/gatling-http-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-http/3.16.1/gatling-http-3.16.1.pom (5.4 kB at 258 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-http-client/3.16.1/gatling-http-client-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-http-client/3.16.1/gatling-http-client-3.16.1.pom (10 kB at 460 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-http/4.2.20.Final/netty-codec-http-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-http/4.2.20.Final/netty-codec-http-4.2.20.Final.pom (5.7 kB at 270 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-compression/4.2.20.Final/netty-codec-compression-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-compression/4.2.20.Final/netty-codec-compression-4.2.20.Final.pom (5.9 kB at 237 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-handler-proxy/4.2.20.Final/netty-handler-proxy-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-handler-proxy/4.2.20.Final/netty-handler-proxy-4.2.20.Final.pom (4.8 kB at 231 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-socks/4.2.20.Final/netty-codec-socks-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-socks/4.2.20.Final/netty-codec-socks-4.2.20.Final.pom (3.7 kB at 174 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns/4.2.20.Final/netty-resolver-dns-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns/4.2.20.Final/netty-resolver-dns-4.2.20.Final.pom (4.5 kB at 178 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-dns/4.2.20.Final/netty-codec-dns-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-dns/4.2.20.Final/netty-codec-dns-4.2.20.Final.pom (3.8 kB at 174 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-http2/4.2.20.Final/netty-codec-http2-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-http2/4.2.20.Final/netty-codec-http2-4.2.20.Final.pom (7.5 kB at 355 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns-native-macos/4.2.20.Final/netty-resolver-dns-native-macos-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns-native-macos/4.2.20.Final/netty-resolver-dns-native-macos-4.2.20.Final.pom (22 kB at 1.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns-classes-macos/4.2.20.Final/netty-resolver-dns-classes-macos-4.2.20.Final.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns-classes-macos/4.2.20.Final/netty-resolver-dns-classes-macos-4.2.20.Final.pom (2.8 kB at 136 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/brotli4j/1.24.0/brotli4j-1.24.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/brotli4j/1.24.0/brotli4j-1.24.0.pom (8.9 kB at 444 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/brotli4j-parent/1.24.0/brotli4j-parent-1.24.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/brotli4j-parent/1.24.0/brotli4j-parent-1.24.0.pom (8.0 kB at 335 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/service/1.24.0/service-1.24.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/service/1.24.0/service-1.24.0.pom (2.0 kB at 95 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-linux-x86_64/1.24.0/native-linux-x86_64-1.24.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-linux-x86_64/1.24.0/native-linux-x86_64-1.24.0.pom (4.7 kB at 226 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/natives/1.24.0/natives-1.24.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/natives/1.24.0/natives-1.24.0.pom (6.1 kB at 307 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-linux-aarch64/1.24.0/native-linux-aarch64-1.24.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-linux-aarch64/1.24.0/native-linux-aarch64-1.24.0.pom (4.6 kB at 220 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-osx-x86_64/1.24.0/native-osx-x86_64-1.24.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-osx-x86_64/1.24.0/native-osx-x86_64-1.24.0.pom (4.6 kB at 210 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-osx-aarch64/1.24.0/native-osx-aarch64-1.24.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-osx-aarch64/1.24.0/native-osx-aarch64-1.24.0.pom (4.6 kB at 200 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-windows-x86_64/1.24.0/native-windows-x86_64-1.24.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-windows-x86_64/1.24.0/native-windows-x86_64-1.24.0.pom (4.4 kB at 191 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-http-java/3.16.1/gatling-http-java-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-http-java/3.16.1/gatling-http-java-3.16.1.pom (5.9 kB at 257 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-jms/3.16.1/gatling-jms-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-jms/3.16.1/gatling-jms-3.16.1.pom (5.2 kB at 238 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/jakarta/jms/jakarta.jms-api/3.1.0/jakarta.jms-api-3.1.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/jakarta/jms/jakarta.jms-api/3.1.0/jakarta.jms-api-3.1.0.pom (9.7 kB at 484 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/eclipse/ee4j/project/1.0.7/project-1.0.7.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/eclipse/ee4j/project/1.0.7/project-1.0.7.pom (14 kB at 591 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/eatthepath/fast-uuid/0.2.0/fast-uuid-0.2.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/eatthepath/fast-uuid/0.2.0/fast-uuid-0.2.0.pom (9.3 kB at 442 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-jms-java/3.16.1/gatling-jms-java-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-jms-java/3.16.1/gatling-jms-java-3.16.1.pom (5.9 kB at 282 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-redis/3.16.1/gatling-redis-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-redis/3.16.1/gatling-redis-3.16.1.pom (5.0 kB at 229 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/net/debasishg/redisclient_2.13/3.42/redisclient_2.13-3.42.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/net/debasishg/redisclient_2.13/3.42/redisclient_2.13-3.42.pom (3.1 kB at 146 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/2.13.7/scala-library-2.13.7.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/2.13.7/scala-library-2.13.7.pom (1.6 kB at 70 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-pool2/2.8.0/commons-pool2-2.8.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-pool2/2.8.0/commons-pool2-2.8.0.pom (15 kB at 694 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-parent/48/commons-parent-48.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-parent/48/commons-parent-48.pom (72 kB at 3.0 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/apache/21/apache-21.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/apache/21/apache-21.pom (17 kB at 855 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-api/1.7.32/slf4j-api-1.7.32.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-api/1.7.32/slf4j-api-1.7.32.pom (3.8 kB at 174 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-parent/1.7.32/slf4j-parent-1.7.32.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-parent/1.7.32/slf4j-parent-1.7.32.pom (14 kB at 690 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-pool2/2.13.1/commons-pool2-2.13.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-pool2/2.13.1/commons-pool2-2.13.1.pom (16 kB at 824 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-parent/93/commons-parent-93.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-parent/93/commons-parent-93.pom (79 kB at 1.3 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.14.1/junit-bom-5.14.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.14.1/junit-bom-5.14.1.pom (5.7 kB at 283 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-redis-java/3.16.1/gatling-redis-java-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-redis-java/3.16.1/gatling-redis-java-3.16.1.pom (5.9 kB at 296 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-charts/3.16.1/gatling-charts-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-charts/3.16.1/gatling-charts-3.16.1.pom (4.9 kB at 212 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/elasticsearch/elasticsearch-tdigest/8.15.5/elasticsearch-tdigest-8.15.5.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/elasticsearch/elasticsearch-tdigest/8.15.5/elasticsearch-tdigest-8.15.5.pom (1.4 kB at 64 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-recorder/3.16.1/gatling-recorder-3.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-recorder/3.16.1/gatling-recorder-3.16.1.pom (5.8 kB at 289 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/scala-lang/modules/scala-swing_2.13/3.0.0/scala-swing_2.13-3.0.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/scala-lang/modules/scala-swing_2.13/3.0.0/scala-swing_2.13-3.0.0.pom (2.2 kB at 113 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/2.13.3/scala-library-2.13.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/2.13.3/scala-library-2.13.3.pom (1.6 kB at 80 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-recorder-bc-shaded/1.85.0/gatling-recorder-bc-shaded-1.85.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-recorder-bc-shaded/1.85.0/gatling-recorder-bc-shaded-1.85.0.pom (5.6 kB at 293 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/highcharts/gatling-charts-highcharts/3.16.1/gatling-charts-highcharts-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/highcharts/gatling-charts-highcharts/3.16.1/gatling-charts-highcharts-3.16.1.jar (139 kB at 4.5 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-app/3.16.1/gatling-app-3.16.1.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/2.13.18/scala-library-2.13.18.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-core/3.16.1/gatling-core-3.16.1.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-netty-util/3.16.1/gatling-netty-util-3.16.1.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-util_2.13/0.1.0/gatling-shared-util_2.13-0.1.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-app/3.16.1/gatling-app-3.16.1.jar (67 kB at 2.7 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-epoll/4.2.20.Final/netty-transport-native-epoll-4.2.20.Final-linux-aarch_64.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-epoll/4.2.20.Final/netty-transport-native-epoll-4.2.20.Final-linux-aarch_64.jar (44 kB at 923 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-classes-epoll/4.2.20.Final/netty-transport-classes-epoll-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-netty-util/3.16.1/gatling-netty-util-3.16.1.jar (15 kB at 271 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-epoll/4.2.20.Final/netty-transport-native-epoll-4.2.20.Final-linux-x86_64.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-util_2.13/0.1.0/gatling-shared-util_2.13-0.1.0.jar (53 kB at 892 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-io_uring/4.2.20.Final/netty-transport-native-io_uring-4.2.20.Final-linux-aarch_64.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-classes-epoll/4.2.20.Final/netty-transport-classes-epoll-4.2.20.Final.jar (160 kB at 2.2 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-classes-io_uring/4.2.20.Final/netty-transport-classes-io_uring-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-epoll/4.2.20.Final/netty-transport-native-epoll-4.2.20.Final-linux-x86_64.jar (43 kB at 563 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-io_uring/4.2.20.Final/netty-transport-native-io_uring-4.2.20.Final-linux-x86_64.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-classes-io_uring/4.2.20.Final/netty-transport-classes-io_uring-4.2.20.Final.jar (210 kB at 2.0 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-quicklens/3.16.1/gatling-quicklens-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-io_uring/4.2.20.Final/netty-transport-native-io_uring-4.2.20.Final-linux-x86_64.jar (44 kB at 396 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-commons/3.16.1/gatling-commons-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-io_uring/4.2.20.Final/netty-transport-native-io_uring-4.2.20.Final-linux-aarch_64.jar (44 kB at 376 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/typesafe/config/1.4.10/config-1.4.10.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-core/3.16.1/gatling-core-3.16.1.jar (2.0 MB at 16 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/github/metarank/cfor_2.13/0.4/cfor_2.13-0.4.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-quicklens/3.16.1/gatling-quicklens-3.16.1.jar (109 kB at 813 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-reflect/2.13.18/scala-reflect-2.13.18.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/github/metarank/cfor_2.13/0.4/cfor_2.13-0.4.jar (37 kB at 239 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-api/2.0.20/slf4j-api-2.0.20.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/2.13.18/scala-library-2.13.18.jar (5.9 MB at 37 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/jul-to-slf4j/2.0.20/jul-to-slf4j-2.0.20.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-commons/3.16.1/gatling-commons-3.16.1.jar (177 kB at 1.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/typesafe/scala-logging/scala-logging_2.13/3.9.6/scala-logging_2.13-3.9.6.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/typesafe/config/1.4.10/config-1.4.10.jar (301 kB at 1.8 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/ch/qos/logback/logback-classic/1.6.7/logback-classic-1.6.7.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/typesafe/scala-logging/scala-logging_2.13/3.9.6/scala-logging_2.13-3.9.6.jar (62 kB at 335 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/ch/qos/logback/logback-core/1.6.7/logback-core-1.6.7.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-api/2.0.20/slf4j-api-2.0.20.jar (70 kB at 374 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-jsonpath/3.16.1/gatling-jsonpath-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/jul-to-slf4j/2.0.20/jul-to-slf4j-2.0.20.jar (6.3 kB at 34 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-model_2.13/0.2.0/gatling-shared-model_2.13-0.2.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/scala-lang/scala-reflect/2.13.18/scala-reflect-2.13.18.jar (3.8 MB at 18 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/suzaku/boopickle_2.13/1.5.0/boopickle_2.13-1.5.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/ch/qos/logback/logback-classic/1.6.7/logback-classic-1.6.7.jar (293 kB at 1.4 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/simpleflatmapper/lightning-csv/9.0.2/lightning-csv-9.0.2.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-model_2.13/0.2.0/gatling-shared-model_2.13-0.2.0.jar (166 kB at 753 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/simpleflatmapper/sfm-util/9.0.2/sfm-util-9.0.2.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-jsonpath/3.16.1/gatling-jsonpath-3.16.1.jar (134 kB at 603 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/github/ben-manes/caffeine/caffeine/3.3.1/caffeine-3.3.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/ch/qos/logback/logback-core/1.6.7/logback-core-1.6.7.jar (654 kB at 2.8 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/google/errorprone/error_prone_annotations/2.50.0/error_prone_annotations-2.50.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/suzaku/boopickle_2.13/1.5.0/boopickle_2.13-1.5.0.jar (255 kB at 1.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/pebbletemplates/pebble/4.1.3/pebble-4.1.3.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/simpleflatmapper/lightning-csv/9.0.2/lightning-csv-9.0.2.jar (85 kB at 354 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/unbescape/unbescape/1.1.7.RELEASE/unbescape-1.1.7.RELEASE.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/simpleflatmapper/sfm-util/9.0.2/sfm-util-9.0.2.jar (64 kB at 261 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/scala-lang/modules/scala-parser-combinators_2.13/2.5.0/scala-parser-combinators_2.13-2.5.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/github/ben-manes/caffeine/caffeine/3.3.1/caffeine-3.3.1.jar (1.1 MB at 4.2 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/github/scopt/scopt_2.13/4.2.0/scopt_2.13-4.2.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/google/errorprone/error_prone_annotations/2.50.0/error_prone_annotations-2.50.0.jar (20 kB at 77 kB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/pebbletemplates/pebble/4.1.3/pebble-4.1.3.jar (338 kB at 1.3 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-handler/4.2.20.Final/netty-handler-4.2.20.Final.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver/4.2.20.Final/netty-resolver-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/unbescape/unbescape/1.1.7.RELEASE/unbescape-1.1.7.RELEASE.jar (178 kB at 651 kB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/scala-lang/modules/scala-parser-combinators_2.13/2.5.0/scala-parser-combinators_2.13-2.5.0.jar (190 kB at 694 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-unix-common/4.2.20.Final/netty-transport-native-unix-common-4.2.20.Final.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-classes/2.0.85.Final/netty-tcnative-classes-2.0.85.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-handler/4.2.20.Final/netty-handler-4.2.20.Final.jar (596 kB at 2.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-boringssl-static/2.0.85.Final/netty-tcnative-boringssl-static-2.0.85.Final-windows-x86_64.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/github/scopt/scopt_2.13/4.2.0/scopt_2.13-4.2.0.jar (133 kB at 460 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-boringssl-static/2.0.85.Final/netty-tcnative-boringssl-static-2.0.85.Final-osx-aarch_64.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-classes/2.0.85.Final/netty-tcnative-classes-2.0.85.Final.jar (37 kB at 123 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-boringssl-static/2.0.85.Final/netty-tcnative-boringssl-static-2.0.85.Final-osx-x86_64.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport-native-unix-common/4.2.20.Final/netty-transport-native-unix-common-4.2.20.Final.jar (47 kB at 155 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-boringssl-static/2.0.85.Final/netty-tcnative-boringssl-static-2.0.85.Final-linux-aarch_64.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver/4.2.20.Final/netty-resolver-4.2.20.Final.jar (33 kB at 107 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-boringssl-static/2.0.85.Final/netty-tcnative-boringssl-static-2.0.85.Final-linux-x86_64.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-boringssl-static/2.0.85.Final/netty-tcnative-boringssl-static-2.0.85.Final-osx-aarch_64.jar (1.1 MB at 3.6 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/net/sf/saxon/Saxon-HE/12.10/Saxon-HE-12.10.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-boringssl-static/2.0.85.Final/netty-tcnative-boringssl-static-2.0.85.Final-windows-x86_64.jar (1.2 MB at 3.5 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/xmlresolver/xmlresolver/6.1.1/xmlresolver-6.1.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-boringssl-static/2.0.85.Final/netty-tcnative-boringssl-static-2.0.85.Final-osx-x86_64.jar (1.3 MB at 3.6 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/xmlresolver/xmlresolver/6.1.1/xmlresolver-6.1.1-data.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/xmlresolver/xmlresolver/6.1.1/xmlresolver-6.1.1.jar (181 kB at 485 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/jodd-lagarto/6.1.0/jodd-lagarto-6.1.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/xmlresolver/xmlresolver/6.1.1/xmlresolver-6.1.1-data.jar (1.1 MB at 2.8 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/jodd/jodd-util/6.3.0/jodd-util-6.3.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-boringssl-static/2.0.85.Final/netty-tcnative-boringssl-static-2.0.85.Final-linux-x86_64.jar (1.4 MB at 3.5 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/burt/jmespath-jackson/0.6.0/jmespath-jackson-0.6.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/jodd-lagarto/6.1.0/jodd-lagarto-6.1.0.jar (269 kB at 639 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/burt/jmespath-core/0.6.0/jmespath-core-0.6.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/net/sf/saxon/Saxon-HE/12.10/Saxon-HE-12.10.jar (5.8 MB at 14 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-core-java/3.16.1/gatling-core-java-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-tcnative-boringssl-static/2.0.85.Final/netty-tcnative-boringssl-static-2.0.85.Final-linux-aarch_64.jar (1.3 MB at 3.0 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/net/jodah/typetools/0.7.0/typetools-0.7.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/jodd/jodd-util/6.3.0/jodd-util-6.3.0.jar (338 kB at 783 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/jspecify/jspecify/1.0.1/jspecify-1.0.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/burt/jmespath-jackson/0.6.0/jmespath-jackson-0.6.0.jar (7.1 kB at 16 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-http/3.16.1/gatling-http-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-core-java/3.16.1/gatling-core-java-3.16.1.jar (326 kB at 717 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-http-client/3.16.1/gatling-http-client-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/burt/jmespath-core/0.6.0/jmespath-core-0.6.0.jar (489 kB at 1.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-handler-proxy/4.2.20.Final/netty-handler-proxy-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/net/jodah/typetools/0.7.0/typetools-0.7.0.jar (28 kB at 61 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-socks/4.2.20.Final/netty-codec-socks-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/jspecify/jspecify/1.0.1/jspecify-1.0.1.jar (3.1 kB at 6.7 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns/4.2.20.Final/netty-resolver-dns-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-handler-proxy/4.2.20.Final/netty-handler-proxy-4.2.20.Final.jar (27 kB at 56 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-dns/4.2.20.Final/netty-codec-dns-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-http-client/3.16.1/gatling-http-client-3.16.1.jar (199 kB at 416 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-http2/4.2.20.Final/netty-codec-http2-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-http/3.16.1/gatling-http-3.16.1.jar (1.4 MB at 2.9 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns-native-macos/4.2.20.Final/netty-resolver-dns-native-macos-4.2.20.Final-osx-aarch_64.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-socks/4.2.20.Final/netty-codec-socks-4.2.20.Final.jar (133 kB at 273 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns-classes-macos/4.2.20.Final/netty-resolver-dns-classes-macos-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns/4.2.20.Final/netty-resolver-dns-4.2.20.Final.jar (181 kB at 370 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns-native-macos/4.2.20.Final/netty-resolver-dns-native-macos-4.2.20.Final-osx-x86_64.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-dns/4.2.20.Final/netty-codec-dns-4.2.20.Final.jar (74 kB at 148 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/brotli4j/1.24.0/brotli4j-1.24.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-http2/4.2.20.Final/netty-codec-http2-4.2.20.Final.jar (507 kB at 1.0 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/service/1.24.0/service-1.24.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns-native-macos/4.2.20.Final/netty-resolver-dns-native-macos-4.2.20.Final-osx-aarch_64.jar (21 kB at 42 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-linux-x86_64/1.24.0/native-linux-x86_64-1.24.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns-classes-macos/4.2.20.Final/netty-resolver-dns-classes-macos-4.2.20.Final.jar (9.8 kB at 19 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-linux-aarch64/1.24.0/native-linux-aarch64-1.24.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/service/1.24.0/service-1.24.0.jar (3.4 kB at 6.4 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-osx-x86_64/1.24.0/native-osx-x86_64-1.24.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/brotli4j/1.24.0/brotli4j-1.24.0.jar (48 kB at 90 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-osx-aarch64/1.24.0/native-osx-aarch64-1.24.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-resolver-dns-native-macos/4.2.20.Final/netty-resolver-dns-native-macos-4.2.20.Final-osx-x86_64.jar (21 kB at 39 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-windows-x86_64/1.24.0/native-windows-x86_64-1.24.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-linux-x86_64/1.24.0/native-linux-x86_64-1.24.0.jar (444 kB at 817 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-http-java/3.16.1/gatling-http-java-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-linux-aarch64/1.24.0/native-linux-aarch64-1.24.0.jar (441 kB at 810 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-jms/3.16.1/gatling-jms-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-osx-x86_64/1.24.0/native-osx-x86_64-1.24.0.jar (431 kB at 786 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/jakarta/jms/jakarta.jms-api/3.1.0/jakarta.jms-api-3.1.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-osx-aarch64/1.24.0/native-osx-aarch64-1.24.0.jar (415 kB at 744 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/eatthepath/fast-uuid/0.2.0/fast-uuid-0.2.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-http-java/3.16.1/gatling-http-java-3.16.1.jar (122 kB at 216 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-jms-java/3.16.1/gatling-jms-java-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/aayushatharva/brotli4j/native-windows-x86_64/1.24.0/native-windows-x86_64-1.24.0.jar (367 kB at 650 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-redis/3.16.1/gatling-redis-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/jakarta/jms/jakarta.jms-api/3.1.0/jakarta.jms-api-3.1.0.jar (59 kB at 104 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/net/debasishg/redisclient_2.13/3.42/redisclient_2.13-3.42.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-jms/3.16.1/gatling-jms-3.16.1.jar (245 kB at 427 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-pool2/2.13.1/commons-pool2-2.13.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/eatthepath/fast-uuid/0.2.0/fast-uuid-0.2.0.jar (6.1 kB at 10 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-redis-java/3.16.1/gatling-redis-java-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-redis/3.16.1/gatling-redis-3.16.1.jar (15 kB at 25 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-charts/3.16.1/gatling-charts-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-jms-java/3.16.1/gatling-jms-java-3.16.1.jar (43 kB at 73 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/elasticsearch/elasticsearch-tdigest/8.15.5/elasticsearch-tdigest-8.15.5.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/net/debasishg/redisclient_2.13/3.42/redisclient_2.13-3.42.jar (410 kB at 691 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-recorder/3.16.1/gatling-recorder-3.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-pool2/2.13.1/commons-pool2-2.13.1.jar (156 kB at 258 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-cli/0.1.0/gatling-shared-cli-0.1.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-charts/3.16.1/gatling-charts-3.16.1.jar (361 kB at 591 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/scala-lang/modules/scala-swing_2.13/3.0.0/scala-swing_2.13-3.0.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-redis-java/3.16.1/gatling-redis-java-3.16.1.jar (7.8 kB at 13 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.23.0/jackson-databind-2.23.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/elasticsearch/elasticsearch-tdigest/8.15.5/elasticsearch-tdigest-8.15.5.jar (61 kB at 100 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.23/jackson-annotations-2.23.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-cli/0.1.0/gatling-shared-cli-0.1.0.jar (8.2 kB at 13 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-core/2.23.0/jackson-core-2.23.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-recorder/3.16.1/gatling-recorder-3.16.1.jar (730 kB at 1.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-recorder-bc-shaded/1.85.0/gatling-recorder-bc-shaded-1.85.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/scala-lang/modules/scala-swing_2.13/3.0.0/scala-swing_2.13-3.0.0.jar (739 kB at 1.2 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-http/4.2.20.Final/netty-codec-http-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.23/jackson-annotations-2.23.jar (84 kB at 132 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-common/4.2.20.Final/netty-common-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.23.0/jackson-databind-2.23.0.jar (1.7 MB at 2.6 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-buffer/4.2.20.Final/netty-buffer-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-core/2.23.0/jackson-core-2.23.0.jar (604 kB at 913 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport/4.2.20.Final/netty-transport-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-http/4.2.20.Final/netty-codec-http-4.2.20.Final.jar (687 kB at 1.0 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-base/4.2.20.Final/netty-codec-base-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-common/4.2.20.Final/netty-common-4.2.20.Final.jar (906 kB at 1.3 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-compression/4.2.20.Final/netty-codec-compression-4.2.20.Final.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-buffer/4.2.20.Final/netty-buffer-4.2.20.Final.jar (380 kB at 554 kB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-base/4.2.20.Final/netty-codec-base-4.2.20.Final.jar (157 kB at 224 kB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-transport/4.2.20.Final/netty-transport-4.2.20.Final.jar (553 kB at 787 kB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/netty/netty-codec-compression/4.2.20.Final/netty-codec-compression-4.2.20.Final.jar (238 kB at 335 kB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-recorder-bc-shaded/1.85.0/gatling-recorder-bc-shaded-1.85.0.jar (10 MB at 13 MB/s)
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ gat ---
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-filtering/3.4.0/maven-filtering-3.4.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-filtering/3.4.0/maven-filtering-3.4.0.pom (6.5 kB at 223 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-components/43/maven-shared-components-43.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-components/43/maven-shared-components-43.pom (3.8 kB at 157 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/43/maven-parent-43.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/43/maven-parent-43.pom (50 kB at 1.7 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/apache/33/apache-33.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/apache/33/apache-33.pom (24 kB at 806 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.10.3/junit-bom-5.10.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.10.3/junit-bom-5.10.3.pom (5.6 kB at 195 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/javax/inject/javax.inject/1/javax.inject-1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/javax/inject/javax.inject/1/javax.inject-1.pom (612 B at 19 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/sonatype/plexus/plexus-build-api/0.0.7/plexus-build-api-0.0.7.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/sonatype/plexus/plexus-build-api/0.0.7/plexus-build-api-0.0.7.pom (3.2 kB at 114 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/sonatype/spice/spice-parent/15/spice-parent-15.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/sonatype/spice/spice-parent/15/spice-parent-15.pom (8.4 kB at 321 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/sonatype/forge/forge-parent/5/forge-parent-5.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/sonatype/forge/forge-parent/5/forge-parent-5.pom (8.4 kB at 322 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/4.0.2/plexus-utils-4.0.2.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/4.0.2/plexus-utils-4.0.2.pom (13 kB at 427 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.1/plexus-xml-3.0.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.1/plexus-xml-3.0.1.pom (3.7 kB at 137 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/18/plexus-18.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/18/plexus-18.pom (29 kB at 1.0 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.10.2/junit-bom-5.10.2.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.10.2/junit-bom-5.10.2.pom (5.6 kB at 209 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-interpolation/1.27/plexus-interpolation-1.27.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-interpolation/1.27/plexus-interpolation-1.27.pom (3.0 kB at 108 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/16/plexus-16.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/16/plexus-16.pom (28 kB at 892 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.10.1/junit-bom-5.10.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.10.1/junit-bom-5.10.1.pom (5.6 kB at 209 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/commons-io/commons-io/2.16.1/commons-io-2.16.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/commons-io/commons-io/2.16.1/commons-io-2.16.1.pom (20 kB at 701 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-parent/69/commons-parent-69.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-parent/69/commons-parent-69.pom (77 kB at 2.3 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-lang3/3.16.0/commons-lang3-3.16.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-lang3/3.16.0/commons-lang3-3.16.0.pom (31 kB at 1.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-parent/72/commons-parent-72.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-parent/72/commons-parent-72.pom (78 kB at 2.4 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.11.0-M2/junit-bom-5.11.0-M2.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.11.0-M2/junit-bom-5.11.0-M2.pom (5.7 kB at 190 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-lang3/3.20.0/commons-lang3-3.20.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-lang3/3.20.0/commons-lang3-3.20.0.pom (33 kB at 1.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-parent/92/commons-parent-92.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-parent/92/commons-parent-92.pom (80 kB at 2.2 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.13.4/junit-bom-5.13.4.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.13.4/junit-bom-5.13.4.pom (5.7 kB at 183 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-filtering/3.4.0/maven-filtering-3.4.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-filtering/3.4.0/maven-filtering-3.4.0.jar (56 kB at 1.9 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/sonatype/plexus/plexus-build-api/0.0.7/plexus-build-api-0.0.7.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/4.0.2/plexus-utils-4.0.2.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.1/plexus-xml-3.0.1.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-interpolation/1.27/plexus-interpolation-1.27.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.1/plexus-xml-3.0.1.jar (94 kB at 4.3 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/commons-io/commons-io/2.16.1/commons-io-2.16.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/sonatype/plexus/plexus-build-api/0.0.7/plexus-build-api-0.0.7.jar (8.5 kB at 353 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-lang3/3.20.0/commons-lang3-3.20.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar (41 kB at 1.6 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/javax/inject/javax.inject/1/javax.inject-1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/4.0.2/plexus-utils-4.0.2.jar (193 kB at 6.9 MB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-interpolation/1.27/plexus-interpolation-1.27.jar (86 kB at 3.1 MB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/commons-io/commons-io/2.16.1/commons-io-2.16.1.jar (509 kB at 11 MB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/javax/inject/javax.inject/1/javax.inject-1.jar (2.5 kB at 48 kB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-lang3/3.20.0/commons-lang3-3.20.0.jar (714 kB at 14 MB/s)
+[INFO] skip non existing resourceDirectory /tmp/bench/maven-spread/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ gat ---
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-utils/3.4.2/maven-shared-utils-3.4.2.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-utils/3.4.2/maven-shared-utils-3.4.2.pom (5.9 kB at 256 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-components/39/maven-shared-components-39.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-components/39/maven-shared-components-39.pom (3.2 kB at 119 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/39/maven-parent-39.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/39/maven-parent-39.pom (48 kB at 1.8 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/apache/29/apache-29.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/apache/29/apache-29.pom (21 kB at 715 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/commons-io/commons-io/2.11.0/commons-io-2.11.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/commons-io/commons-io/2.11.0/commons-io-2.11.0.pom (20 kB at 897 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-parent/52/commons-parent-52.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/commons/commons-parent/52/commons-parent-52.pom (79 kB at 2.8 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/apache/23/apache-23.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/apache/23/apache-23.pom (18 kB at 801 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.7.2/junit-bom-5.7.2.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.7.2/junit-bom-5.7.2.pom (5.1 kB at 222 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-incremental/1.1/maven-shared-incremental-1.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-incremental/1.1/maven-shared-incremental-1.1.pom (4.7 kB at 176 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-components/19/maven-shared-components-19.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-components/19/maven-shared-components-19.pom (6.4 kB at 245 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/23/maven-parent-23.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/23/maven-parent-23.pom (33 kB at 1.3 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/apache/13/apache-13.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/apache/13/apache-13.pom (14 kB at 608 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-java/1.2.0/plexus-java-1.2.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-java/1.2.0/plexus-java-1.2.0.pom (4.3 kB at 153 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-languages/1.2.0/plexus-languages-1.2.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-languages/1.2.0/plexus-languages-1.2.0.pom (3.2 kB at 123 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/15/plexus-15.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/15/plexus-15.pom (28 kB at 926 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.10.0/junit-bom-5.10.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.10.0/junit-bom-5.10.0.pom (5.6 kB at 314 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.6/asm-9.6.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.6/asm-9.6.pom (2.4 kB at 79 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/ow2/ow2/1.5.1/ow2-1.5.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/ow2/ow2/1.5.1/ow2-1.5.1.pom (11 kB at 470 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/thoughtworks/qdox/qdox/2.0.3/qdox-2.0.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/thoughtworks/qdox/qdox/2.0.3/qdox-2.0.3.pom (17 kB at 718 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler-api/2.15.0/plexus-compiler-api-2.15.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler-api/2.15.0/plexus-compiler-api-2.15.0.pom (1.4 kB at 54 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler/2.15.0/plexus-compiler-2.15.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler/2.15.0/plexus-compiler-2.15.0.pom (7.6 kB at 281 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/17/plexus-17.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/17/plexus-17.pom (28 kB at 1.3 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/4.0.0/plexus-utils-4.0.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/4.0.0/plexus-utils-4.0.0.pom (8.7 kB at 433 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/13/plexus-13.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/13/plexus-13.pom (27 kB at 1.1 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.9.3/junit-bom-5.9.3.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.9.3/junit-bom-5.9.3.pom (5.6 kB at 209 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler-manager/2.15.0/plexus-compiler-manager-2.15.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler-manager/2.15.0/plexus-compiler-manager-2.15.0.pom (1.3 kB at 54 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.0/plexus-xml-3.0.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.0/plexus-xml-3.0.0.pom (3.7 kB at 163 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler-javac/2.15.0/plexus-compiler-javac-2.15.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler-javac/2.15.0/plexus-compiler-javac-2.15.0.pom (1.3 kB at 46 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compilers/2.15.0/plexus-compilers-2.15.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compilers/2.15.0/plexus-compilers-2.15.0.pom (1.6 kB at 54 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-utils/3.4.2/maven-shared-utils-3.4.2.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-utils/3.4.2/maven-shared-utils-3.4.2.jar (151 kB at 5.0 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/commons-io/commons-io/2.11.0/commons-io-2.11.0.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-java/1.2.0/plexus-java-1.2.0.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-incremental/1.1/maven-shared-incremental-1.1.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.6/asm-9.6.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/thoughtworks/qdox/qdox/2.0.3/qdox-2.0.3.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.6/asm-9.6.jar (124 kB at 5.9 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler-api/2.15.0/plexus-compiler-api-2.15.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-java/1.2.0/plexus-java-1.2.0.jar (58 kB at 2.6 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler-manager/2.15.0/plexus-compiler-manager-2.15.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/thoughtworks/qdox/qdox/2.0.3/qdox-2.0.3.jar (334 kB at 14 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.0/plexus-xml-3.0.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/shared/maven-shared-incremental/1.1/maven-shared-incremental-1.1.jar (14 kB at 521 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler-javac/2.15.0/plexus-compiler-javac-2.15.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/commons-io/commons-io/2.11.0/commons-io-2.11.0.jar (327 kB at 12 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/4.0.0/plexus-utils-4.0.0.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler-api/2.15.0/plexus-compiler-api-2.15.0.jar (29 kB at 709 kB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler-manager/2.15.0/plexus-compiler-manager-2.15.0.jar (5.2 kB at 125 kB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.0/plexus-xml-3.0.0.jar (93 kB at 1.7 MB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/4.0.0/plexus-utils-4.0.0.jar (192 kB at 3.1 MB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-compiler-javac/2.15.0/plexus-compiler-javac-2.15.0.jar (26 kB at 415 kB/s)
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ gat ---
+[INFO] skip non existing resourceDirectory /tmp/bench/maven-spread/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ gat ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 1 source file with javac [debug release 21] to target/test-classes
+[INFO] 
+[INFO] <<< gatling:4.22.3:test (default-cli) < test-compile @ gat <<<
+[INFO] 
+[INFO] 
+[INFO] --- gatling:4.22.3:test (default-cli) @ gat ---
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-enterprise-plugin-commons/1.28.1/gatling-enterprise-plugin-commons-1.28.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-enterprise-plugin-commons/1.28.1/gatling-enterprise-plugin-commons-1.28.1.pom (4.9 kB at 140 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-scanner/1.7.4/gatling-scanner-1.7.4.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-scanner/1.7.4/gatling-scanner-1.7.4.pom (3.7 kB at 120 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/ow2/asm/asm-tree/9.11.1/asm-tree-9.11.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/ow2/asm/asm-tree/9.11.1/asm-tree-9.11.1.pom (2.6 kB at 108 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.11.1/asm-9.11.1.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.11.1/asm-9.11.1.pom (2.4 kB at 85 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/4.2.0/plexus-utils-4.2.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/4.2.0/plexus-utils-4.2.0.pom (7.8 kB at 289 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/27/plexus-27.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus/27/plexus-27.pom (36 kB at 1.2 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-cli/0.0.7/gatling-shared-cli-0.0.7.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-cli/0.0.7/gatling-shared-cli-0.0.7.pom (1.7 kB at 74 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.pom (1.5 kB at 54 kB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-enterprise-plugin-commons/1.28.1/gatling-enterprise-plugin-commons-1.28.1.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-enterprise-plugin-commons/1.28.1/gatling-enterprise-plugin-commons-1.28.1.jar (193 kB at 6.7 MB/s)
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-scanner/1.7.4/gatling-scanner-1.7.4.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/ow2/asm/asm-tree/9.11.1/asm-tree-9.11.1.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.11.1/asm-9.11.1.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/4.2.0/plexus-utils-4.2.0.jar
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-cli/0.0.7/gatling-shared-cli-0.0.7.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.11.1/asm-9.11.1.jar (131 kB at 6.2 MB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/4.2.0/plexus-utils-4.2.0.jar (195 kB at 8.5 MB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/ow2/asm/asm-tree/9.11.1/asm-tree-9.11.1.jar (52 kB at 2.1 MB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-shared-cli/0.0.7/gatling-shared-cli-0.0.7.jar (7.6 kB at 252 kB/s)
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/io/gatling/gatling-scanner/1.7.4/gatling-scanner-1.7.4.jar (15 kB at 442 kB/s)
+[INFO] Running simulation bench.SpreadSimulation.
+04:39:38,818 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found logback-core version 1.6.7
+04:39:38,819 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - No custom configurators were discovered as a service.
+04:39:38,819 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Trying to configure with ch.qos.logback.classic.util.DefaultJoranConfigurator
+04:39:38,819 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Constructed configurator of type class ch.qos.logback.classic.util.DefaultJoranConfigurator
+04:39:38,823 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
+04:39:38,827 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback.xml] at [jar:file:/tmp/bench/m2/io/gatling/gatling-maven-plugin/4.22.3/gatling-maven-plugin-4.22.3.jar!/logback.xml]
+04:39:38,861 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 12
+04:39:38,861 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+04:39:38,886 |-INFO in ch.qos.logback.classic.model.processor.ConfigurationModelHandlerFull - Scan attribute not set.
+04:39:38,892 |-INFO in ch.qos.logback.classic.model.processor.CallerInstructionLogic@149e0f5d - No contradictions in caller extraction instruction were detected
+04:39:38,892 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [CONSOLE]
+04:39:38,892 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+04:39:38,898 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+04:39:38,922 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - NOTE: Writing to the console can be slow. Try to avoid logging to the 
+04:39:38,922 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - console in production environments, especially in high volume systems.
+04:39:38,922 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - See also https://logback.qos.ch/codes.html#slowConsole
+04:39:38,923 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - ROOT level set to WARN
+04:39:38,923 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [CONSOLE] to Logger[ROOT]
+04:39:38,923 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@1b1473ab - End of configuration.
+04:39:38,924 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@2f7c2f4f - Registering current configuration as safe fallback point
+04:39:38,929 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - ch.qos.logback.classic.util.DefaultJoranConfigurator.configure() call lasted 105 milliseconds. ExecutionStatus=DO_NOT_INVOKE_NEXT_IF_ANY
+
+
+========================================================================================================================
+2026-11-23 04:39:44 GMT                                                                               5s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |     4,485 |     4,321 |       164
+> fast                                                                               |       917 |       917 |         0
+> slow                                                                               |     2,701 |     2,701 |         0
+> mixed                                                                              |       867 |       703 |       164
+---- Errors ------------------------------------------------------------------------------------------------------------
+> status.find.in([200, 209], 304), found 500                                                                 84 (51.22%)
+> status.find.in([200, 209], 304), found 404                                                                 79 (48.17%)
+> i.g.h.c.i.PrematureCloseException: Premature close                                                          1  (0.61%)
+
+---- spread ------------------------------------------------------------------------------------------------------------
+[|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||]     0%
+          waiting:         0 / active:        50  / done:         0
+========================================================================================================================
+
+
+========================================================================================================================
+2026-11-23 04:39:49 GMT                                                                              10s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |     8,541 |     8,194 |       347
+> fast                                                                               |     1,728 |     1,728 |         0
+> slow                                                                               |     5,135 |     5,135 |         0
+> mixed                                                                              |     1,678 |     1,331 |       347
+---- Errors ------------------------------------------------------------------------------------------------------------
+> status.find.in([200, 209], 304), found 500                                                                171 (49.28%)
+> status.find.in([200, 209], 304), found 404                                                                171 (49.28%)
+> i.g.h.c.i.PrematureCloseException: Premature close                                                          5  (1.44%)
+
+---- spread ------------------------------------------------------------------------------------------------------------
+[|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||]     0%
+          waiting:         0 / active:        50  / done:         0
+========================================================================================================================
+
+
+========================================================================================================================
+2026-11-23 04:39:52 GMT                                                                              12s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |     8,605 |     8,258 |       347
+> fast                                                                               |     1,730 |     1,730 |         0
+> slow                                                                               |     5,172 |     5,172 |         0
+> mixed                                                                              |     1,703 |     1,356 |       347
+---- Errors ------------------------------------------------------------------------------------------------------------
+> status.find.in([200, 209], 304), found 500                                                                171 (49.28%)
+> status.find.in([200, 209], 304), found 404                                                                171 (49.28%)
+> i.g.h.c.i.PrematureCloseException: Premature close                                                          5  (1.44%)
+
+---- spread ------------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:        50
+========================================================================================================================
+
+Parsing log file(s)...
+Parsing log file(s) done in 0s.
+Generating reports...
+
+========================================================================================================================
+---- Global Information -------------------------------------------------------------|---Total---|-----OK----|----KO----
+> request count                                                                      |     8,605 |     8,258 |       347
+> min response time (ms)                                                             |         0 |         0 |         0
+> max response time (ms)                                                             |     3,002 |     3,002 |         6
+> mean response time (ms)                                                            |        63 |        66 |         0
+> response time std deviation (ms)                                                   |       308 |       314 |         1
+> response time 50th percentile (ms)                                                 |        50 |        50 |         0
+> response time 75th percentile (ms)                                                 |        51 |        51 |         0
+> response time 95th percentile (ms)                                                 |        52 |        52 |         1
+> response time 99th percentile (ms)                                                 |     2,787 |     2,867 |         3
+> mean throughput (rps)                                                              |    661.92 |    635.23 |     26.69
+---- Response Time Distribution ----------------------------------------------------------------------------------------
+> OK: t < 800 ms                                                                                          8,165 (94.89%)
+> OK: 800 ms <= t < 1200 ms                                                                                   0     (0%)
+> OK: t >= 1200 ms                                                                                           93  (1.08%)
+> KO                                                                                                        347  (4.03%)
+---- Errors ------------------------------------------------------------------------------------------------------------
+> status.find.in([200, 209], 304), found 500                                                                171 (49.28%)
+> status.find.in([200, 209], 304), found 404                                                                171 (49.28%)
+> i.g.h.c.i.PrematureCloseException: Premature close                                                          5  (1.44%)
+========================================================================================================================
+
+Reports generated, please open the following file: file:///tmp/bench/maven-spread/target/gatling/spreadsimulation-20261123043939635/index.html
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  21.695 s
+[INFO] Finished at: 2026-11-23T04:39:53Z
+[INFO] ------------------------------------------------------------------------

@@ -1,0 +1,113 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------------------< bench:gat >------------------------------
+[INFO] Building gat 1
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> gatling:4.22.3:test (default-cli) > test-compile @ gat >>>
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ gat ---
+[INFO] skip non existing resourceDirectory /tmp/bench/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ gat ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ gat ---
+[INFO] skip non existing resourceDirectory /tmp/bench/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ gat ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] <<< gatling:4.22.3:test (default-cli) < test-compile @ gat <<<
+[INFO] 
+[INFO] 
+[INFO] --- gatling:4.22.3:test (default-cli) @ gat ---
+[INFO] Running simulation bench.FirstSimulation.
+21:47:59,821 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found logback-core version 1.6.7
+21:47:59,822 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - No custom configurators were discovered as a service.
+21:47:59,822 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Trying to configure with ch.qos.logback.classic.util.DefaultJoranConfigurator
+21:47:59,823 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Constructed configurator of type class ch.qos.logback.classic.util.DefaultJoranConfigurator
+21:47:59,826 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
+21:47:59,829 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback.xml] at [jar:file:/tmp/bench/m2/io/gatling/gatling-maven-plugin/4.22.3/gatling-maven-plugin-4.22.3.jar!/logback.xml]
+21:47:59,864 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 12
+21:47:59,864 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+21:47:59,889 |-INFO in ch.qos.logback.classic.model.processor.ConfigurationModelHandlerFull - Scan attribute not set.
+21:47:59,894 |-INFO in ch.qos.logback.classic.model.processor.CallerInstructionLogic@149e0f5d - No contradictions in caller extraction instruction were detected
+21:47:59,895 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [CONSOLE]
+21:47:59,895 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+21:47:59,902 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+21:47:59,924 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - NOTE: Writing to the console can be slow. Try to avoid logging to the 
+21:47:59,924 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - console in production environments, especially in high volume systems.
+21:47:59,924 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - See also https://logback.qos.ch/codes.html#slowConsole
+21:47:59,925 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - ROOT level set to WARN
+21:47:59,925 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [CONSOLE] to Logger[ROOT]
+21:47:59,925 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@1b1473ab - End of configuration.
+21:47:59,925 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@2f7c2f4f - Registering current configuration as safe fallback point
+21:47:59,929 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - ch.qos.logback.classic.util.DefaultJoranConfigurator.configure() call lasted 102 milliseconds. ExecutionStatus=DO_NOT_INVOKE_NEXT_IF_ANY
+
+
+========================================================================================================================
+2026-11-23 21:48:03 GMT                                                                               2s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |       200 |       200 |         0
+> index                                                                              |       200 |       200 |         0
+
+---- burst -------------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:       200
+========================================================================================================================
+
+[INFO] Running simulation bench.SecondSimulation.
+21:48:03,132 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found logback-core version 1.6.7
+21:48:03,133 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - No custom configurators were discovered as a service.
+21:48:03,133 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Trying to configure with ch.qos.logback.classic.util.DefaultJoranConfigurator
+21:48:03,133 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Constructed configurator of type class ch.qos.logback.classic.util.DefaultJoranConfigurator
+21:48:03,137 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
+21:48:03,140 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback.xml] at [jar:file:/tmp/bench/m2/io/gatling/gatling-maven-plugin/4.22.3/gatling-maven-plugin-4.22.3.jar!/logback.xml]
+21:48:03,173 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 12
+21:48:03,173 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+21:48:03,210 |-INFO in ch.qos.logback.classic.model.processor.ConfigurationModelHandlerFull - Scan attribute not set.
+21:48:03,216 |-INFO in ch.qos.logback.classic.model.processor.CallerInstructionLogic@149e0f5d - No contradictions in caller extraction instruction were detected
+21:48:03,219 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [CONSOLE]
+21:48:03,219 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+21:48:03,227 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+21:48:03,254 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - NOTE: Writing to the console can be slow. Try to avoid logging to the 
+21:48:03,254 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - console in production environments, especially in high volume systems.
+21:48:03,254 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - See also https://logback.qos.ch/codes.html#slowConsole
+21:48:03,254 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - ROOT level set to WARN
+21:48:03,255 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [CONSOLE] to Logger[ROOT]
+21:48:03,255 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@1b1473ab - End of configuration.
+21:48:03,255 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@2f7c2f4f - Registering current configuration as safe fallback point
+21:48:03,259 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - ch.qos.logback.classic.util.DefaultJoranConfigurator.configure() call lasted 123 milliseconds. ExecutionStatus=DO_NOT_INVOKE_NEXT_IF_ANY
+
+
+========================================================================================================================
+2026-11-23 21:48:08 GMT                                                                               5s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |        10 |        10 |         0
+> index                                                                              |        10 |        10 |         0
+
+---- trickle -----------------------------------------------------------------------------------------------------------
+[#####################################################################                                          ]  62.5%
+          waiting:         6 / active:         0  / done:        10
+========================================================================================================================
+
+
+========================================================================================================================
+2026-11-23 21:48:11 GMT                                                                               7s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |        16 |        16 |         0
+> index                                                                              |        16 |        16 |         0
+
+---- trickle -----------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:        16
+========================================================================================================================
+
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  13.051 s
+[INFO] Finished at: 2026-11-23T21:48:11Z
+[INFO] ------------------------------------------------------------------------

@@ -1,0 +1,166 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------------------< bench:gat >------------------------------
+[INFO] Building gat 1
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> gatling:4.22.3:test (default-cli) > test-compile @ gat >>>
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ gat ---
+[INFO] skip non existing resourceDirectory /tmp/bench/maven-multi/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ gat ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ gat ---
+[INFO] skip non existing resourceDirectory /tmp/bench/maven-multi/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ gat ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 2 source files with javac [debug release 21] to target/test-classes
+[INFO] 
+[INFO] <<< gatling:4.22.3:test (default-cli) < test-compile @ gat <<<
+[INFO] 
+[INFO] 
+[INFO] --- gatling:4.22.3:test (default-cli) @ gat ---
+[INFO] Running simulation bench.DropSimulation.
+04:21:28,048 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found logback-core version 1.6.7
+04:21:28,049 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - No custom configurators were discovered as a service.
+04:21:28,049 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Trying to configure with ch.qos.logback.classic.util.DefaultJoranConfigurator
+04:21:28,049 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Constructed configurator of type class ch.qos.logback.classic.util.DefaultJoranConfigurator
+04:21:28,052 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
+04:21:28,055 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback.xml] at [jar:file:/tmp/bench/.m2/repository/io/gatling/gatling-maven-plugin/4.22.3/gatling-maven-plugin-4.22.3.jar!/logback.xml]
+04:21:28,081 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 12
+04:21:28,081 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+04:21:28,105 |-INFO in ch.qos.logback.classic.model.processor.ConfigurationModelHandlerFull - Scan attribute not set.
+04:21:28,110 |-INFO in ch.qos.logback.classic.model.processor.CallerInstructionLogic@149e0f5d - No contradictions in caller extraction instruction were detected
+04:21:28,111 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [CONSOLE]
+04:21:28,111 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+04:21:28,117 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+04:21:28,140 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - NOTE: Writing to the console can be slow. Try to avoid logging to the 
+04:21:28,140 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - console in production environments, especially in high volume systems.
+04:21:28,140 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - See also https://logback.qos.ch/codes.html#slowConsole
+04:21:28,140 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - ROOT level set to WARN
+04:21:28,141 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [CONSOLE] to Logger[ROOT]
+04:21:28,141 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@1b1473ab - End of configuration.
+04:21:28,141 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@2f7c2f4f - Registering current configuration as safe fallback point
+04:21:28,145 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - ch.qos.logback.classic.util.DefaultJoranConfigurator.configure() call lasted 92 milliseconds. ExecutionStatus=DO_NOT_INVOKE_NEXT_IF_ANY
+
+
+========================================================================================================================
+2026-11-23 04:21:32 GMT                                                                               3s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |    75,085 |         0 |    75,085
+> drop                                                                               |    75,085 |         0 |    75,085
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                     75,085   (100%)
+
+---- drop --------------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:         2
+========================================================================================================================
+
+Parsing log file(s)...
+Parsing log file(s) done in 0s.
+Generating reports...
+
+========================================================================================================================
+---- Global Information -------------------------------------------------------------|---Total---|-----OK----|----KO----
+> request count                                                                      |    75,085 |         - |    75,085
+> min response time (ms)                                                             |         0 |         - |         0
+> max response time (ms)                                                             |         4 |         - |         4
+> mean response time (ms)                                                            |         0 |         - |         0
+> response time std deviation (ms)                                                   |         0 |         - |         0
+> response time 50th percentile (ms)                                                 |         0 |         - |         0
+> response time 75th percentile (ms)                                                 |         0 |         - |         0
+> response time 95th percentile (ms)                                                 |         1 |         - |         1
+> response time 99th percentile (ms)                                                 |         1 |         - |         1
+> mean throughput (rps)                                                              | 18,771.25 |         - | 18,771.25
+---- Response Time Distribution ----------------------------------------------------------------------------------------
+> OK: t < 800 ms                                                                                              0     (0%)
+> OK: 800 ms <= t < 1200 ms                                                                                   0     (0%)
+> OK: t >= 1200 ms                                                                                            0     (0%)
+> KO                                                                                                     75,085   (100%)
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                     75,085   (100%)
+========================================================================================================================
+
+Reports generated, please open the following file: file:///tmp/bench/maven-multi/target/gatling/dropsimulation-20261123042128857/index.html
+[INFO] Running simulation bench.NamesSimulation.
+04:21:32,554 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found logback-core version 1.6.7
+04:21:32,555 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - No custom configurators were discovered as a service.
+04:21:32,555 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Trying to configure with ch.qos.logback.classic.util.DefaultJoranConfigurator
+04:21:32,556 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Constructed configurator of type class ch.qos.logback.classic.util.DefaultJoranConfigurator
+04:21:32,559 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
+04:21:32,562 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback.xml] at [jar:file:/tmp/bench/.m2/repository/io/gatling/gatling-maven-plugin/4.22.3/gatling-maven-plugin-4.22.3.jar!/logback.xml]
+04:21:32,601 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 12
+04:21:32,601 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+04:21:32,630 |-INFO in ch.qos.logback.classic.model.processor.ConfigurationModelHandlerFull - Scan attribute not set.
+04:21:32,637 |-INFO in ch.qos.logback.classic.model.processor.CallerInstructionLogic@149e0f5d - No contradictions in caller extraction instruction were detected
+04:21:32,638 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [CONSOLE]
+04:21:32,638 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+04:21:32,644 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+04:21:32,670 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - NOTE: Writing to the console can be slow. Try to avoid logging to the 
+04:21:32,670 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - console in production environments, especially in high volume systems.
+04:21:32,670 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - See also https://logback.qos.ch/codes.html#slowConsole
+04:21:32,671 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - ROOT level set to WARN
+04:21:32,671 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [CONSOLE] to Logger[ROOT]
+04:21:32,672 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@1b1473ab - End of configuration.
+04:21:32,672 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@2f7c2f4f - Registering current configuration as safe fallback point
+04:21:32,676 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - ch.qos.logback.classic.util.DefaultJoranConfigurator.configure() call lasted 116 milliseconds. ExecutionStatus=DO_NOT_INVOKE_NEXT_IF_ANY
+
+
+========================================================================================================================
+2026-11-23 04:21:37 GMT                                                                               3s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |   202,017 |   201,899 |       118
+> Global                                                                             |       118 |       118 |         0
+> closed                                                                             |   201,309 |   201,309 |         0
+> a | b | c                                                                          |       118 |         0 |       118
+> a request name long enough that the console table cuts it short, past eighty-tw... |       118 |       118 |         0
+> a request name long enough that the console table cuts it short, past eighty-tw... |       118 |       118 |         0
+> café ☕                                                                             |       118 |       118 |         0
+> outer / inner / deep                                                               |       118 |       118 |         0
+---- Errors ------------------------------------------------------------------------------------------------------------
+> status.find.in([200, 209], 304), found 500                                                                118   (100%)
+
+---- open --------------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:         2
+---- closed ------------------------------------------------------------------------------------------------------------
+          active:         0  / done:         2
+========================================================================================================================
+
+Parsing log file(s)...
+Parsing log file(s) done in 0s.
+Generating reports...
+
+========================================================================================================================
+---- Global Information -------------------------------------------------------------|---Total---|-----OK----|----KO----
+> request count                                                                      |   202,017 |   201,899 |       118
+> min response time (ms)                                                             |         0 |         0 |         0
+> max response time (ms)                                                             |        52 |        52 |         1
+> mean response time (ms)                                                            |         0 |         0 |         0
+> response time std deviation (ms)                                                   |         1 |         1 |         0
+> response time 50th percentile (ms)                                                 |         0 |         0 |         0
+> response time 75th percentile (ms)                                                 |         0 |         0 |         0
+> response time 95th percentile (ms)                                                 |         0 |         0 |         1
+> response time 99th percentile (ms)                                                 |         1 |         1 |         1
+> mean throughput (rps)                                                              | 50,504.25 | 50,474.75 |      29.5
+---- Response Time Distribution ----------------------------------------------------------------------------------------
+> OK: t < 800 ms                                                                                        201,899 (99.94%)
+> OK: 800 ms <= t < 1200 ms                                                                                   0     (0%)
+> OK: t >= 1200 ms                                                                                            0     (0%)
+> KO                                                                                                        118  (0.06%)
+---- Errors ------------------------------------------------------------------------------------------------------------
+> status.find.in([200, 209], 304), found 500                                                                118   (100%)
+========================================================================================================================
+
+Reports generated, please open the following file: file:///tmp/bench/maven-multi/target/gatling/namessimulation-20261123042133435/index.html
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  11.272 s
+[INFO] Finished at: 2026-11-23T04:21:37Z
+[INFO] ------------------------------------------------------------------------

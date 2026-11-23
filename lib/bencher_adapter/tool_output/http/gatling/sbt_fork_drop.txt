@@ -1,0 +1,50 @@
+[info] welcome to sbt 1.13.1 (Eclipse Adoptium Java 21.0.13.1)
+[info] loading settings for project sbt-fork-build from plugins.sbt...
+[info] loading project definition from /tmp/bench/sbt-fork/project
+[info] loading settings for project root from build.sbt...
+[info] set current project to gatling-sbt-plugin-demo (in build file:/tmp/bench/sbt-fork/)
+[info] compiling 2 Scala sources to /tmp/bench/sbt-fork/target/scala-2.13/test-classes ...
+[info] done compiling
+
+========================================================================================================================
+2026-11-23 04:28:03 GMT                                                                               3s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |    73,231 |         0 |    73,231
+> drop                                                                               |    73,231 |         0 |    73,231
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                     73,231   (100%)
+
+---- drop --------------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:         2
+========================================================================================================================
+
+Parsing log file(s)...
+Parsing log file(s) done in 0s.
+Generating reports...
+
+========================================================================================================================
+---- Global Information -------------------------------------------------------------|---Total---|-----OK----|----KO----
+> request count                                                                      |    73,231 |         - |    73,231
+> min response time (ms)                                                             |         0 |         - |         0
+> max response time (ms)                                                             |         4 |         - |         4
+> mean response time (ms)                                                            |         0 |         - |         0
+> response time std deviation (ms)                                                   |         0 |         - |         0
+> response time 50th percentile (ms)                                                 |         0 |         - |         0
+> response time 75th percentile (ms)                                                 |         0 |         - |         0
+> response time 95th percentile (ms)                                                 |         1 |         - |         1
+> response time 99th percentile (ms)                                                 |         1 |         - |         1
+> mean throughput (rps)                                                              | 18,307.75 |         - | 18,307.75
+---- Response Time Distribution ----------------------------------------------------------------------------------------
+> OK: t < 800 ms                                                                                              0     (0%)
+> OK: 800 ms <= t < 1200 ms                                                                                   0     (0%)
+> OK: t >= 1200 ms                                                                                            0     (0%)
+> KO                                                                                                     73,231   (100%)
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                     73,231   (100%)
+========================================================================================================================
+
+Reports generated, please open the following file: file:///tmp/bench/sbt-fork/target/gatling/dropsimulation-20261123042800026/index.html
+[info] Simulation DropSimulation successful.
+[info] Simulation(s) execution ended.
+[success] Total time: 7 s, completed Nov 23, 2026, 4:28:03 AM

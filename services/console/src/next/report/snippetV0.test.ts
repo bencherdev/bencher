@@ -39,6 +39,7 @@ const CLI_ADAPTERS = new Set([
 	"cpp_google",
 	"dart_benchmark_harness",
 	"go_bench",
+	"http_gatling",
 	"http_k6",
 	"java_jmh",
 	"js_benchmark",
