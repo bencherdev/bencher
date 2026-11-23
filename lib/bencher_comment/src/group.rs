@@ -467,6 +467,7 @@ fn adapter_docs(adapter: Adapter) -> (&'static str, &'static str) {
         Adapter::HttpK6 | Adapter::HttpK6Json | Adapter::HttpK6JsonSummary => {
             ("HTTP k6", "-http-k6")
         },
+        Adapter::HttpJmeter => ("HTTP JMeter", "-http-jmeter"),
     }
 }
 

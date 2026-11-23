@@ -1,0 +1,50 @@
+{
+  "fast" : {
+    "transaction" : "fast",
+    "sampleCount" : 100,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 41.110000000000014,
+    "medianResTime" : 42.0,
+    "minResTime" : 18.0,
+    "maxResTime" : 43.0,
+    "pct1ResTime" : 42.0,
+    "pct2ResTime" : 42.94999999999999,
+    "pct3ResTime" : 43.0,
+    "throughput" : 48.56726566294318,
+    "receivedKBytesPerSec" : 5.3594736522583775,
+    "sentKBytesPerSec" : 5.881192326372025
+  },
+  "Total" : {
+    "transaction" : "Total",
+    "sampleCount" : 100,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 41.110000000000014,
+    "medianResTime" : 42.0,
+    "minResTime" : 18.0,
+    "maxResTime" : 43.0,
+    "pct1ResTime" : 42.0,
+    "pct2ResTime" : 42.94999999999999,
+    "pct3ResTime" : 43.0,
+    "throughput" : 48.56726566294318,
+    "receivedKBytesPerSec" : 5.3594736522583775,
+    "sentKBytesPerSec" : 5.881192326372025
+  },
+  "empty" : {
+    "transaction" : "empty",
+    "sampleCount" : 0,
+    "errorCount" : 0,
+    "errorPct" : "NaN",
+    "meanResTime" : "NaN",
+    "medianResTime" : "NaN",
+    "minResTime" : 9.223372036854776E18,
+    "maxResTime" : -9.223372036854776E18,
+    "pct1ResTime" : "NaN",
+    "pct2ResTime" : "NaN",
+    "pct3ResTime" : "NaN",
+    "throughput" : 0.0,
+    "receivedKBytesPerSec" : 0.0,
+    "sentKBytesPerSec" : 0.0
+  }
+}

@@ -40,6 +40,8 @@ export const adapterName = (adapter: Adapter): string => {
 		case Adapter.HttpK6Json:
 		case Adapter.HttpK6JsonSummary:
 			return "k6";
+		case Adapter.HttpJmeter:
+			return "Apache JMeter";
 		case Adapter.JavaJmh:
 			return "Java Microbenchmark Harness (JMH)";
 		case Adapter.CSharpDotNet:
@@ -108,6 +110,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.HttpK6Json:
 		case Adapter.HttpK6JsonSummary:
 			return `bencher run${host} --file summary.json "k6 run --quiet --new-machine-readable-summary --summary-export summary.json script.js"`;
+		case Adapter.HttpJmeter:
+			return `bencher run${host} --file report/statistics.json "jmeter -n -f -t plan.jmx -l results.jtl -e -o report"`;
 		case Adapter.JavaJmh:
 			return `bencher run${host} --file results.json "java -jar benchmarks.jar -rf json -rff results.json"`;
 		case Adapter.CSharpDotNet:
