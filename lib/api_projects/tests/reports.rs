@@ -2804,6 +2804,48 @@ async fn reports_post_creates_the_mitata_measures_in_their_units() {
     );
 }
 
+// POST /v0/projects/{project}/reports - the Haskell criterion leaf creates its new built-in measures
+// in their units
+//
+// Kills: `gc-copied` or `gc-collections` missing from the server's built-ins, which creates it in
+// the generic unit.
+#[tokio::test]
+async fn reports_post_creates_the_haskell_criterion_measures_in_their_units() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "haskellcriterion").await;
+    post_report_body(
+        &server,
+        &token,
+        &project_slug,
+        &parse_report(
+            "haskell_criterion",
+            &[HASKELL_CRITERION_RESPONDERS],
+            Some(1),
+        ),
+    )
+    .await;
+    let project_id = get_project_id(&server, &project_slug);
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq_any(["gc-collections", "gc-copied"]))
+        .order(schema::measure::slug)
+        .select((
+            schema::measure::slug,
+            schema::measure::name,
+            schema::measure::units,
+        ))
+        .load::<(String, String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures");
+    assert_eq!(
+        measures,
+        [
+            ("gc-collections", "GC Collections", "collections"),
+            ("gc-copied", "GC Copied", "bytes (B)"),
+        ]
+        .map(|(slug, name, units)| (slug.to_owned(), name.to_owned(), units.to_owned()))
+    );
+}
+
 // POST /v0/projects/{project}/reports - the benchmark prefix goes in front of every name at
 // version 1, whether a harness leaf, the user's own BMF JSON, or `magic` parsed it, and a version
 // 0 report ignores it
@@ -2868,6 +2910,8 @@ const MITATA_COUNTERS: &str =
 const HYPERFINE_COUNTERS: &str =
     include_str!("../../bencher_adapter/tool_output/shell/hyperfine/v2_counters.json");
 const ASV_PARAMS: &str = include_str!("../../bencher_adapter/tool_output/python/asv/params.txt");
+const HASKELL_CRITERION_RESPONDERS: &str =
+    include_str!("../../bencher_adapter/tool_output/haskell/criterion/criterion_responders.json");
 const DART_EMITTERS: &str =
     include_str!("../../bencher_adapter/tool_output/dart/benchmark_harness/emitters.txt");
 const JMH_LONG_PARAM_ONLY: &str =

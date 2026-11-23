@@ -36,6 +36,8 @@ export const adapterName = (adapter: Adapter): string => {
 		case Adapter.GoBenchJson:
 		case Adapter.GoBenchText:
 			return "go test -bench";
+		case Adapter.HaskellCriterion:
+			return "criterion";
 		case Adapter.JavaJmh:
 			return "Java Microbenchmark Harness (JMH)";
 		case Adapter.CSharpDotNet:
@@ -100,6 +102,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.GoBenchJson:
 		case Adapter.GoBenchText:
 			return `bencher run${host} "go test -bench"`;
+		case Adapter.HaskellCriterion:
+			return `bencher run${host} --file results.json "cabal bench --benchmark-options='--json results.json'"`;
 		case Adapter.JavaJmh:
 			return `bencher run${host} --file results.json "java -jar benchmarks.jar -rf json -rff results.json"`;
 		case Adapter.CSharpDotNet:

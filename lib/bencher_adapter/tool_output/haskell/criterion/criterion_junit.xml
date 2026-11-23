@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Criterion benchmarks" tests="5">
+  <testcase name="fib/10" time="0.00000005850628657108838" />
+  <testcase name="fib/20" time="0.00000012406837394192004" />
+  <testcase name="fib/with space" time="0.00000019292127456971272" />
+  <testcase name="list/sum/1000" time="0.0000008838607560051255" />
+  <testcase name="list/replicate" time="0.00000026246027781983634" />
+</testsuite>

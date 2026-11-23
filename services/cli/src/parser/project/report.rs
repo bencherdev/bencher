@@ -198,6 +198,8 @@ pub enum CliReportAdapter {
     DartBenchmarkHarness,
     /// 🕳 Go Bench
     GoBench,
+    /// 🟪 Haskell criterion
+    HaskellCriterion,
     /// ☕️ Java JMH
     JavaJmh,
     /// 🕸 JavaScript Benchmark

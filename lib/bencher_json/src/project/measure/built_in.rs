@@ -404,3 +404,15 @@ pub mod gungraun {
         "suppressed contexts"
     );
 }
+
+pub mod haskell {
+    use bencher_valid::BYTES;
+
+    create_measure!(GcCopied, "GC Copied", "gc-copied", BYTES);
+    create_measure!(
+        GcCollections,
+        "GC Collections",
+        "gc-collections",
+        "collections"
+    );
+}

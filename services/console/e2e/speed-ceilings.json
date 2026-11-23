@@ -258,7 +258,7 @@
 		"jsBytes": 80373,
 		"deferredJsBytes": 117968,
 		"stylesheets": 1,
-		"htmlBytes": 2840,
+		"htmlBytes": 2891,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -301,7 +301,7 @@
 		"cls": 0.00025,
 		"jsBytes": 107701,
 		"deferredJsBytes": 112880,
-		"htmlBytes": 2850,
+		"htmlBytes": 2901,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
