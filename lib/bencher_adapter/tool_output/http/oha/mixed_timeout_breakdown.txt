@@ -1,0 +1,98 @@
+Summary:
+  Success rate:	88.67%
+  Total:	2007451.8460 us
+  Slowest:	517.1610 us
+  Fastest:	11.3690 us
+  Average:	80.8764 us
+  Requests/sec:	298.8864
+
+  Total data:	1.23 KiB
+  Size/request:	2 B
+  Size/sec:	627 B
+
+Response time histogram:
+   11.369 us [1]   |
+   61.948 us [350] |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  112.527 us [95]  |■■■■■■■■
+  163.107 us [23]  |■■
+  213.686 us [17]  |■
+  264.265 us [10]  |
+  314.844 us [9]   |
+  365.423 us [6]   |
+  416.003 us [12]  |■
+  466.582 us [5]   |
+  517.161 us [4]   |
+
+Response time distribution:
+  10.00% in 23.8170 us
+  25.00% in 32.4610 us
+  50.00% in 46.7230 us
+  75.00% in 81.7670 us
+  90.00% in 192.4920 us
+  95.00% in 322.2130 us
+  99.00% in 444.5970 us
+  99.90% in 517.1610 us
+  99.99% in 517.1610 us
+
+Response time histogram (2xx only):
+   11.369 us [1]   |
+   61.948 us [265] |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  112.527 us [82]  |■■■■■■■■■
+  163.107 us [21]  |■■
+  213.686 us [15]  |■
+  264.265 us [8]   |
+  314.844 us [7]   |
+  365.423 us [5]   |
+  416.003 us [8]   |
+  466.582 us [4]   |
+  517.161 us [4]   |
+
+Response time distribution (2xx only):
+  10.00% in 24.7900 us
+  25.00% in 32.7200 us
+  50.00% in 47.9950 us
+  75.00% in 86.3960 us
+  90.00% in 192.9530 us
+  95.00% in 322.2130 us
+  99.00% in 461.6240 us
+  99.90% in 517.1610 us
+  99.99% in 517.1610 us
+
+Response time histogram (4xx + 5xx only):
+   12.309 us [1]  |
+   52.968 us [75] |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+   93.626 us [19] |■■■■■■■■
+  134.285 us [3]  |■
+  174.944 us [3]  |■
+  215.602 us [1]  |
+  256.261 us [1]  |
+  296.920 us [2]  |
+  337.579 us [2]  |
+  378.237 us [0]  |
+  418.896 us [5]  |■■
+
+Response time distribution (4xx + 5xx only):
+  10.00% in 22.6260 us
+  25.00% in 32.1190 us
+  50.00% in 41.2150 us
+  75.00% in 61.7570 us
+  90.00% in 166.1900 us
+  95.00% in 334.2450 us
+  99.00% in 395.0790 us
+  99.90% in 418.8960 us
+  99.99% in 418.8960 us
+
+
+Details (average, fastest, slowest):
+  DNS+dialup:	77.3733 us, 13.6310 us, 292.1580 us
+  DNS-lookup:	14.9616 us, 1.4910 us, 64.3220 us
+  First byte:	82.6319 us, 11.3180 us, 517.1010 us
+
+Status code distribution:
+  [200] 420 responses
+  [404] 60 responses
+  [500] 52 responses
+
+Error distribution:
+  [38] timeout
+  [30] connection closed before message completed
