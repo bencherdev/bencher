@@ -40,6 +40,10 @@ export const adapterName = (adapter: Adapter): string => {
 		case Adapter.HttpK6Json:
 		case Adapter.HttpK6JsonSummary:
 			return "k6";
+		case Adapter.HttpLocust:
+		case Adapter.HttpLocustCsv:
+		case Adapter.HttpLocustJson:
+			return "Locust";
 		case Adapter.JavaJmh:
 			return "Java Microbenchmark Harness (JMH)";
 		case Adapter.CSharpDotNet:
@@ -108,6 +112,10 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.HttpK6Json:
 		case Adapter.HttpK6JsonSummary:
 			return `bencher run${host} --file summary.json "k6 run --quiet --new-machine-readable-summary --summary-export summary.json script.js"`;
+		case Adapter.HttpLocust:
+		case Adapter.HttpLocustCsv:
+		case Adapter.HttpLocustJson:
+			return `bencher run${host} --file results_stats.csv "locust --headless -u 10 -r 10 -t 1m -H http://localhost:8080 --only-summary --csv results"`;
 		case Adapter.JavaJmh:
 			return `bencher run${host} --file results.json "java -jar benchmarks.jar -rf json -rff results.json"`;
 		case Adapter.CSharpDotNet:

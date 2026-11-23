@@ -1,0 +1,97 @@
+[
+    {
+        "name": "/fast",
+        "method": "GET",
+        "last_request_timestamp": 1794719998.7156255,
+        "start_time": 1794719993.827912,
+        "num_requests": 657,
+        "num_none_requests": 0,
+        "num_failures": 0,
+        "total_response_time": 346.49505799620783,
+        "max_response_time": 4.54925799999728,
+        "min_response_time": 0.2773809999325749,
+        "total_content_length": 1971,
+        "response_times": {
+            "2": 2,
+            "3": 3,
+            "4": 3,
+            "5": 1,
+            "1": 222,
+            "0": 426
+        },
+        "num_reqs_per_sec": {
+            "1794719993": 30,
+            "1794719994": 129,
+            "1794719995": 94,
+            "1794719996": 141,
+            "1794719997": 148,
+            "1794719998": 115
+        },
+        "num_fail_per_sec": {}
+    },
+    {
+        "name": "/mixed",
+        "method": "GET",
+        "last_request_timestamp": 1794719998.6926823,
+        "start_time": 1794719993.8290544,
+        "num_requests": 223,
+        "num_none_requests": 0,
+        "num_failures": 58,
+        "total_response_time": 6129.654141002902,
+        "max_response_time": 1001.63317800002,
+        "min_response_time": 0.30534600000464707,
+        "total_content_length": 495,
+        "response_times": {
+            "5": 1,
+            "1": 74,
+            "0": 141,
+            "11": 1,
+            "1000": 6
+        },
+        "num_reqs_per_sec": {
+            "1794719993": 12,
+            "1794719994": 38,
+            "1794719995": 43,
+            "1794719996": 46,
+            "1794719997": 48,
+            "1794719998": 36
+        },
+        "num_fail_per_sec": {
+            "1794719993": 2,
+            "1794719994": 7,
+            "1794719995": 13,
+            "1794719996": 13,
+            "1794719997": 13,
+            "1794719998": 10
+        }
+    },
+    {
+        "name": "/slow",
+        "method": "GET",
+        "last_request_timestamp": 1794719998.7084785,
+        "start_time": 1794719993.8793771,
+        "num_requests": 197,
+        "num_none_requests": 0,
+        "num_failures": 0,
+        "total_response_time": 10079.95218900237,
+        "max_response_time": 58.40692299989314,
+        "min_response_time": 50.4230799999732,
+        "total_content_length": 3227648,
+        "response_times": {
+            "57": 1,
+            "51": 165,
+            "52": 28,
+            "58": 1,
+            "50": 2
+        },
+        "num_reqs_per_sec": {
+            "1794719993": 7,
+            "1794719994": 40,
+            "1794719995": 33,
+            "1794719996": 39,
+            "1794719997": 46,
+            "1794719998": 32
+        },
+        "num_fail_per_sec": {}
+    }
+]

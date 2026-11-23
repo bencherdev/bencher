@@ -6,7 +6,7 @@ use crate::{
             cpp::{catch2::AdapterCppCatch2V1, google::AdapterCppGoogleV1},
             dart::benchmark_harness::AdapterDartBenchmarkHarnessV1,
             go::bench::AdapterGoBenchV1,
-            http::k6::AdapterHttpK6,
+            http::{k6::AdapterHttpK6, locust::AdapterHttpLocust},
             java::jmh::AdapterJavaJmhV1,
             js::{
                 benchmark::AdapterJsBenchmarkV1, deno::AdapterJsDeno, mitata::AdapterJsMitata,
@@ -56,6 +56,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterRustGungraunV1::parse(input, settings))
             .or_else(|| AdapterShellHyperfineV1::parse(input, settings))
             .or_else(|| AdapterHttpK6::parse(input, settings))
+            .or_else(|| AdapterHttpLocust::parse(input, settings))
     }
 }
 
@@ -73,7 +74,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 33] = [
+    const LEAVES: [Adapter; 35] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -107,11 +108,13 @@ mod test_magic_v1 {
         Adapter::ShellHyperfineV1,
         Adapter::HttpK6Json,
         Adapter::HttpK6JsonSummary,
+        Adapter::HttpLocustCsv,
+        Adapter::HttpLocustJson,
     ];
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 12] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 19] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -137,6 +140,17 @@ mod test_magic_v1 {
         ("rust/gungraun/json_not_v6.txt", None),
         // k6's text summary, which k6 does not support parsing.
         ("http/k6/text_scenarios.txt", None),
+        // hey's CSV, one row per request, which no leaf reads.
+        ("http/hey/hey_csv_head.txt", None),
+        // Locust's other CSV files and its log, which no leaf reads.
+        ("http/locust/basic_stats_history.csv", None),
+        ("http/locust/multi_exceptions.csv", None),
+        ("http/locust/multi_failures.csv", None),
+        ("http/locust/multi_text.txt", None),
+        // Locust 1.0's own CSV writer, whose integer times are not Locust's statistics.
+        ("http/locust/v1_0_3_multi_stats.csv", None),
+        // A Locust run in which no request finished prints an empty document.
+        ("http/locust/hang.json", None),
     ];
 
     /// The fixtures that a second leaf also claims, one `magic` tries after the owner, with that
@@ -276,6 +290,10 @@ mod test_magic_v1 {
                     Adapter::HttpK6JsonSummary
                 });
             },
+            "http/locust" => (
+                extension == Some("json"),
+                (Adapter::HttpLocustJson, Adapter::HttpLocustCsv),
+            ),
             "js/vitest" => (
                 name.starts_with("v5"),
                 (Adapter::JsVitestV5, Adapter::JsVitestV1),

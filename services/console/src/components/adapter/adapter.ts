@@ -51,6 +51,10 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.HttpK6Json:
 		case Adapter.HttpK6JsonSummary:
 			return K6_ICON;
+		case Adapter.HttpLocust:
+		case Adapter.HttpLocustCsv:
+		case Adapter.HttpLocustJson:
+			return PYTHON_ICON;
 		case Adapter.JavaJmh:
 			return JAVA_ICON;
 		case Adapter.CSharpDotNet:
@@ -115,6 +119,10 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.HttpK6Json:
 		case Adapter.HttpK6JsonSummary:
 			return `bencher run${host} --file summary.json "k6 run --quiet --new-machine-readable-summary --summary-export summary.json script.js"`;
+		case Adapter.HttpLocust:
+		case Adapter.HttpLocustCsv:
+		case Adapter.HttpLocustJson:
+			return `bencher run${host} --file results_stats.csv "locust --headless -u 10 -r 10 -t 1m -H http://localhost:8080 --only-summary --csv results"`;
 		case Adapter.JavaJmh:
 			return `bencher run${host} --file results.json "java -jar benchmarks.jar -rf json -rff results.json"`;
 		case Adapter.CSharpDotNet:
