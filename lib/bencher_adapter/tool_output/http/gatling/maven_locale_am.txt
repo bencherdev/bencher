@@ -1,0 +1,110 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------------------< bench:gat >------------------------------
+[INFO] Building gat 1
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> gatling:4.22.3:test (default-cli) > test-compile @ gat >>>
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ gat ---
+[INFO] skip non existing resourceDirectory /tmp/bench/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ gat ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ gat ---
+[INFO] skip non existing resourceDirectory /tmp/bench/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ gat ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] <<< gatling:4.22.3:test (default-cli) < test-compile @ gat <<<
+[INFO] 
+[INFO] 
+[INFO] --- gatling:4.22.3:test (default-cli) @ gat ---
+[INFO] Running simulation bench.LocaleSimulation.
+21:48:12,789 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found logback-core version 1.6.7
+21:48:12,790 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - No custom configurators were discovered as a service.
+21:48:12,790 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Trying to configure with ch.qos.logback.classic.util.DefaultJoranConfigurator
+21:48:12,791 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Constructed configurator of type class ch.qos.logback.classic.util.DefaultJoranConfigurator
+21:48:12,795 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
+21:48:12,798 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback.xml] at [jar:file:/tmp/bench/m2/io/gatling/gatling-maven-plugin/4.22.3/gatling-maven-plugin-4.22.3.jar!/logback.xml]
+21:48:12,837 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 12
+21:48:12,837 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+21:48:12,869 |-INFO in ch.qos.logback.classic.model.processor.ConfigurationModelHandlerFull - Scan attribute not set.
+21:48:12,875 |-INFO in ch.qos.logback.classic.model.processor.CallerInstructionLogic@149e0f5d - No contradictions in caller extraction instruction were detected
+21:48:12,876 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [CONSOLE]
+21:48:12,876 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+21:48:12,883 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+21:48:12,911 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - NOTE: Writing to the console can be slow. Try to avoid logging to the 
+21:48:12,911 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - console in production environments, especially in high volume systems.
+21:48:12,911 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - See also https://logback.qos.ch/codes.html#slowConsole
+21:48:12,911 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - ROOT level set to WARN
+21:48:12,912 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [CONSOLE] to Logger[ROOT]
+21:48:12,912 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@1b1473ab - End of configuration.
+21:48:12,912 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@2f7c2f4f - Registering current configuration as safe fallback point
+21:48:12,917 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - ch.qos.logback.classic.util.DefaultJoranConfigurator.configure() call lasted 121 milliseconds. ExecutionStatus=DO_NOT_INVOKE_NEXT_IF_ANY
+
+
+========================================================================================================================
+2026-11-23 21:48:18 ጂ ኤም ቲ                                                                            5s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |       200 |       100 |       100
+> home                                                                               |       100 |       100 |         0
+> missing                                                                            |       100 |         0 |       100
+---- Errors ------------------------------------------------------------------------------------------------------------
+> status.find.in([200, 209], 304), found 404                                                                100   (100%)
+
+---- locale ------------------------------------------------------------------------------------------------------------
+[###############################################################################                                ] 71.43%
+          waiting:        40 / active:         0  / done:       100
+========================================================================================================================
+
+
+========================================================================================================================
+2026-11-23 21:48:20 ጂ ኤም ቲ                                                                            6s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |       280 |       140 |       140
+> home                                                                               |       140 |       140 |         0
+> missing                                                                            |       140 |         0 |       140
+---- Errors ------------------------------------------------------------------------------------------------------------
+> status.find.in([200, 209], 304), found 404                                                                140   (100%)
+
+---- locale ------------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:       140
+========================================================================================================================
+
+Parsing log file(s)...
+Parsing log file(s) done in 0s.
+Generating reports...
+
+========================================================================================================================
+---- Global Information -------------------------------------------------------------|---Total---|-----OK----|----KO----
+> request count                                                                      |       280 |       140 |       140
+> min response time (ms)                                                             |         0 |         1 |         0
+> max response time (ms)                                                             |         7 |         7 |         4
+> mean response time (ms)                                                            |         2 |         2 |         1
+> response time std deviation (ms)                                                   |         1 |         1 |         1
+> response time 50th percentile (ms)                                                 |         2 |         2 |         1
+> response time 75th percentile (ms)                                                 |         2 |         2 |         2
+> response time 95th percentile (ms)                                                 |         3 |         3 |         2
+> response time 99th percentile (ms)                                                 |         4 |         4 |         3
+> mean throughput (rps)                                                              |        40 |        20 |        20
+---- Response Time Distribution ----------------------------------------------------------------------------------------
+> OK: t < 800 ms                                                                                            140    (50%)
+> OK: 800 ms <= t < 1200 ms                                                                                   0     (0%)
+> OK: t >= 1200 ms                                                                                            0     (0%)
+> KO                                                                                                        140    (50%)
+---- Errors ------------------------------------------------------------------------------------------------------------
+> status.find.in([200, 209], 304), found 404                                                                140   (100%)
+========================================================================================================================
+
+Reports generated, please open the following file: file:///tmp/bench/target/gatling/localesimulation-20261123214813710/index.html
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  9.117 s
+[INFO] Finished at: 2026-11-23T21:48:21Z
+[INFO] ------------------------------------------------------------------------

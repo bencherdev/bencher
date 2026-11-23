@@ -1,0 +1,127 @@
+[info] entering thin client - BEEP WHIRR
+[info] starting sbt server in the background
+[info] use 'sbt shutdown' to shutdown the server
+[info]  
+[info] welcome to sbt 2.1.0 (Eclipse Adoptium Java 21.0.13.1)
+[info] loading project definition from /tmp/bench/sbt2/project
+[info] set current project to gatling-sbt-plugin-demo (in build file:/tmp/bench/sbt2/)
+[info] [gatlingSbtPluginDemo] compiling 2 Scala sources to /tmp/bench/sbt2/target/out/jvm/scala-2.13.18/gatling-sbt-plugin-demo/test-classes ...
+[info] [gatlingSbtPluginDemo] done compiling
+
+========================================================================================================================
+2026-11-23 04:26:47 GMT                                                                               5s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |   196,893 |    66,165 |   130,728
+> fast                                                                               |       309 |       309 |         0
+> checkout / create                                                                  |    65,327 |    65,327 |         0
+> checkout / error                                                                   |    65,327 |         0 |    65,327
+> drop                                                                               |    65,324 |         0 |    65,324
+> slow                                                                               |       307 |       307 |         0
+> mixed                                                                              |       299 |       222 |        77
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                     65,328 (49.97%)
+> status.find.in([200, 209], 304), found 500                                                             65,327 (49.97%)
+> status.find.is(200), found 500                                                                             37  (0.03%)
+> status.find.is(200), found 404                                                                             36  (0.03%)
+
+---- browse ------------------------------------------------------------------------------------------------------------
+[|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||]     0%
+          waiting:         0 / active:        10  / done:         0
+---- checkout ----------------------------------------------------------------------------------------------------------
+[|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||]     0%
+          waiting:         0 / active:         4  / done:         0
+========================================================================================================================
+
+
+========================================================================================================================
+2026-11-23 04:26:52 GMT                                                                              10s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |   451,911 |   151,504 |   300,407
+> fast                                                                               |       492 |       492 |         0
+> checkout / create                                                                  |   150,150 |   150,150 |         0
+> checkout / error                                                                   |   150,149 |         0 |   150,149
+> drop                                                                               |   150,148 |         0 |   150,148
+> slow                                                                               |       490 |       490 |         0
+> mixed                                                                              |       482 |       372 |       110
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                    150,152 (49.98%)
+> status.find.in([200, 209], 304), found 500                                                            150,149 (49.98%)
+> status.find.is(200), found 500                                                                             55  (0.02%)
+> status.find.is(200), found 404                                                                             51  (0.02%)
+
+---- browse ------------------------------------------------------------------------------------------------------------
+[|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||]     0%
+          waiting:         0 / active:        10  / done:         0
+---- checkout ----------------------------------------------------------------------------------------------------------
+[|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||]     0%
+          waiting:         0 / active:         4  / done:         0
+========================================================================================================================
+
+
+========================================================================================================================
+2026-11-23 04:26:55 GMT                                                                              12s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |   497,136 |   166,586 |   330,550
+> fast                                                                               |       492 |       492 |         0
+> checkout / create                                                                  |   165,222 |   165,222 |         0
+> checkout / error                                                                   |   165,221 |         0 |   165,221
+> drop                                                                               |   165,219 |         0 |   165,219
+> slow                                                                               |       492 |       492 |         0
+> mixed                                                                              |       490 |       380 |       110
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                    165,223 (49.98%)
+> status.find.in([200, 209], 304), found 500                                                            165,221 (49.98%)
+> status.find.is(200), found 500                                                                             55  (0.02%)
+> status.find.is(200), found 404                                                                             51  (0.02%)
+
+---- browse ------------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:        10
+---- checkout ----------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:         4
+========================================================================================================================
+
+Parsing log file(s)...
+Parsing log file(s) done in 0s.
+Generating reports...
+
+========================================================================================================================
+---- Global Information -------------------------------------------------------------|---Total---|-----OK----|----KO----
+> request count                                                                      |   497,136 |   166,586 |   330,550
+> min response time (ms)                                                             |         0 |         0 |         0
+> max response time (ms)                                                             |     3,002 |     3,002 |         4
+> mean response time (ms)                                                            |         0 |         1 |         0
+> response time std deviation (ms)                                                   |        23 |        40 |         0
+> response time 50th percentile (ms)                                                 |         0 |         0 |         0
+> response time 75th percentile (ms)                                                 |         0 |         0 |         0
+> response time 95th percentile (ms)                                                 |         1 |         1 |         1
+> response time 99th percentile (ms)                                                 |         1 |         1 |         1
+> mean throughput (rps)                                                              | 38,241.23 | 12,814.31 | 25,426.92
+---- Response Time Distribution ----------------------------------------------------------------------------------------
+> OK: t < 800 ms                                                                                        166,557  (33.5%)
+> OK: 800 ms <= t < 1200 ms                                                                                   0     (0%)
+> OK: t >= 1200 ms                                                                                           29  (0.01%)
+> KO                                                                                                    330,550 (66.49%)
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                    165,223 (49.98%)
+> status.find.in([200, 209], 304), found 500                                                            165,221 (49.98%)
+> status.find.is(200), found 500                                                                             55  (0.02%)
+> status.find.is(200), found 404                                                                             51  (0.02%)
+========================================================================================================================
+
+Reports generated, please open the following file: file:///tmp/bench/sbt2/target/out/jvm/scala-2.13.18/gatling-sbt-plugin-demo/gatling/mixedsimulation-20261123042641938/index.html
+Global: 99th percentile of response time is less than 500.0 : true (actual : 1.0)
+checkout: percentage of failed events is less than 1.0 : false (actual : 99.9993947537253)
+[error] Simulation MixedSimulation failed.
+[info] Simulation(s) execution ended.
+[error] failed tests:
+[error]         bench.MixedSimulation
+[error] (Gatling / testOnly) sbt.TestsFailedException: Tests unsuccessful
+[error] Test summary (1 test task failed):
+[error]   Gatling / testOnly
+[error]         bench.MixedSimulation     FAIL
+[error]  
+[error] failed: total 1, failed 1, errors 0, passed 0, cached 0
+[error] elapsed time: 17 s, cache 0%, 11 onsite tasks
+[0J

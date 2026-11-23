@@ -1,0 +1,139 @@
+04:20:19,543 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found logback-core version 1.6.7
+04:20:19,544 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - No custom configurators were discovered as a service.
+04:20:19,544 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Trying to configure with ch.qos.logback.classic.util.DefaultJoranConfigurator
+04:20:19,544 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - Constructed configurator of type class ch.qos.logback.classic.util.DefaultJoranConfigurator
+04:20:19,547 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
+04:20:19,550 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback.xml] at [jar:file:/tmp/bench/.m2/repository/io/gatling/gatling-maven-plugin/4.22.3/gatling-maven-plugin-4.22.3.jar!/logback.xml]
+04:20:19,582 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 12
+04:20:19,582 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+04:20:19,606 |-INFO in ch.qos.logback.classic.model.processor.ConfigurationModelHandlerFull - Scan attribute not set.
+04:20:19,611 |-INFO in ch.qos.logback.classic.model.processor.CallerInstructionLogic@149e0f5d - No contradictions in caller extraction instruction were detected
+04:20:19,612 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [CONSOLE]
+04:20:19,612 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+04:20:19,617 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+04:20:19,639 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - NOTE: Writing to the console can be slow. Try to avoid logging to the 
+04:20:19,639 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - console in production environments, especially in high volume systems.
+04:20:19,639 |-INFO in ch.qos.logback.core.ConsoleAppender[CONSOLE] - See also https://logback.qos.ch/codes.html#slowConsole
+04:20:19,642 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - ROOT level set to WARN
+04:20:19,642 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [CONSOLE] to Logger[ROOT]
+04:20:19,642 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@1b1473ab - End of configuration.
+04:20:19,643 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@2f7c2f4f - Registering current configuration as safe fallback point
+04:20:19,647 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3aefe5e5 - ch.qos.logback.classic.util.DefaultJoranConfigurator.configure() call lasted 99 milliseconds. ExecutionStatus=DO_NOT_INVOKE_NEXT_IF_ANY
+
+
+========================================================================================================================
+2026-11-23 04:20:25 GMT                                                                               5s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |   195,032 |    65,822 |   129,210
+> fast                                                                               |       471 |       471 |         0
+> checkout / create                                                                  |    64,545 |    64,545 |         0
+> checkout / error                                                                   |    64,545 |         0 |    64,545
+> drop                                                                               |    64,543 |         0 |    64,543
+> slow                                                                               |       467 |       467 |         0
+> mixed                                                                              |       461 |       339 |       122
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                     64,548 (49.96%)
+> status.find.in([200, 209], 304), found 500                                                             64,545 (49.95%)
+> status.find.is(200), found 500                                                                             57  (0.04%)
+> status.find.is(200), found 404                                                                             38  (0.03%)
+> Request timeout to localhost/127.0.0.1:8080 after 1000 ms                                                  22  (0.02%)
+
+---- browse ------------------------------------------------------------------------------------------------------------
+[|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||]     0%
+          waiting:         0 / active:        10  / done:         0
+---- checkout ----------------------------------------------------------------------------------------------------------
+[|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||]     0%
+          waiting:         0 / active:         4  / done:         0
+========================================================================================================================
+
+
+========================================================================================================================
+2026-11-23 04:20:30 GMT                                                                              10s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |   444,039 |   149,723 |   294,316
+> fast                                                                               |       990 |       990 |         0
+> checkout / create                                                                  |   147,028 |   147,028 |         0
+> checkout / error                                                                   |   147,028 |         0 |   147,028
+> drop                                                                               |   147,026 |         0 |   147,026
+> slow                                                                               |       987 |       987 |         0
+> mixed                                                                              |       980 |       718 |       262
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                    147,033 (49.96%)
+> status.find.in([200, 209], 304), found 500                                                            147,028 (49.96%)
+> status.find.is(200), found 500                                                                            111  (0.04%)
+> status.find.is(200), found 404                                                                             98  (0.03%)
+> Request timeout to localhost/127.0.0.1:8080 after 1000 ms                                                  46  (0.02%)
+
+---- browse ------------------------------------------------------------------------------------------------------------
+[|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||]     0%
+          waiting:         0 / active:        10  / done:         0
+---- checkout ----------------------------------------------------------------------------------------------------------
+[|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||]     0%
+          waiting:         0 / active:         4  / done:         0
+========================================================================================================================
+
+
+========================================================================================================================
+2026-11-23 04:20:32 GMT                                                                              11s elapsed
+---- Requests -----------------------------------------------------------------------|---Total---|-----OK----|----KO----
+> Global                                                                             |   489,390 |   164,840 |   324,550
+> fast                                                                               |       990 |       990 |         0
+> checkout / create                                                                  |   162,142 |   162,142 |         0
+> checkout / error                                                                   |   162,141 |         0 |   162,141
+> drop                                                                               |   162,140 |         0 |   162,140
+> slow                                                                               |       990 |       990 |         0
+> mixed                                                                              |       987 |       718 |       269
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                    162,147 (49.96%)
+> status.find.in([200, 209], 304), found 500                                                            162,141 (49.96%)
+> status.find.is(200), found 500                                                                            111  (0.03%)
+> status.find.is(200), found 404                                                                             98  (0.03%)
+> Request timeout to localhost/127.0.0.1:8080 after 1000 ms                                                  53  (0.02%)
+
+---- browse ------------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:        10
+---- checkout ----------------------------------------------------------------------------------------------------------
+[###############################################################################################################]   100%
+          waiting:         0 / active:         0  / done:         4
+========================================================================================================================
+
+Parsing log file(s)...
+Parsing log file(s) done in 0s.
+Generating reports...
+
+========================================================================================================================
+---- Global Information -------------------------------------------------------------|---Total---|-----OK----|----KO----
+> request count                                                                      |   489,390 |   164,840 |   324,550
+> min response time (ms)                                                             |         0 |         0 |         0
+> max response time (ms)                                                             |     1,001 |        53 |     1,001
+> mean response time (ms)                                                            |         0 |         0 |         0
+> response time std deviation (ms)                                                   |        11 |         4 |        13
+> response time 50th percentile (ms)                                                 |         0 |         0 |         0
+> response time 75th percentile (ms)                                                 |         0 |         0 |         0
+> response time 95th percentile (ms)                                                 |         1 |         1 |         1
+> response time 99th percentile (ms)                                                 |         1 |         1 |         1
+> mean throughput (rps)                                                              |  40,782.5 | 13,736.67 | 27,045.83
+---- Response Time Distribution ----------------------------------------------------------------------------------------
+> OK: t < 800 ms                                                                                        164,840 (33.68%)
+> OK: 800 ms <= t < 1200 ms                                                                                   0     (0%)
+> OK: t >= 1200 ms                                                                                            0     (0%)
+> KO                                                                                                    324,550 (66.32%)
+---- Errors ------------------------------------------------------------------------------------------------------------
+> i.g.h.c.i.PrematureCloseException: Premature close                                                    162,147 (49.96%)
+> status.find.in([200, 209], 304), found 500                                                            162,141 (49.96%)
+> status.find.is(200), found 500                                                                            111  (0.03%)
+> status.find.is(200), found 404                                                                             98  (0.03%)
+> Request timeout to localhost/127.0.0.1:8080 after 1000 ms                                                  53  (0.02%)
+========================================================================================================================
+
+Reports generated, please open the following file: file:///tmp/bench/maven/target/gatling/mixedsimulation-20261123042020394/index.html
+Global: 99th percentile of response time is less than 500.0 : true (actual : 1.0)
+checkout: percentage of failed events is less than 1.0 : false (actual : 99.99938325665158)
+[ERROR] Failed to execute goal io.gatling:gatling-maven-plugin:4.22.3:test (default-cli) on project gat: Gatling simulation assertions failed ! ForkException -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
