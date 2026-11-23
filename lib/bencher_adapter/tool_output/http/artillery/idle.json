@@ -1,0 +1,9 @@
+{
+  "aggregate": {
+    "counters": {},
+    "rates": {},
+    "summaries": {},
+    "histograms": {}
+  },
+  "intermediate": []
+}

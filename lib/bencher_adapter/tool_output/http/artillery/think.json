@@ -1,0 +1,96 @@
+{
+  "aggregate": {
+    "period": 1795226300000,
+    "counters": {
+      "vusers.created_by_name.wait": 10,
+      "vusers.created": 10,
+      "vusers.failed": 0,
+      "vusers.completed": 10
+    },
+    "rates": {},
+    "firstCounterAt": 1795226300816,
+    "firstHistogramAt": 1795226300817,
+    "lastCounterAt": 1795226302018,
+    "lastHistogramAt": 1795226302018,
+    "firstMetricAt": 1795226300816,
+    "lastMetricAt": 1795226302018,
+    "summaries": {
+      "vusers.session_length": {
+        "min": 0.5,
+        "max": 2.6,
+        "count": 10,
+        "mean": 1.4,
+        "p50": 1.6,
+        "median": 1.6,
+        "p75": 1.6,
+        "p90": 2,
+        "p95": 2,
+        "p99": 2,
+        "p999": 2
+      }
+    },
+    "histograms": {
+      "vusers.session_length": {
+        "min": 0.5,
+        "max": 2.6,
+        "count": 10,
+        "mean": 1.4,
+        "p50": 1.6,
+        "median": 1.6,
+        "p75": 1.6,
+        "p90": 2,
+        "p95": 2,
+        "p99": 2,
+        "p999": 2
+      }
+    }
+  },
+  "intermediate": [
+    {
+      "period": "1795226300000",
+      "counters": {
+        "vusers.created_by_name.wait": 10,
+        "vusers.created": 10,
+        "vusers.failed": 0,
+        "vusers.completed": 10
+      },
+      "rates": {},
+      "firstCounterAt": 1795226300816,
+      "firstHistogramAt": 1795226300817,
+      "lastCounterAt": 1795226302018,
+      "lastHistogramAt": 1795226302018,
+      "firstMetricAt": 1795226300816,
+      "lastMetricAt": 1795226302018,
+      "summaries": {
+        "vusers.session_length": {
+          "min": 0.5,
+          "max": 2.6,
+          "count": 10,
+          "mean": 1.4,
+          "p50": 1.6,
+          "median": 1.6,
+          "p75": 1.6,
+          "p90": 2,
+          "p95": 2,
+          "p99": 2,
+          "p999": 2
+        }
+      },
+      "histograms": {
+        "vusers.session_length": {
+          "min": 0.5,
+          "max": 2.6,
+          "count": 10,
+          "mean": 1.4,
+          "p50": 1.6,
+          "median": 1.6,
+          "p75": 1.6,
+          "p90": 2,
+          "p95": 2,
+          "p99": 2,
+          "p999": 2
+        }
+      }
+    }
+  ]
+}
