@@ -497,6 +497,50 @@ impl AdapterResults {
         fold_map.into()
     }
 
+    /// Merge the results of a later payload of the same iteration into these, and return how
+    /// many of these values the later payload replaced.
+    ///
+    /// A value is keyed where it is stored: its benchmark, its parameters, and its measure, and
+    /// at BMF v1 also its metric name, so a later payload replaces only a value it repeats.
+    /// A BMF v0 measure is one metric, so a later payload replaces it whole.
+    pub(crate) fn merge(&mut self, later: Self) -> usize {
+        let Self {
+            inner,
+            version: _,
+            resolved_adapter: _,
+            skipped,
+            units,
+        } = later;
+        self.skipped = self.skipped + skipped;
+        self.units.extend(units);
+
+        let by_name = self.version == BmfVersion::V1;
+        let mut replaced = 0;
+        for (benchmark, entries) in inner {
+            let held_entries = self.inner.entry(benchmark).or_default();
+            for (parameters, metrics) in entries {
+                let held_metrics = held_entries.entry(parameters).or_default();
+                for (measure, metric) in metrics.inner {
+                    let Some(held_metric) = held_metrics.inner.get_mut(&measure) else {
+                        held_metrics.inner.insert(measure, metric);
+                        continue;
+                    };
+                    if by_name {
+                        for (name, value) in metric.inner {
+                            if held_metric.inner.insert(name, value).is_some() {
+                                replaced += 1;
+                            }
+                        }
+                    } else {
+                        *held_metric = metric;
+                        replaced += 1;
+                    }
+                }
+            }
+        }
+        replaced
+    }
+
     /// Cut every measure to the per measure cap, counting each name cut as skipped.
     pub(crate) fn truncate(&mut self) {
         for metric in self

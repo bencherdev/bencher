@@ -620,9 +620,9 @@ impl QueryReport {
         })
     }
 
-    /// Process benchmark results and record metrics/alerts for this report.
+    /// Process benchmark results and record metrics/alerts for this report,
+    /// where each result is its own iteration.
     ///
-    /// Shared between `create()` (local runs) and `handle_completed()` (job-based runs).
     /// Includes plan usage tracking and validation.
     #[expect(clippy::too_many_arguments, reason = "cfg features add extra params")]
     pub async fn process_results(
@@ -631,6 +631,45 @@ impl QueryReport {
         context: &ApiContext,
         branch_id: BranchId,
         results: &[&str],
+        adapter: Adapter,
+        settings: JsonReportSettings,
+        report_version: ReportBmfVersion,
+        warnings: ReportWarnings,
+        #[cfg(feature = "plus")] plan_kind: PlanKind,
+        #[cfg(all(feature = "plus", feature = "otel"))] priority: bencher_json::Priority,
+        #[cfg(feature = "plus")] query_project: &QueryProject,
+    ) -> Result<(), HttpError> {
+        let iterations: Vec<Vec<&str>> = results.iter().map(|&result| vec![result]).collect();
+        self.process_iteration_results(
+            log,
+            context,
+            branch_id,
+            &iterations,
+            adapter,
+            settings,
+            report_version,
+            warnings,
+            #[cfg(feature = "plus")]
+            plan_kind,
+            #[cfg(all(feature = "plus", feature = "otel"))]
+            priority,
+            #[cfg(feature = "plus")]
+            query_project,
+        )
+        .await
+    }
+
+    /// Process benchmark results and record metrics/alerts for this report,
+    /// where each iteration holds the results it returned, in order, and merges them.
+    ///
+    /// Includes plan usage tracking and validation.
+    #[expect(clippy::too_many_arguments, reason = "cfg features add extra params")]
+    pub async fn process_iteration_results(
+        &mut self,
+        log: &Logger,
+        context: &ApiContext,
+        branch_id: BranchId,
+        iterations: &[Vec<&str>],
         adapter: Adapter,
         settings: JsonReportSettings,
         report_version: ReportBmfVersion,
@@ -656,7 +695,7 @@ impl QueryReport {
             .process(
                 log,
                 context,
-                results,
+                iterations,
                 adapter,
                 settings,
                 report_version,

@@ -79,6 +79,33 @@ impl AdapterResultsArray {
         Self { inner }
     }
 
+    /// One result per iteration from these results of one payload each, where `payloads` holds
+    /// how many payloads in a row each iteration returned, and how many values a later payload
+    /// of an iteration replaced.
+    ///
+    /// The payloads of an iteration merge in order, so a later one wins. An iteration that
+    /// returned no payload has no result, so it is left out.
+    pub fn merge_iterations<I>(self, payloads: I) -> (Self, usize)
+    where
+        I: IntoIterator<Item = usize>,
+    {
+        let mut results = self.inner.into_iter();
+        let mut merged = Vec::new();
+        let mut replaced = 0;
+        for count in payloads {
+            let mut iteration = results.by_ref().take(count);
+            let Some(mut first) = iteration.next() else {
+                continue;
+            };
+            for later in iteration {
+                replaced += first.merge(later);
+            }
+            merged.push(first);
+        }
+        // A merged measure can pass the per measure cap that each payload met on its own.
+        (Self::from_iterations(merged), replaced)
+    }
+
     /// The leaf adapter the first iteration resolved to, which the report records.
     pub fn resolved_adapter(&self) -> Option<Adapter> {
         self.inner.first()?.resolved_adapter
@@ -166,7 +193,7 @@ mod test_results_array {
 
     use super::{
         AdapterResultsArray,
-        adapter_metrics::{AdapterMetric, AdapterMetrics, MetricsMap, NamedMap},
+        adapter_metrics::{AdapterMetric, AdapterMetrics, MAX_METRIC_NAMES, MetricsMap, NamedMap},
         adapter_results::ResultsMap,
     };
     use crate::{
@@ -440,6 +467,35 @@ mod test_results_array {
             .collect::<Shape>();
             assert_eq!(shape(&array), expected, "{bmf_version}");
         }
+    }
+
+    /// A measure that 2 payloads of one iteration fill past the per measure cap between them is
+    /// cut to the cap once merged, and the cut counts as skipped.
+    ///
+    /// Kills: a merge that skips the cap because each payload met it on its own.
+    #[test]
+    fn results_array_merged_measure_meets_the_cap() {
+        let payload = |prefix: &str| {
+            let names = (1..=MAX_METRIC_NAMES)
+                .map(|n| (format!("{prefix}{n}"), serde_json::json!(n)))
+                .collect::<serde_json::Map<_, _>>();
+            serde_json::json!({ "bench": [{ "measures": { "latency": names } }] }).to_string()
+        };
+        let (earlier, later) = (payload("a"), payload("b"));
+        let array = AdapterResultsArray::new(
+            &[&earlier, &later],
+            Adapter::Json,
+            Settings::new(None, BmfVersion::V1),
+        )
+        .expect("expected both payloads to parse");
+        assert_eq!(array.skipped().metrics, 0);
+
+        let (array, replaced) = array.merge_iterations([2]);
+        assert_eq!(replaced, 0);
+        assert_eq!(array.skipped().metrics, MAX_METRIC_NAMES);
+        let merged = only(&array);
+        let metrics = variant(&merged, "bench", "{}");
+        assert_eq!(names(metrics, "latency").len(), MAX_METRIC_NAMES);
     }
 
     /// Each benchmark's variants, by canonical parameters, with their measures.
