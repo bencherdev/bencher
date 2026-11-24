@@ -7,6 +7,7 @@
 //! Integration tests for the OCI token endpoint (GET and POST /v0/auth/oci/token).
 
 use bencher_api_tests::TestServer;
+use bencher_api_tests::oci::compute_digest;
 use bencher_json::{JsonUserKeyCreated, ProjectKey, UserKey};
 use http::StatusCode;
 use serde_json::Value;
@@ -669,4 +670,212 @@ async fn oci_token_user_key_malformed() {
 
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     assert!(resp.headers().contains_key("www-authenticate"));
+}
+
+// --- Scopes for more than one repository ---------------------------------------
+//
+// When a layer may be mounted from another repository, containerd asks for the
+// mount source's pull scope beside the push scope, and it sorts the scopes. So a
+// mount source that sorts first comes before the repository being pushed.
+
+// GET with a user API token, mount source first → a push token for the pushed repository
+#[tokio::test]
+async fn oci_token_mount_source_first_user() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("MountFirst User", "mountfirst@example.com")
+        .await;
+    let org = server.create_org(&user, "MountFirst Org").await;
+    let project_a = server.create_project(&user, &org, "MountFirst A").await;
+    let project_b = server.create_project(&user, &org, "MountFirst B").await;
+
+    let api_key = server
+        .token_key()
+        .new_api_key(user.email.clone(), u32::MAX)
+        .expect("Failed to create API key");
+
+    let slug_a: &str = project_a.slug.as_ref();
+    let slug_b: &str = project_b.slug.as_ref();
+    let url = format!(
+        "/v0/auth/oci/token?scope=repository:{slug_a}:pull&scope=repository:{slug_b}:pull,push&service=localhost"
+    );
+
+    let resp = server
+        .client
+        .get(server.api_url(&url))
+        .basic_auth(user.email.as_ref(), Some(api_key.as_ref()))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = resp.json().await.expect("Invalid JSON");
+    let token = body["token"].as_str().expect("Missing token");
+
+    let blob_data = b"mount source first blob";
+    let push_token_a = server.oci_push_token(&user, &project_a);
+    assert_eq!(
+        push_blob(&server, slug_a, &push_token_a, blob_data).await,
+        StatusCode::CREATED
+    );
+
+    // The token is for the pushed repository only, so a mount from the source falls back to an upload.
+    let mount_resp = server
+        .client
+        .post(server.api_url(&format!(
+            "/v2/{slug_b}/blobs/uploads?digest={}&from={slug_a}",
+            compute_digest(blob_data)
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Mount request failed");
+    assert_eq!(mount_resp.status(), StatusCode::ACCEPTED);
+
+    assert_eq!(
+        push_blob(&server, slug_b, token, blob_data).await,
+        StatusCode::CREATED
+    );
+}
+
+// POST with the project key of the pushed repository, mount source first → a push token for it
+#[tokio::test]
+async fn oci_token_post_mount_source_first_project_key() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("MountFirstKey User", "mountfirstkey@example.com")
+        .await;
+    let org = server.create_org(&user, "MountFirstKey Org").await;
+    let project_a = server.create_project(&user, &org, "MountFirstKey A").await;
+    let project_b = server.create_project(&user, &org, "MountFirstKey B").await;
+    let project_key_b = server
+        .create_project_key(&user, &project_b, "mount-first-key-b")
+        .await;
+
+    let slug_a: &str = project_a.slug.as_ref();
+    let slug_b: &str = project_b.slug.as_ref();
+    let scope = format!("repository:{slug_a}:pull repository:{slug_b}:pull,push");
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/auth/oci/token"))
+        .form(&[
+            ("grant_type", "password"),
+            ("username", slug_b),
+            ("password", project_key_b.key.as_ref()),
+            ("scope", &scope),
+            ("service", "localhost"),
+        ])
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = resp.json().await.expect("Invalid JSON");
+    let token = body["access_token"].as_str().expect("Missing access_token");
+
+    assert_eq!(
+        push_blob(&server, slug_b, token, b"mount source first key blob").await,
+        StatusCode::CREATED
+    );
+}
+
+// GET with the project key of the mount source, push scope for another project → 403
+#[tokio::test]
+async fn oci_token_mount_source_project_key_cannot_push_other() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("MountSourceKey User", "mountsourcekey@example.com")
+        .await;
+    let org = server.create_org(&user, "MountSourceKey Org").await;
+    let project_a = server.create_project(&user, &org, "MountSourceKey A").await;
+    let project_b = server.create_project(&user, &org, "MountSourceKey B").await;
+    let project_key_a = server
+        .create_project_key(&user, &project_a, "mount-source-key-a")
+        .await;
+
+    let slug_a: &str = project_a.slug.as_ref();
+    let slug_b: &str = project_b.slug.as_ref();
+    let url = format!(
+        "/v0/auth/oci/token?scope=repository:{slug_a}:pull&scope=repository:{slug_b}:pull,push&service=localhost"
+    );
+
+    let resp = server
+        .client
+        .get(server.api_url(&url))
+        .basic_auth(slug_a, Some(project_key_a.key.as_ref()))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    let body = resp.text().await.expect("Failed to read body");
+    assert!(
+        body.contains("Project key is not authorized for the requested repository"),
+        "Unexpected body: {body}"
+    );
+}
+
+// GET with a user API token, push scope for a claimed project the user cannot push to → 403
+#[tokio::test]
+async fn oci_token_mount_source_first_user_without_push_permission() {
+    let server = TestServer::new().await;
+    let owner = server
+        .signup("MountOwner User", "mountowner@example.com")
+        .await;
+    let org = server.create_org(&owner, "MountOwner Org").await;
+    let project_a = server.create_project(&owner, &org, "MountOwner A").await;
+    let project_b = server.create_project(&owner, &org, "MountOwner B").await;
+    let outsider = server
+        .signup("MountOutsider User", "mountoutsider@example.com")
+        .await;
+
+    let api_key = server
+        .token_key()
+        .new_api_key(outsider.email.clone(), u32::MAX)
+        .expect("Failed to create API key");
+
+    let slug_a: &str = project_a.slug.as_ref();
+    let slug_b: &str = project_b.slug.as_ref();
+    let url = format!(
+        "/v0/auth/oci/token?scope=repository:{slug_a}:pull&scope=repository:{slug_b}:pull,push&service=localhost"
+    );
+
+    let resp = server
+        .client
+        .get(server.api_url(&url))
+        .basic_auth(outsider.email.as_ref(), Some(api_key.as_ref()))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    let body = resp.text().await.expect("Failed to read body");
+    assert!(
+        body.contains(&format!("Access denied to repository: {slug_b}")),
+        "Unexpected body: {body}"
+    );
+}
+
+#[expect(clippy::expect_used, reason = "test helper outside #[test] fns")]
+async fn push_blob(server: &TestServer, repository: &str, token: &str, data: &[u8]) -> StatusCode {
+    server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{repository}/blobs/uploads?digest={}",
+            compute_digest(data)
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .header("Content-Type", "application/octet-stream")
+        .body(data.to_vec())
+        .send()
+        .await
+        .expect("Blob push failed")
+        .status()
 }
