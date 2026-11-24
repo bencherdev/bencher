@@ -30,3 +30,14 @@ It is used when a greater value would indicate a performance regression.
 and your historical Metrics had a mean of `100` and a standard deviation of `10`,
 the Upper Boundary Limit would be `119.95` and
 any value greater than `119.95` would generate an Alert.
+- #### z-score Boundaries across a Report
+  - For a Project at BMF version 1, a z-score Boundary covers the whole Report.
+An Upper Boundary of `0.99` means that an unchanged Report generates an Upper Boundary Alert at most 1 time in 100, however many Lines it has.
+Bencher divides that chance equally across every check on that side of the Report: each Threshold, on each Line it checks, in each iteration.
+A Line with too few historical Metrics to check still takes its share.
+  - For example, a Report with `200` Lines and an Upper Boundary of `0.99` checks each Line at `0.99995`.
+For a normal distribution, that moves each Line's Upper Boundary Limit from about `2.33` to about `3.89` standard deviations above the mean.
+  - For a Project at BMF version 0, a z-score Boundary covers each Line on its own.
+A Report with `200` Lines and an Upper Boundary of `0.99` generates about `2` false Upper Boundary Alerts.
+  - With a short history, a z-score understates the spread of your historical Metrics,
+so its real chance of a false Alert is higher than stated, for one Line or for a whole Report.

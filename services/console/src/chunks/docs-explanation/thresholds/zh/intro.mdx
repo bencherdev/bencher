@@ -16,6 +16,11 @@ Threshold 使用特定的 [Test][tests] 来检测性能回归。
 然后每个新的 [Metric][metric] 都会与每个边界限制进行比较。
 当新的 Metric 低于下界限制或高于上界限制时，会生成警报。
 
+对于 BMF 版本 1 的项目，t检验、z-score 或对数正态边界覆盖一整个检查族：
+其模型在报告的一侧、在每条线上、在每次迭代中进行的每一次检查。
+因此，有很多条线的报告不会比只有一条线的报告产生更多错误警报。
+百分比、IQR、Delta IQR 或静态边界是一个大小而不是概率，它分别覆盖每条线。
+
 当 [持续基准测试]时，即在持续集成（CI）中进行基准测试时，你会想创建阈值。
 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令，
 你已经用 [`--branch` option][branch option] 指定了一个 Branch，

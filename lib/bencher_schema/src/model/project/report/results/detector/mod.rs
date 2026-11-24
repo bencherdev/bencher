@@ -1,5 +1,10 @@
-use bencher_boundary::MetricsBoundary;
-use bencher_json::BoundaryUuid;
+use std::num::NonZeroU32;
+
+use bencher_boundary::{
+    MetricsBoundary,
+    correction::{is_corrected, per_test_level},
+};
+use bencher_json::{Boundary, BoundaryUuid};
 use dropshot::HttpError;
 use slog::Logger;
 
@@ -20,7 +25,7 @@ pub mod threshold;
 pub use prepared::PreparedDetection;
 
 use data::metrics_data;
-pub use threshold::Threshold;
+pub use threshold::{Threshold, ThresholdModel};
 
 #[derive(Debug, Clone)]
 pub struct Detector {
@@ -29,6 +34,9 @@ pub struct Detector {
     pub spec_id: Option<SpecId>,
     pub measure_id: MeasureId,
     pub threshold: Threshold,
+    /// The report's family, which corrects a probability boundary at BMF version 1.
+    /// `None` tests each line at its boundary, as BMF version 0 does.
+    pub family: Option<Family>,
 }
 
 impl Detector {
@@ -46,29 +54,80 @@ impl Detector {
         // Query the historical population/sample data for the variant
         let metrics_data = metrics_data(log, conn, self, benchmark_id, variant_id)?;
 
+        let model = &self.threshold.model;
+        let (lower_level, upper_level) = self
+            .family
+            .map_or((None, None), |family| family.levels(model));
+
         // Check to see if the metric has a boundary check for the given threshold model.
         let boundary = MetricsBoundary::new(
             log,
             metric_value,
             &metrics_data,
-            self.threshold.model.test,
-            self.threshold.model.min_sample_size,
-            self.threshold.model.lower_boundary,
-            self.threshold.model.upper_boundary,
+            model.test,
+            model.min_sample_size,
+            lower_level.or(model.lower_boundary),
+            upper_level.or(model.upper_boundary),
         )
         .map_err(bad_request_error)?;
+        let MetricsBoundary { limits, outlier } = boundary;
 
         Ok(PreparedDetection {
             project_id: self.threshold.project_id,
             threshold_id: self.threshold.id,
-            model_id: self.threshold.model.id,
+            model_id: model.id,
             boundary_uuid: BoundaryUuid::new(),
-            baseline: boundary.limits.baseline,
-            lower_limit: boundary.limits.lower.map(Into::into),
-            upper_limit: boundary.limits.upper.map(Into::into),
-            outlier: boundary.outlier,
+            baseline: limits.baseline,
+            lower_limit: limits.lower.map(Into::into),
+            lower_level,
+            upper_limit: limits.upper.map(Into::into),
+            upper_level,
+            outlier,
             ignore_benchmark,
         })
+    }
+}
+
+/// The family of each side of a BMF version 1 report.
+///
+/// A family is every check a model with a probability boundary on that side makes in the
+/// report: each threshold on each line it checks in each iteration, whether or not the line
+/// has the history to test.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Family {
+    pub lower: u32,
+    pub upper: u32,
+}
+
+impl Family {
+    /// Count one check of `model` into the family of each side it guards.
+    pub fn count(&mut self, model: &ThresholdModel) {
+        if !is_corrected(model.test) {
+            return;
+        }
+        if model.lower_boundary.is_some() {
+            self.lower = self.lower.saturating_add(1);
+        }
+        if model.upper_boundary.is_some() {
+            self.upper = self.upper.saturating_add(1);
+        }
+    }
+
+    /// The level each side of `model` is tested at, or `None` for a side without a boundary
+    /// or a model whose boundary is not a probability.
+    fn levels(self, model: &ThresholdModel) -> (Option<Boundary>, Option<Boundary>) {
+        if !is_corrected(model.test) {
+            return (None, None);
+        }
+        let level = |boundary: Option<Boundary>, family: u32| {
+            boundary.map(|boundary| {
+                per_test_level(boundary, NonZeroU32::new(family).unwrap_or(NonZeroU32::MIN))
+            })
+        };
+        (
+            level(model.lower_boundary, self.lower),
+            level(model.upper_boundary, self.upper),
+        )
     }
 }
 

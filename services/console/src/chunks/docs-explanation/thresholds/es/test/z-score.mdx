@@ -27,3 +27,14 @@ Se utiliza cuando un valor mayor indicaría una regresión de rendimiento.
   - Por ejemplo, si utiliza una Prueba de puntuación z con un Límite Superior de `0.977`
 y sus Métricos históricos tenían una media de `100` y una desviación estándar de `10`,
 el Límite Superior sería `119.95` y cualquier valor mayor que `119.95` generaría una Alerta.
+- #### Límites de la puntuación z en todo un Reporte
+  - Para un Proyecto con la versión 1 de BMF, un Límite de la puntuación z cubre todo el Reporte.
+Un Límite Superior de `0.99` significa que un Reporte sin cambios genera una Alerta del Límite Superior como máximo 1 vez de cada 100, sin importar cuántas Líneas tenga.
+Bencher divide esa probabilidad a partes iguales entre cada comprobación de ese lado del Reporte: cada Umbral, en cada Línea que comprueba, en cada iteración.
+Una Línea con muy pocas Métricas históricas para comprobarla también recibe su parte.
+  - Por ejemplo, un Reporte con `200` Líneas y un Límite Superior de `0.99` comprueba cada Línea a `0.99995`.
+Para una distribución normal, eso mueve el Límite Superior de cada Línea de unas `2.33` a unas `3.89` desviaciones estándar por encima de la media.
+  - Para un Proyecto con la versión 0 de BMF, un Límite de la puntuación z cubre cada Línea por separado.
+Un Reporte con `200` Líneas y un Límite Superior de `0.99` genera unas `2` Alertas falsas del Límite Superior.
+  - Con un historial corto, la puntuación z subestima la dispersión de tus Métricas históricas,
+por lo que su probabilidad real de una Alerta falsa es mayor que la indicada, para una Línea o para todo un Reporte.

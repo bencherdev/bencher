@@ -395,6 +395,7 @@ mod tests {
                     upper_boundary: None,
                 },
             },
+            family: None,
         };
         let log = slog::Logger::root(slog::Discard, slog::o!());
         metrics_data(

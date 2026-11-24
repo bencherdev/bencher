@@ -16,3 +16,14 @@ Für z-score Tests werden Standardabweichungen als dezimale kumulative Prozents�
 - #### z-score Obere Grenze
   - Eine z-score Obere Grenze kann jede positive Dezimalzahl zwischen `0.5` und `1.0` sein. Dabei steht `0.5` für den Mittelwert und `1.0` für alle möglichen rechten Werte (∞). Sie wird verwendet, wenn ein größerer Wert auf eine Leistungsregression hinweisen würde.
   - Zum Beispiel, wenn Sie einen z-score Test mit einer oberen Grenze von `0.977` verwenden und Ihre historischen Metriken einen Mittelwert von `100` und eine Standardabweichung von `10` hatten, wäre die obere Grenzschwelle `119.95` und jeder Wert über `119.95` würde einen Alarm auslösen.
+- #### z-score: Grenzen über einen ganzen Bericht
+  - Für ein Projekt mit BMF-Version 1 deckt eine Grenze des z-scores den ganzen Bericht ab.
+Eine obere Grenze von `0.99` bedeutet, dass ein unveränderter Bericht höchstens 1 von 100 Malen einen Alarm an der oberen Grenze auslöst, egal wie viele Linien er hat.
+Bencher teilt diese Wahrscheinlichkeit gleichmäßig auf jede Prüfung auf dieser Seite des Berichts auf: jeder Threshold, auf jeder Linie, die er prüft, in jeder Iteration.
+Eine Linie mit zu wenigen historischen Metriken für eine Prüfung erhält trotzdem ihren Anteil.
+  - Zum Beispiel prüft ein Bericht mit `200` Linien und einer oberen Grenze von `0.99` jede Linie bei `0.99995`.
+Bei einer Normalverteilung verschiebt das den oberen Grenzwert jeder Linie von etwa `2.33` auf etwa `3.89` Standardabweichungen über dem Mittelwert.
+  - Für ein Projekt mit BMF-Version 0 deckt eine Grenze des z-scores jede Linie für sich ab.
+Ein Bericht mit `200` Linien und einer oberen Grenze von `0.99` löst etwa `2` falsche Alarme an der oberen Grenze aus.
+  - Bei einer kurzen Historie unterschätzt ein z-score die Streuung Ihrer historischen Metriken,
+daher ist seine tatsächliche Wahrscheinlichkeit für einen falschen Alarm höher als angegeben, für eine Linie wie für einen ganzen Bericht.

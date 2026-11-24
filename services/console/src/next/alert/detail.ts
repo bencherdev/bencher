@@ -61,6 +61,9 @@ export const alertFacts = (detail: JsonConsoleAlertDetail) => {
 	const format = (value: number | undefined) =>
 		value === undefined ? undefined : formatMeasure(value, measure.units);
 	const boundary = model?.[`${side}_boundary`];
+	// The level its report's family tested the side at, where it corrected the boundary.
+	// It prints in full: a large family takes it closer to 1 than a boundary's digits show.
+	const level = detail[`${side}_level`];
 	return {
 		benchmark: benchmark.name,
 		tags: tagsOf(variant.parameters),
@@ -86,6 +89,7 @@ export const alertFacts = (detail: JsonConsoleAlertDetail) => {
 				...(boundary == null
 					? []
 					: [`${side}_boundary ${boundaryText(boundary)}`]),
+				...(level == null ? [] : [`per test ${level}`]),
 			].join(" · "),
 		},
 	};

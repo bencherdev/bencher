@@ -92,6 +92,26 @@ describe("alertFacts", () => {
 		);
 	});
 
+	// Kills the level left out, taken from the other side, or shown where its
+	// report's family did not correct the boundary.
+	test("names the level its report's family tested the crossed side at", () => {
+		expect(
+			alertFacts(alertDetail({ lower_level: 0.999, upper_level: 0.99995 }))
+				?.threshold?.text,
+		).toBe("t_test · upper_boundary 0.99 · per test 0.99995");
+		expect(
+			alertFacts(alertDetail({ lower_level: 0.999 }))?.threshold?.text,
+		).toBe("t_test · upper_boundary 0.99");
+	});
+
+	// Kills a level below 1 that reads as 1, as the clamp of a large family would.
+	test("shows a level at the clamp below 1", () => {
+		expect(
+			alertFacts(alertDetail({ upper_level: 0.9999999999999999 }))?.threshold
+				?.text,
+		).toBe("t_test · upper_boundary 0.99 · per test 0.9999999999999999");
+	});
+
 	// Kills reading a line the answer does not hold.
 	test("has nothing to say of an answer with no line", () => {
 		const detail = alertDetail();

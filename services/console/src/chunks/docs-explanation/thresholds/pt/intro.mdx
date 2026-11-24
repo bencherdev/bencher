@@ -18,6 +18,11 @@ Cada Limite é usado para calcular um Limite de Fronteira.
 Então, cada novo [métrica][metric] é verificada em relação a cada Limite de Fronteira.
 Um alerta é gerado quando uma nova Métrica está abaixo de um Limite Inferior de Fronteira ou acima de um Limite Superior de Fronteira.
 
+Para um Projeto na versão 1 do BMF, um Limite t-test, z-score ou Log Normal cobre toda uma família de verificações:
+cada verificação que o seu Modelo faz em um lado de um Relatório, em cada Linha, em cada iteração.
+Assim, um Relatório com muitas Linhas não gera mais Alertas falsos do que um Relatório com uma.
+Um Limite de Porcentagem, IQR, Delta IQR ou Estático é um tamanho, não uma probabilidade, e cobre cada Linha separadamente.
+
 Quando [Benchmarking Contínuo], ou seja, benchmarking em CI, você vai querer criar Limiares.
 Usando o subcomando de CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>,
 você já especifica um Ramo com [a opção `--branch`][branch option]

@@ -8,9 +8,9 @@ use std::{
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Patch, ResponseOk};
 use bencher_json::{
-    AlertUuid, BranchName, BranchSlug, BranchUuid, CommitTitle, DateTime, DateTimeMillis, GitHash,
-    HeadUuid, MeasureUuid, MetricName, ProjectResourceId, ReportUuid, ResourceName, TestbedSlug,
-    TestbedUuid, ThresholdUuid,
+    AlertUuid, Boundary, BranchName, BranchSlug, BranchUuid, CommitTitle, DateTime, DateTimeMillis,
+    GitHash, HeadUuid, MeasureUuid, MetricName, ProjectResourceId, ReportUuid, ResourceName,
+    TestbedSlug, TestbedUuid, ThresholdUuid,
     project::{
         alert::{
             AlertStatus, JsonAlertsFilter, JsonUpdateAlerts, JsonUpdatedAlerts, MAX_UPDATE_ALERTS,
@@ -1216,7 +1216,7 @@ async fn get_one_inner(
             variant,
             measure,
             (metric, value),
-            (threshold_id, model_id, baseline, lower_limit, upper_limit),
+            (threshold_id, model_id, baseline, lower_limit, lower_level, upper_limit, upper_level),
         ) = detail_row(conn, &project, path_params.alert)?;
 
         let limits = Limits {
@@ -1281,7 +1281,9 @@ async fn get_one_inner(
             value,
             baseline,
             lower_limit,
+            lower_level,
             upper_limit,
+            upper_level,
             perf,
         })
     })
@@ -1299,7 +1301,15 @@ type DetailRow = (
     VariantRow,
     MeasureRow,
     (MetricName, f64),
-    (ThresholdId, ModelId, Option<f64>, Option<f64>, Option<f64>),
+    (
+        ThresholdId,
+        ModelId,
+        Option<f64>,
+        Option<f64>,
+        Option<Boundary>,
+        Option<f64>,
+        Option<Boundary>,
+    ),
 );
 
 fn detail_row(
@@ -1380,7 +1390,9 @@ fn detail_row(
                 schema::boundary::model_id,
                 schema::boundary::baseline,
                 schema::boundary::lower_limit,
+                schema::boundary::lower_level,
                 schema::boundary::upper_limit,
+                schema::boundary::upper_level,
             ),
         ))
         .first::<DetailRow>(conn)

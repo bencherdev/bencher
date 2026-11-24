@@ -16,3 +16,12 @@ Para las pruebas t, los intervalos de predicción se expresan como un porcentaje
 - #### Límite Superior de la prueba t
   - Un Límite Superior de la prueba t puede ser cualquier número decimal positivo entre `0.5` y `1.0`. Donde `0.5` representa la media y `1.0` representa todos los posibles valores del lado derecho (∞). Se utiliza cuando un valor mayor indicaría una regresión de rendimiento.
   - Por ejemplo, si utilizas una prueba t con un Límite Superior de `0.977` y tienes `25` Métricas históricas con una media de `100` y una desviación estándar muestral de `10`, el Límite Superior sería `121.46` y cualquier valor mayor que `121.46` generaría una Alerta.
+- #### Límites de la prueba t en todo un Reporte
+  - Para un Proyecto con la versión 1 de BMF, un Límite de la prueba t cubre todo el Reporte.
+Un Límite Superior de `0.99` significa que un Reporte sin cambios genera una Alerta del Límite Superior como máximo 1 vez de cada 100, sin importar cuántas Líneas tenga.
+Bencher divide esa probabilidad a partes iguales entre cada comprobación de ese lado del Reporte: cada Umbral, en cada Línea que comprueba, en cada iteración.
+Una Línea con muy pocas Métricas históricas para comprobarla también recibe su parte.
+  - Por ejemplo, un Reporte con `200` Líneas y un Límite Superior de `0.99` comprueba cada Línea a `0.99995`.
+Para una distribución normal, eso mueve el Límite Superior de cada Línea de unas `2.33` a unas `3.89` desviaciones estándar por encima de la media.
+  - Para un Proyecto con la versión 0 de BMF, un Límite de la prueba t cubre cada Línea por separado.
+Un Reporte con `200` Líneas y un Límite Superior de `0.99` genera unas `2` Alertas falsas del Límite Superior.

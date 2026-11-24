@@ -1781,8 +1781,9 @@ async fn alert_names_the_variant_that_regressed() {
 // An alert answers with everything it answered with before, unchanged, plus the one
 // key naming the variant. This is the compatibility claim stated as a fixture: the
 // key set is pinned, and so is every value the detector computes for this fixture's
-// history, independently derived from a t-test at a 0.98 upper boundary over the
-// four degrees of freedom the history 10 through 14 gives.
+// history, independently derived from a t-test over the four degrees of freedom the
+// history 10 through 14 gives. At BMF version 1 its 0.98 boundary covers both variants
+// of the report, so each variant is tested at 1 - (1 - 0.98) / 2 = 0.99.
 #[tokio::test]
 async fn alert_json_is_unchanged_but_for_the_variant() {
     let server = TestServer::new().await;
@@ -1820,8 +1821,8 @@ async fn alert_json_is_unchanged_but_for_the_variant() {
         alert["boundary"],
         serde_json::json!({
             "baseline": 12.0,
-            "lower_limit": 6.806_397_375_694_743,
-            "upper_limit": 17.193_602_624_305_257,
+            "lower_limit": 5.510_096_750_732_533,
+            "upper_limit": 18.489_903_249_267_467,
         }),
         "the boundary is the one the detector computed"
     );

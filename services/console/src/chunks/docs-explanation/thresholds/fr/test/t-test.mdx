@@ -15,3 +15,12 @@ Pour les tests t-test, les intervalles de prédiction sont exprimés en pourcent
 - #### Limite Supérieure du t-test
   - La Limite Supérieure d'un test t peut être n'importe quel décimal positif entre `0.5` et `1.0`. Où `0.5` représente la moyenne et `1.0` représente toutes les valeurs possibles du côté droit (∞). Elle est utilisée lorsqu'une valeur plus grande indiquerait une régression de performance.
   - Par exemple, si vous utilisez un test t avec une Limite Supérieure de `0.977` et que vous avez `25` métriques historiques avec une moyenne de `100` et un écart-type d'échantillon de `10`, la Limite Supérieure serait `121,46` et toute valeur supérieure à `121,46` générerait une alerte.
+- #### Limites t-test sur un Rapport entier
+  - Pour un Projet en version 1 de BMF, une Limite t-test couvre le Rapport entier.
+Une Limite Supérieure de `0.99` signifie qu'un Rapport sans changement génère une alerte de Limite Supérieure au plus 1 fois sur 100, quel que soit son nombre de Lignes.
+Bencher répartit cette probabilité à parts égales entre chaque vérification de ce côté du Rapport : chaque Seuil, sur chaque Ligne qu'il vérifie, à chaque itération.
+Une Ligne avec trop peu de métriques historiques pour être vérifiée reçoit quand même sa part.
+  - Par exemple, un Rapport avec `200` Lignes et une Limite Supérieure de `0.99` vérifie chaque Ligne à `0.99995`.
+Pour une distribution normale, cela déplace la Limite Supérieure de chaque Ligne d'environ `2.33` à environ `3.89` écarts-types au-dessus de la moyenne.
+  - Pour un Projet en version 0 de BMF, une Limite t-test couvre chaque Ligne séparément.
+Un Rapport avec `200` Lignes et une Limite Supérieure de `0.99` génère environ `2` fausses alertes de Limite Supérieure.

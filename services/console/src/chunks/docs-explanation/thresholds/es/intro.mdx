@@ -9,6 +9,11 @@ Los Umbrales son cómo detectas regresiones de rendimiento con Bencher. Un Umbra
 
 Cada Límite se utiliza para calcular un Límite de Umbral. Luego, cada nuevo [Metric][metric] se verifica contra cada Límite de Umbral. Se genera una alerta cuando un nuevo Métrico está por debajo del Límite Inferior o por encima del Límite Superior.
 
+Para un Proyecto con la versión 1 de BMF, un Límite de la prueba t, de la puntuación z o Log Normal cubre toda una familia de comprobaciones:
+cada comprobación que su Modelo hace en un lado de un Reporte, en cada Línea, en cada iteración.
+Así, un Reporte con muchas Líneas no genera más Alertas falsas que un Reporte con una.
+Un Límite de Porcentaje, IQR, Delta IQR o Estático es un tamaño, no una probabilidad, y cubre cada Línea por separado.
+
 Al realizar [Benchmarking Continuo], es decir, benchmarking en CI, querrás crear Umbrales. Usando el subcomando <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> de la CLI, ya especificas una Rama con [la opción `--branch`][branch option] y un Banco de Pruebas con [la opción `--testbed`][testbed option]. Así que la única otra dimensión que necesitas especificar es una Medida, con la opción `--threshold-measure`. Luego puedes usar la opción `--threshold-test` para especificar el Test a usar para esa Medida. Las opciones `--threshold-min-sample-size`, `--threshold-max-sample-size` y `--threshold-window` te permiten controlar qué datos se utilizan por el Test. Finalmente, las opciones `--threshold-lower-boundary` y `--threshold-upper-boundary` te permiten establecer el Límite Inferior y el Límite Superior. Si deseas eliminar todos los Modelos que no estén especificados, puedes hacerlo con el flag `--thresholds-reset`.
 
 - Si el Umbral no existe, se creará para ti.

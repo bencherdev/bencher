@@ -1,4 +1,4 @@
-use bencher_json::{BoundaryUuid, project::boundary::JsonBoundary};
+use bencher_json::{Boundary, BoundaryUuid, project::boundary::JsonBoundary};
 
 use crate::{
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
@@ -20,7 +20,11 @@ pub struct QueryBoundary {
     pub model_id: ModelId,
     pub baseline: Option<f64>,
     pub lower_limit: Option<f64>,
+    /// The level the lower side was tested at, where a family corrected it.
+    pub lower_level: Option<Boundary>,
     pub upper_limit: Option<f64>,
+    /// The level the upper side was tested at, where a family corrected it.
+    pub upper_level: Option<Boundary>,
 }
 
 impl QueryBoundary {
@@ -46,5 +50,9 @@ pub struct InsertBoundary {
     pub model_id: ModelId,
     pub baseline: Option<f64>,
     pub lower_limit: Option<f64>,
+    /// The level the lower side was tested at, where a family corrected it.
+    pub lower_level: Option<Boundary>,
     pub upper_limit: Option<f64>,
+    /// The level the upper side was tested at, where a family corrected it.
+    pub upper_level: Option<Boundary>,
 }

@@ -9,6 +9,11 @@ Thresholds는 Bencher로 성능 퇴보를 포착하는 방법입니다. Threshol
 
 각 경계는 경계 제한을 계산하는 데 사용됩니다. 그런 다음 모든 새로운 [메트릭][metric]이 각 경계 제한과 비교됩니다. 새로운 메트릭이 하한 경계 제한 아래나 상한 경계 제한 위에 있을 때 경고가 생성됩니다.
 
+BMF 버전 1의 프로젝트에서 t-테스트, z-점수 또는 로그 정규 경계는 검사의 패밀리 전체를 다룹니다:
+그 모델이 보고서의 한쪽에서 각 라인, 각 반복마다 하는 모든 검사입니다.
+따라서 라인이 많은 보고서도 라인이 하나인 보고서보다 잘못된 알림을 더 많이 생성하지 않습니다.
+백분율, IQR, 델타 IQR 또는 정적 경계는 확률이 아니라 크기이며, 각 라인을 따로 다룹니다.
+
 [Continuous Benchmarking]에서는 즉 CI를 사용하여 벤치마킹할 때, Thresholds를 만들어야 합니다. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브 커맨드를 사용할 때 [그 `--branch` 옵션][branch option]을 통해 분기를, [그 `--testbed` 옵션][testbed option]을 통해 테스트베드를 이미 지정하므로, 지정해야 할 다른 차원은 `--threshold-measure` 옵션을 사용하여 측정치를 지정하는 것입니다. 그런 다음 해당 측정치에 사용할 테스트를 지정하려면 `--threshold-test` 옵션을 사용합니다. `--threshold-min-sample-size`, `--threshold-max-sample-size` 및 `--threshold-window` 옵션을 사용하면 테스트에서 사용될 데이터를 제어할 수 있습니다. 마지막으로 `--threshold-lower-boundary` 및 `--threshold-upper-boundary` 옵션을 사용하여 하한 경계와 상한 경계를 설정할 수 있습니다. 지정되지 않은 모든 모델을 제거하려면 `--thresholds-reset` 플래그를 사용할 수 있습니다.
 
 - Threshold가 존재하지 않으면 자동으로 생성됩니다.

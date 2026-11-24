@@ -18,6 +18,11 @@ Chaque limite est utilisée pour calculer une Limite de Seuil.
 Ensuite, chaque nouvelle [Métrique][metric] est vérifiée par rapport à chaque Limite de Seuil.
 Une alerte est générée lorsqu'une nouvelle métrique est en dessous d'une Limite Inférieure de Seuil ou au-dessus d'une Limite Supérieure de Seuil.
 
+Pour un Projet en version 1 de BMF, une Limite t-test, z-score ou Log Normale couvre toute une famille de vérifications :
+chaque vérification que son Modèle fait d'un côté d'un Rapport, sur chaque Ligne, à chaque itération.
+Un Rapport avec de nombreuses Lignes ne génère donc pas plus de fausses alertes qu'un Rapport avec une seule.
+Une Limite en Pourcentage, IQR, Delta IQR ou Statique est une taille, pas une probabilité, et couvre chaque Ligne séparément.
+
 Lors du [Benchmarking Continu], c'est-à-dire du benchmarking en CI, vous voudrez créer des seuils.
 En utilisant la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>,
 vous spécifiez déjà une branche avec [l'option `--branch`][branch option]

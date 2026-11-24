@@ -22,3 +22,14 @@ Sie wird verwendet, wenn ein kleinerer Wert eine Leistungsverschlechterung anzei
 Wo `0,5` den zentralen Standort und `1,0` alle möglichen rechten Werte (∞) darstellt.
 Sie wird verwendet, wenn ein größerer Wert eine Leistungsverschlechterung anzeigen würde.
   - Wenn Sie beispielsweise einen Lognormaltest mit einer Oberen Grenze von `0,977` verwenden und `25` historische Metriken um `100` zentriert sowie einen vorherigen Ausreißer bei `200` haben, wäre die Obere Grenzgrenze `134,18` und jeder Wert über `134,18` würde einen Alarm auslösen.
+- #### Lognormalverteilung: Grenzen über einen ganzen Bericht
+  - Für ein Projekt mit BMF-Version 1 deckt eine Grenze der Lognormalverteilung den ganzen Bericht ab.
+Eine obere Grenze von `0.99` bedeutet, dass ein unveränderter Bericht höchstens 1 von 100 Malen einen Alarm an der oberen Grenze auslöst, egal wie viele Linien er hat.
+Bencher teilt diese Wahrscheinlichkeit gleichmäßig auf jede Prüfung auf dieser Seite des Berichts auf: jeder Threshold, auf jeder Linie, die er prüft, in jeder Iteration.
+Eine Linie mit zu wenigen historischen Metriken für eine Prüfung erhält trotzdem ihren Anteil.
+  - Zum Beispiel prüft ein Bericht mit `200` Linien und einer oberen Grenze von `0.99` jede Linie bei `0.99995`.
+Bei einer Normalverteilung verschiebt das den oberen Grenzwert jeder Linie von etwa `2.33` auf etwa `3.89` Standardabweichungen über dem Mittelwert.
+  - Für ein Projekt mit BMF-Version 0 deckt eine Grenze der Lognormalverteilung jede Linie für sich ab.
+Ein Bericht mit `200` Linien und einer oberen Grenze von `0.99` löst etwa `2` falsche Alarme an der oberen Grenze aus.
+  - Bei einer kurzen Historie unterschätzt ein Lognormaltest die Streuung Ihrer historischen Metriken,
+daher ist seine tatsächliche Wahrscheinlichkeit für einen falschen Alarm höher als angegeben, für eine Linie wie für einen ganzen Bericht.
