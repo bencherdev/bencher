@@ -1,12 +1,17 @@
 ## Job Output
 
 When a Runner sends `completed` or `failed`,
-the full output is stored in the same OCI storage backend used for container Images,
-at the path `{project}/output/v0/jobs/{job}`.
+the output of that execution is stored at once in the same OCI storage backend used for container Images,
+at the path `{project}/output/v0/executions/{execution}`.
+When every iteration of the Job has its outcome,
+the server assembles the Job's output from its executions, in iteration order,
+and stores it at the path `{project}/output/v0/jobs/{job}`.
 
 The stored output contains a per-iteration `results` array and, on failure, an `error` string.
 Each iteration records its `exit_code`, `stdout`, `stderr`,
 and a map of any collected output files to their contents.
+Under `allow_failure`, an iteration whose run failed keeps only its `exit_code` and `stderr`,
+so it holds its place and no Metrics from it reach the Report.
 After the output is stored, the server runs the [benchmark harness adapter][adapters] on the results
 to parse Metrics and Alerts into the Report, transitioning the Job to `processed`.
 

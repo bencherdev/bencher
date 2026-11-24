@@ -5,13 +5,23 @@ import FlowDiagram from "../flow-diagram.mdx";
 연결 후, Runner는 유휴 폴링 루프에 진입하여,
 서버가 `job`을 할당할 때까지 `ready`를 보냅니다
 (또는 폴이 타임아웃되면 `no_job`을, 새 버전이 있으면 `update`를 반환합니다).
-Job을 받으면, Runner는 `running`을 보내고,
+각 `job` 메시지는 하나의 실행입니다. 즉, Job의 Image를 한 번 실행하는 것으로, 반복이 하나인 Job과 같습니다.
+실행을 받으면, Runner는 `running`을 보내고,
 벤치마크가 실행되는 동안 `heartbeat` 메시지를 스트리밍하며,
 종단(terminal) 메시지인 `completed` 또는 `failed`로 마무리합니다.
 서버는 각 메시지를 `ack`로 확인하며,
-연결은 열린 상태로 유지되어 Runner는 다음 Job을 위해 유휴 루프로 돌아갑니다.
+연결은 열린 상태로 유지되어 Runner는 다음 실행을 위해 유휴 루프로 돌아갑니다.
 
-Job이 취소되면, 서버는 `heartbeat`에 `cancel`로 응답합니다.
+서버는 Job의 실행들로부터 Job의 반복을 구성합니다.
+반복이 세 번인 Job은 세 개의 `job` 메시지로 전송되며,
+이 메시지들은 Job의 Spec을 가진 서로 다른 Runner로 하나씩 차례로,
+그리고 다른 Job의 실행 사이에 전송될 수 있습니다.
+Job은 진행 중인 실행을 최대 하나만 가지며, 다음 `job` 메시지는 이전 실행에 결과가 나온 뒤에만 전송됩니다.
+우선순위가 같은 Job 사이에서는 마지막 실행이 가장 오래전에 전송된 Job이 다음 차례가 되므로,
+반복이 한 번인 Job은 더 긴 Job의 반복을 최대 한 번만 기다립니다.
+
+실행이 진행 중일 때 Job이 취소되면,
+서버는 그 실행의 다음 `running` 또는 `heartbeat`에 `cancel`로 응답합니다.
 Runner는 벤치마크를 중지하고 `canceled`로 응답하며, 서버는 이를 확인합니다.
 
 <FlowDiagram />

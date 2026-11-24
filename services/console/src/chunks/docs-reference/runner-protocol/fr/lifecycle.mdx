@@ -2,21 +2,23 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 
 ## Cycle de vie du Job
 
-Chaque Job traverse un ensemble fixe d'états au fur et à mesure qu'il est réclamé, exécuté et traité.
+Chaque Job traverse un ensemble fixe d'états au fur et à mesure que ses exécutions sont envoyées, exécutées et traitées.
+Un Job reste `running` de sa première exécution jusqu'à son issue, y compris entre ses exécutions.
 
 | De        | Vers        | Déclencheur                                                            |
 | --------- | ----------- | ---------------------------------------------------------------------- |
-| pending   | claimed     | Un Runner réclame le Job                                                |
+| pending   | claimed     | Un Runner prend la première exécution du Job                            |
 | pending   | canceled    | Un utilisateur annule le Job                                            |
 | claimed   | running     | Le Runner envoie `running`                                             |
 | claimed   | failed      | Le Runner envoie `failed`                                              |
 | claimed   | unknown     | Le serveur perd le contact avec le Runner                              |
 | claimed   | canceled    | Un utilisateur annule le Job                                            |
-| running   | completed   | Le Runner envoie `completed`                                           |
-| running   | failed      | Le Runner envoie `failed`                                              |
-| running   | unknown     | Le serveur perd le contact avec le Runner                              |
+| running   | completed   | Chaque itération du Job a son issue                                    |
+| running   | failed      | Une exécution échoue sans `allow_failure`, ou le temps du Job est écoulé |
+| running   | unknown     | Le serveur perd le contact avec le Runner de sa seule exécution en cours |
 | running   | canceled    | Un utilisateur annule le Job, ou le délai d'attente strict du Job est dépassé |
-| unknown   | completed   | Le Runner envoie `completed`                                           |
+| unknown   | running     | Le Runner renvoie son résultat, et il reste des itérations au Job      |
+| unknown   | completed   | Le Runner renvoie son résultat, et chaque itération a son issue        |
 | unknown   | failed      | Le Runner envoie `failed`                                              |
 | unknown   | canceled    | Un utilisateur annule le Job, ou le délai d'attente strict du Job est dépassé |
 | completed | processed   | Le serveur traite les résultats avec succès                            |

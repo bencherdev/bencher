@@ -5,13 +5,23 @@ import FlowDiagram from "../flow-diagram.mdx";
 Nach dem Verbinden tritt der Runner in eine Polling-Schleife im Leerlauf ein
 und sendet `ready`, bis der Server einen `job` zuweist
 (oder `no_job` zurückgibt, wenn das Poll-Timeout abläuft, oder `update`, wenn eine neue Version verfügbar ist).
-Sobald er einen Job hat, sendet der Runner `running`,
+Jede `job`-Nachricht ist eine Ausführung: ein Lauf des Images des Jobs, als Job mit einer Iteration.
+Sobald er eine Ausführung hat, sendet der Runner `running`,
 streamt `heartbeat`-Nachrichten, während der Benchmark ausgeführt wird,
 und schließt mit einer terminalen `completed`- oder `failed`-Nachricht ab.
 Der Server bestätigt jede Nachricht mit `ack`,
-und die Verbindung bleibt offen, sodass der Runner für den nächsten Job in die Leerlaufschleife zurückkehrt.
+und die Verbindung bleibt offen, sodass der Runner für die nächste Ausführung in die Leerlaufschleife zurückkehrt.
 
-Wird ein Job abgebrochen, antwortet der Server auf ein `heartbeat` mit `cancel`.
+Der Server bildet die Iterationen eines Jobs aus seinen Ausführungen.
+Ein Job mit drei Iterationen wird als drei `job`-Nachrichten versendet,
+die nacheinander an verschiedene Runner der Spec des Jobs gehen können,
+auch zwischen den Ausführungen anderer Jobs.
+Ein Job hat höchstens eine Ausführung in Arbeit: Seine nächste `job`-Nachricht geht erst hinaus, wenn die vorherige ihr Ergebnis hat.
+Unter Jobs derselben Priorität kommt der Job als Nächstes an die Reihe, dessen letzte Ausführung am längsten zurückliegt,
+sodass ein Job mit einer Iteration höchstens auf eine Iteration eines längeren Jobs wartet.
+
+Wird ein Job abgebrochen, während seine Ausführung läuft,
+antwortet der Server auf das nächste `running` oder `heartbeat` dieser Ausführung mit `cancel`.
 Der Runner stoppt den Benchmark und antwortet mit `canceled`, was der Server bestätigt.
 
 <FlowDiagram />

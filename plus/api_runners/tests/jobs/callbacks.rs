@@ -29,9 +29,10 @@ use super::{
         callback_state, connect_channel_ws, create_runner, create_test_report, get_project_id,
         get_runner_id, insert_pending_callback, insert_pending_callback_with_body,
         insert_test_job_with_project, insert_test_job_with_timeout, insert_test_spec,
-        recv_server_msg as recv_msg, runner_metadata, send_runner_msg as send_msg, set_job_status,
+        insert_whole_job_execution, job_of, recv_server_msg as recv_msg, runner_metadata,
+        send_runner_msg as send_msg, set_job_status,
     },
-    get_job_id, get_status, mock_clock, set_job_last_heartbeat, set_job_times,
+    get_status, mock_clock, set_job_last_heartbeat, set_job_times,
     websocket::{setup_claimed_job, setup_reconnect_with_job_in},
 };
 
@@ -339,7 +340,7 @@ async fn a_discarded_late_result_fires_nothing() {
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
-// Site: `check_job_timeout`, the heartbeat timeout task at an Unknown job's deadline.
+// Site: `JobTimeout::spawn`, the heartbeat timeout task at an Unknown execution's deadline.
 #[tokio::test]
 async fn the_deadline_of_an_unknown_job_fires() {
     let server = TestServer::new().await;
@@ -360,6 +361,7 @@ async fn the_deadline_of_an_unknown_job_fires() {
         Some(base_timestamp()),
     );
     set_job_last_heartbeat(&server, job_uuid, base_timestamp());
+    let execution_id = insert_whole_job_execution(&server, job_uuid);
     insert_pending_callback(&server, job_uuid);
 
     // Past the deadline of started + 10 s timeout + 60 s grace period.
@@ -372,7 +374,7 @@ async fn the_deadline_of_an_unknown_job_fires() {
     .spawn(
         slog::Logger::root(slog::Discard, slog::o!()),
         Arc::new(Mutex::new(server.db_conn())),
-        get_job_id(&server, job_uuid),
+        execution_id,
         &HeartbeatTasks::new(),
         clock,
         server.context().callbacks.clone(),
@@ -584,7 +586,7 @@ async fn process_submitted(submitted: &Submitted) {
     assert!(
         matches!(
             serde_json::from_str(&claimed).expect("Failed to parse the claimed job"),
-            ServerMessage::Job(claimed) if claimed.uuid == *job
+            ServerMessage::Job(claimed) if job_of(server, &claimed) == *job
         ),
         "the runner claims the submitted job"
     );

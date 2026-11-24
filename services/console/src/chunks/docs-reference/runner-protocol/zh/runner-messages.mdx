@@ -8,6 +8,10 @@
 | `paused`    | Runner 空闲，但在暂停原因消除之前不接受 Job；服务器保持轮询并以 `no_job` 应答 | `reasons`（每项带有 `kind`：`raid` 或 `maintenance`）、`since` 以及 `ready` 的全部字段 |
 | `running`   | Job 设置完成，基准测试正在启动 | 无                                                                  |
 | `heartbeat` | 周期性存活信号（约每秒一次）  | 无                                                                    |
-| `completed` | 基准测试成功完成              | `job`（Job UUID）和 `results`（每次迭代的输出）                   |
-| `failed`    | 基准测试失败                              | `job`（Job UUID）、`results` 和 `error`                                |
-| `canceled`  | 确认来自服务器的取消       | `job`（Job UUID）                                                        |
+| `completed` | 基准测试成功完成              | `job`（`job` 消息的 UUID）和 `results`（该次运行的输出）          |
+| `failed`    | 基准测试失败                              | `job`（`job` 消息的 UUID）、`results` 和 `error`                       |
+| `canceled`  | 确认来自服务器的取消       | `job`（`job` 消息的 UUID）                                               |
+
+`job` 消息的 UUID 指代该次执行，而不是 Job。
+Runner 会原样返回它，因此结果能准确指向其执行，
+即使在同一 Job 的另一次执行发出之后再重新发送也是如此。

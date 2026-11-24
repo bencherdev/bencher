@@ -2,21 +2,23 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 
 ## Job 生命周期
 
-每个 Job 在被认领、执行和处理时，会经过一组固定的状态。
+每个 Job 在其各次执行被发送、运行和处理时，会经过一组固定的状态。
+Job 从第一次执行起直到有结果为止都保持 `running`，在各次执行之间也是如此。
 
 | 从        | 到          | 触发条件                                                               |
 | --------- | ----------- | ---------------------------------------------------------------------- |
-| pending   | claimed     | Runner 认领该 Job                                                 |
+| pending   | claimed     | Runner 接收该 Job 的第一次执行                                    |
 | pending   | canceled    | 用户取消该 Job                                                  |
 | claimed   | running     | Runner 发送 `running`                                              |
 | claimed   | failed      | Runner 发送 `failed`                                                     |
 | claimed   | unknown     | 服务器与 Runner 失去联系                                                       |
 | claimed   | canceled    | 用户取消该 Job                                                  |
-| running   | completed   | Runner 发送 `completed`                                            |
-| running   | failed      | Runner 发送 `failed`                                                     |
-| running   | unknown     | 服务器与 Runner 失去联系                                                       |
+| running   | completed   | 该 Job 的每次迭代都有了结果                                        |
+| running   | failed      | 某次执行在没有 `allow_failure` 时失败，或 Job 的时间用完                 |
+| running   | unknown     | 服务器与其唯一进行中执行的 Runner 失去联系                                     |
 | running   | canceled    | 用户取消该 Job，或超过了硬性 Job 超时             |
-| unknown   | completed   | Runner 发送 `completed`                                                  |
+| unknown   | running     | Runner 重新发送其结果，且 Job 还有剩余迭代                               |
+| unknown   | completed   | Runner 重新发送其结果，且每次迭代都有了结果                              |
 | unknown   | failed      | Runner 发送 `failed`                                                     |
 | unknown   | canceled    | 用户取消该 Job，或超过了硬性 Job 超时                                                |
 | completed | processed   | 服务器成功处理结果                          |

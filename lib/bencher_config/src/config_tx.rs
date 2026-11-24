@@ -652,34 +652,46 @@ fn into_if_exists(if_exists: &IfExists) -> ConfigLoggingIfExists {
 
 #[cfg(feature = "plus")]
 pub async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
-    use bencher_schema::model::runner::{in_flight_jobs, mark_orphaned_claimed_jobs_unknown};
-
-    let in_flight_jobs = {
-        let conn = &mut *context.database.connection.lock().await;
-
-        // First, mark any claimed jobs that have been orphaned (claimed longer ago
-        // than the heartbeat timeout without transitioning to Running) as Unknown.
-        mark_orphaned_claimed_jobs_unknown(log, conn, context.heartbeat_timeout, &context.clock);
-
-        // Then schedule heartbeat timeouts for remaining in-flight jobs.
-        match in_flight_jobs(conn) {
-            Ok(jobs) => jobs,
-            Err(e) => {
-                error!(log, "Failed to query in-flight jobs for recovery: {e}");
-                Vec::new()
-            },
-        }
+    use bencher_schema::model::runner::{
+        in_flight_executions, jobs_between_executions, mark_orphaned_sent_executions_unknown,
+        settle_job,
     };
 
-    let count = in_flight_jobs.len();
+    let (in_flight_executions, jobs_between_executions) = {
+        let conn = &mut *context.database.connection.lock().await;
+
+        // First, mark any executions that have been orphaned (sent longer ago than the
+        // heartbeat timeout without transitioning to Running) as Unknown.
+        mark_orphaned_sent_executions_unknown(log, conn, context.heartbeat_timeout, &context.clock);
+
+        // Then schedule heartbeat timeouts for the executions still in flight, and find the jobs
+        // with nothing in flight, which stay Running between their executions.
+        let in_flight = in_flight_executions(conn).unwrap_or_else(|e| {
+            error!(
+                log,
+                "Failed to query in-flight executions for recovery: {e}"
+            );
+            Vec::new()
+        });
+        let between = jobs_between_executions(conn).unwrap_or_else(|e| {
+            error!(
+                log,
+                "Failed to query jobs between executions for recovery: {e}"
+            );
+            Vec::new()
+        });
+        (in_flight, between)
+    };
+
+    let count = in_flight_executions.len();
     if count > 0 {
         info!(
             log,
-            "Found {count} in-flight job(s), scheduling heartbeat timeout recovery"
+            "Found {count} in-flight execution(s), scheduling heartbeat timeout recovery"
         );
     }
 
-    for job in in_flight_jobs {
+    for execution in in_flight_executions {
         JobTimeout {
             heartbeat: context.heartbeat_timeout,
             grace_period: context.job_timeout_grace_period,
@@ -687,11 +699,19 @@ pub async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
         .spawn(
             log.clone(),
             context.database.connection.clone(),
-            job.id,
+            execution.id,
             &context.heartbeat_tasks,
             context.clock.clone(),
             context.callbacks.clone(),
         );
+    }
+
+    // A job between its executions goes on when a runner takes its next one, unless it is done
+    // with them or out of time.
+    for job_id in jobs_between_executions {
+        if let Err(e) = settle_job(log, context, job_id).await {
+            error!(log, "Failed to settle job {job_id} for recovery: {e}");
+        }
     }
 
     // Then reprocess any jobs stuck in Completed (output stored but results not parsed).

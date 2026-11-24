@@ -12,6 +12,7 @@
 mod callbacks;
 #[path = "../common/mod.rs"]
 mod common;
+mod dispatch;
 mod iterations;
 mod mail;
 mod status;
@@ -34,19 +35,20 @@ use bencher_json::{
 use bencher_schema::{
     context::HeartbeatTasks,
     model::runner::{
-        JobId, JobTimeout, in_flight_jobs, mark_orphaned_claimed_jobs_unknown,
+        ExecutionStatus, JobTimeout, in_flight_executions, mark_orphaned_sent_executions_unknown,
         reprocess_completed_jobs,
     },
     schema,
 };
 use common::{
     assert_ws_closed, associate_runner_spec, base_timestamp, claim_via_channel, connect_channel_ws,
-    create_runner, create_test_report, get_job_priority, get_project_id, get_runner_id,
-    insert_test_job, insert_test_job_full, insert_test_job_with_bmf_version,
+    create_runner, create_sibling_report, create_test_report, get_job_priority, get_project_id,
+    get_runner_id, insert_test_job, insert_test_job_full, insert_test_job_with_bmf_version,
     insert_test_job_with_invalid_config, insert_test_job_with_project,
     insert_test_job_with_timeout, insert_test_spec, insert_test_spec_full,
-    recv_server_msg as recv_msg, send_runner_msg as send_msg, set_job_runner_id, set_job_status,
-    try_connect_channel_ws, ws_url,
+    insert_whole_job_execution, job_of, recv_server_msg as recv_msg, send_runner_msg as send_msg,
+    server_with_no_heartbeat_timeout, set_job_runner_id, set_job_status, try_connect_channel_ws,
+    ws_url,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
@@ -216,7 +218,7 @@ mod job_lifecycle {
         // Step 1: Claim the job via channel WS
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 5).await;
         let claimed_job = claimed.expect("Expected to claim a job");
-        assert_eq!(claimed_job.uuid, job_uuid);
+        assert_eq!(job_of(&server, &claimed_job), job_uuid);
 
         // Step 2: Transition to running via DB
         set_job_status(&server, job_uuid, JobStatus::Running);
@@ -336,7 +338,7 @@ mod job_lifecycle {
         // Exactly one runner should have claimed the job
         let claimed_count = [&job1, &job2]
             .iter()
-            .filter(|j| j.as_ref().is_some_and(|j| j.uuid == job_uuid))
+            .filter(|j| j.as_ref().is_some_and(|j| job_of(&server, j) == job_uuid))
             .count();
         assert_eq!(
             claimed_count, 1,
@@ -428,7 +430,7 @@ mod job_spec {
         // Claim the job via channel WS
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 5).await;
         let claimed_job = claimed.expect("Expected to claim a job");
-        assert_eq!(claimed_job.uuid, job_uuid);
+        assert_eq!(job_of(&server, &claimed_job), job_uuid);
 
         let config = &claimed_job.config;
 
@@ -630,7 +632,8 @@ mod priority_scheduling {
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
-            claimed.uuid, high_job,
+            job_of(&server, &claimed),
+            high_job,
             "Expected high priority job to be claimed first"
         );
 
@@ -642,7 +645,8 @@ mod priority_scheduling {
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
-            claimed.uuid, medium_job,
+            job_of(&server, &claimed),
+            medium_job,
             "Expected medium priority job to be claimed second"
         );
 
@@ -654,7 +658,8 @@ mod priority_scheduling {
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
-            claimed.uuid, low_job,
+            job_of(&server, &claimed),
+            low_job,
             "Expected low priority job to be claimed last"
         );
     }
@@ -662,7 +667,7 @@ mod priority_scheduling {
     // Test Free tier concurrency limit (1 per organization)
     #[tokio::test]
     async fn free_tier_org_limit() {
-        let server = TestServer::new().await;
+        let server = server_with_no_heartbeat_timeout().await;
         let admin = server.signup("Admin", "freetier1@example.com").await;
         let org = server.create_org(&admin, "Free Tier Org").await;
         let project = server
@@ -717,7 +722,7 @@ mod priority_scheduling {
     // Test Unclaimed tier concurrency limit (1 per source IP)
     #[tokio::test]
     async fn unclaimed_tier_ip_limit() {
-        let server = TestServer::new().await;
+        let server = server_with_no_heartbeat_timeout().await;
         let admin = server.signup("Admin", "unclaimed1@example.com").await;
         let org = server.create_org(&admin, "Unclaimed Tier Org").await;
         let project = server
@@ -815,7 +820,7 @@ mod priority_scheduling {
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running
-        set_job_status(&server, first_claimed.uuid, JobStatus::Running);
+        set_job_status(&server, job_of(&server, &first_claimed), JobStatus::Running);
 
         // Claim second job - should succeed because different IP
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
@@ -823,8 +828,9 @@ mod priority_scheduling {
 
         // Verify both jobs were claimed
         assert!(
-            (first_claimed.uuid == job1 && second_claimed.uuid == job2)
-                || (first_claimed.uuid == job2 && second_claimed.uuid == job1),
+            (job_of(&server, &first_claimed) == job1 && job_of(&server, &second_claimed) == job2)
+                || (job_of(&server, &first_claimed) == job2
+                    && job_of(&server, &second_claimed) == job1),
             "Expected both jobs to be claimed"
         );
     }
@@ -874,7 +880,7 @@ mod priority_scheduling {
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running (not completed)
-        set_job_status(&server, first_claimed.uuid, JobStatus::Running);
+        set_job_status(&server, job_of(&server, &first_claimed), JobStatus::Running);
 
         // Claim second job - should succeed because Enterprise tier has no limit
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
@@ -882,8 +888,9 @@ mod priority_scheduling {
 
         // Verify both distinct jobs were claimed
         assert!(
-            (first_claimed.uuid == job1 && second_claimed.uuid == job2)
-                || (first_claimed.uuid == job2 && second_claimed.uuid == job1),
+            (job_of(&server, &first_claimed) == job1 && job_of(&server, &second_claimed) == job2)
+                || (job_of(&server, &first_claimed) == job2
+                    && job_of(&server, &second_claimed) == job1),
             "Expected both Enterprise tier jobs to be claimed concurrently"
         );
     }
@@ -891,7 +898,7 @@ mod priority_scheduling {
     // Test that high priority job skips blocked lower priority jobs
     #[tokio::test]
     async fn high_priority_skips_blocked() {
-        let server = TestServer::new().await;
+        let server = server_with_no_heartbeat_timeout().await;
         let admin = server.signup("Admin", "skipblocked@example.com").await;
         let org = server.create_org(&admin, "Skip Blocked Org").await;
         let project = server
@@ -947,7 +954,8 @@ mod priority_scheduling {
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim Enterprise job");
         assert_eq!(
-            claimed.uuid, enterprise_job,
+            job_of(&server, &claimed),
+            enterprise_job,
             "Expected Enterprise job to be claimed, skipping blocked Free tier job"
         );
     }
@@ -997,15 +1005,16 @@ mod priority_scheduling {
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running
-        set_job_status(&server, first_claimed.uuid, JobStatus::Running);
+        set_job_status(&server, job_of(&server, &first_claimed), JobStatus::Running);
 
         // Claim second job - should succeed because Team tier has no limit
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let second_claimed = claimed.expect("Team tier should allow concurrent jobs");
 
         assert!(
-            (first_claimed.uuid == job1 && second_claimed.uuid == job2)
-                || (first_claimed.uuid == job2 && second_claimed.uuid == job1),
+            (job_of(&server, &first_claimed) == job1 && job_of(&server, &second_claimed) == job2)
+                || (job_of(&server, &first_claimed) == job2
+                    && job_of(&server, &second_claimed) == job1),
             "Expected both Team tier jobs to be claimed concurrently"
         );
     }
@@ -1070,7 +1079,8 @@ mod priority_scheduling {
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
-            claimed.uuid, first_job,
+            job_of(&server, &claimed),
+            first_job,
             "Expected first created job to be claimed first"
         );
 
@@ -1082,7 +1092,8 @@ mod priority_scheduling {
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
-            claimed.uuid, second_job,
+            job_of(&server, &claimed),
+            second_job,
             "Expected second created job to be claimed second"
         );
 
@@ -1094,7 +1105,8 @@ mod priority_scheduling {
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
-            claimed.uuid, third_job,
+            job_of(&server, &claimed),
+            third_job,
             "Expected third created job to be claimed third"
         );
     }
@@ -1154,7 +1166,7 @@ mod priority_scheduling {
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running
-        set_job_status(&server, first_claimed.uuid, JobStatus::Running);
+        set_job_status(&server, job_of(&server, &first_claimed), JobStatus::Running);
 
         // Claim second job - should succeed because different org
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
@@ -1162,8 +1174,9 @@ mod priority_scheduling {
             claimed.expect("Different orgs should allow concurrent Free tier jobs");
 
         assert!(
-            (first_claimed.uuid == job1 && second_claimed.uuid == job2)
-                || (first_claimed.uuid == job2 && second_claimed.uuid == job1),
+            (job_of(&server, &first_claimed) == job1 && job_of(&server, &second_claimed) == job2)
+                || (job_of(&server, &first_claimed) == job2
+                    && job_of(&server, &second_claimed) == job1),
             "Expected both Free tier jobs from different orgs to be claimed"
         );
     }
@@ -1171,7 +1184,7 @@ mod priority_scheduling {
     // Test that completing a job unblocks the next job
     #[tokio::test]
     async fn job_completion_unblocks() {
-        let server = TestServer::new().await;
+        let server = server_with_no_heartbeat_timeout().await;
         let admin = server.signup("Admin", "unblock1@example.com").await;
         let org = server.create_org(&admin, "Unblock Org").await;
         let project = server.create_project(&admin, &org, "Unblock Project").await;
@@ -1210,7 +1223,7 @@ mod priority_scheduling {
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let first_claimed = claimed.expect("Expected to claim first job");
 
-        set_job_status(&server, first_claimed.uuid, JobStatus::Running);
+        set_job_status(&server, job_of(&server, &first_claimed), JobStatus::Running);
 
         // Try to claim second job - should fail (org blocked)
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
@@ -1220,20 +1233,25 @@ mod priority_scheduling {
         );
 
         // Complete the first job
-        set_job_status(&server, first_claimed.uuid, JobStatus::Completed);
+        set_job_status(
+            &server,
+            job_of(&server, &first_claimed),
+            JobStatus::Completed,
+        );
 
         // Now try to claim second job - should succeed (org no longer blocked)
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let second_claimed = claimed.expect("Second job should be claimable after first completes");
 
         // Verify we got the second job (not the completed first one)
-        let expected_second = if first_claimed.uuid == job1 {
+        let expected_second = if job_of(&server, &first_claimed) == job1 {
             job2
         } else {
             job1
         };
         assert_eq!(
-            second_claimed.uuid, expected_second,
+            job_of(&server, &second_claimed),
+            expected_second,
             "Expected second job to be claimed after first completes"
         );
     }
@@ -1241,7 +1259,7 @@ mod priority_scheduling {
     // Test that Free tier is blocked while Team tier is not for the same org
     #[tokio::test]
     async fn free_blocked_team_unblocked() {
-        let server = TestServer::new().await;
+        let server = server_with_no_heartbeat_timeout().await;
         let admin = server.signup("Admin", "boundary1@example.com").await;
         let org = server.create_org(&admin, "Boundary Org").await;
         let project = server
@@ -1299,7 +1317,8 @@ mod priority_scheduling {
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim Team tier job");
         assert_eq!(
-            claimed.uuid, team_job,
+            job_of(&server, &claimed),
+            team_job,
             "Team tier should be unlimited, not blocked like Free tier"
         );
     }
@@ -1307,7 +1326,7 @@ mod priority_scheduling {
     // Test Unclaimed tier blocked by IP while Free tier from different org succeeds
     #[tokio::test]
     async fn unclaimed_blocked_free_different_org_unblocked() {
-        let server = TestServer::new().await;
+        let server = server_with_no_heartbeat_timeout().await;
         let admin = server.signup("Admin", "boundary2@example.com").await;
         let org = server.create_org(&admin, "Boundary UF Org").await;
         let project = server
@@ -1386,7 +1405,8 @@ mod priority_scheduling {
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim unblocked Free tier job");
         assert_eq!(
-            claimed.uuid, free_unblocked,
+            job_of(&server, &claimed),
+            free_unblocked,
             "Free tier from different org should be claimable"
         );
     }
@@ -1453,7 +1473,8 @@ mod priority_scheduling {
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
-            claimed.uuid, first_job,
+            job_of(&server, &claimed),
+            first_job,
             "Expected first inserted job (lowest id) to be claimed first"
         );
 
@@ -1465,7 +1486,8 @@ mod priority_scheduling {
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
-            claimed.uuid, second_job,
+            job_of(&server, &claimed),
+            second_job,
             "Expected second inserted job to be claimed second"
         );
 
@@ -1477,7 +1499,8 @@ mod priority_scheduling {
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
-            claimed.uuid, third_job,
+            job_of(&server, &claimed),
+            third_job,
             "Expected third inserted job to be claimed last"
         );
     }
@@ -1585,7 +1608,7 @@ mod concurrency_safety {
     // This validates the TOCTOU fix: read+check+update under a single write lock.
     #[tokio::test]
     async fn concurrent_free_tier_claim_respects_org_limit() {
-        let server = TestServer::new().await;
+        let server = server_with_no_heartbeat_timeout().await;
         let admin = server.signup("Admin", "concurrent-free@example.com").await;
         let org = server.create_org(&admin, "Concurrent Free Org").await;
         let project = server
@@ -1651,7 +1674,7 @@ mod concurrency_safety {
     // The concurrency limit should prevent both from claiming simultaneously.
     #[tokio::test]
     async fn concurrent_unclaimed_tier_claim_respects_ip_limit() {
-        let server = TestServer::new().await;
+        let server = server_with_no_heartbeat_timeout().await;
         let admin = server
             .signup("Admin", "concurrent-unclaimed@example.com")
             .await;
@@ -1814,7 +1837,7 @@ async fn runner_multiple_specs_claims_matching_jobs() {
     let second = second.expect("Expected to claim second job");
 
     // Both jobs should have been claimed (order depends on priority/FIFO)
-    let claimed_uuids = [first.uuid, second.uuid];
+    let claimed_uuids = [job_of(&server, &first), job_of(&server, &second)];
     assert!(
         claimed_uuids.contains(&job_a),
         "Job A should have been claimed"
@@ -1823,7 +1846,11 @@ async fn runner_multiple_specs_claims_matching_jobs() {
         claimed_uuids.contains(&job_b),
         "Job B should have been claimed"
     );
-    assert_ne!(first.uuid, second.uuid, "Should claim two different jobs");
+    assert_ne!(
+        job_of(&server, &first),
+        job_of(&server, &second),
+        "Should claim two different jobs"
+    );
 }
 
 // =============================================================================
@@ -1918,7 +1945,7 @@ async fn archived_runner_key_rejected() {
 /// Free tier: blocked when same org has in-flight, even from a different runner.
 #[tokio::test]
 async fn free_tier_blocked_same_org_different_runner() {
-    let server = TestServer::new().await;
+    let server = server_with_no_heartbeat_timeout().await;
     let admin = server.signup("Admin", "free-diff-runner@example.com").await;
     let org = server.create_org(&admin, "Free DiffRunner Org").await;
     let project = server
@@ -1961,7 +1988,7 @@ async fn free_tier_blocked_same_org_different_runner() {
 
     // Runner1 claims first job
     let (_ws, claimed) = claim_via_channel(&server, runner1.uuid, runner1_key, 1).await;
-    assert_eq!(claimed.as_ref().map(|j| j.uuid), Some(job1));
+    assert_eq!(claimed.as_ref().map(|j| job_of(&server, j)), Some(job1));
 
     // Set to running
     set_job_status(&server, job1, JobStatus::Running);
@@ -2029,7 +2056,7 @@ async fn mixed_tier_free_blocked_enterprise_claimable() {
     // Claim should skip the blocked Free job and grab the Enterprise job
     let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
     assert_eq!(
-        claimed.as_ref().map(|j| j.uuid),
+        claimed.as_ref().map(|j| job_of(&server, j)),
         Some(enterprise_job),
         "Enterprise job should be claimable even when Free tier is blocked"
     );
@@ -2252,10 +2279,11 @@ async fn claim_no_pending_jobs_succeeds() {
 // Recovery Tests
 // =============================================================================
 
-/// Test that `mark_orphaned_claimed_jobs_unknown` marks orphaned Claimed jobs as Unknown.
-/// A job is "orphaned" when it's been in Claimed state longer than the heartbeat timeout.
+/// Test that `mark_orphaned_sent_executions_unknown` marks orphaned sent executions, and their
+/// Claimed jobs, as Unknown. An execution is "orphaned" when it's been sent longer ago than the
+/// heartbeat timeout.
 #[tokio::test]
-async fn mark_orphaned_claimed_jobs_unknown_marks_as_unknown() {
+async fn mark_orphaned_sent_executions_unknown_marks_as_unknown() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "recover-orphan@example.com").await;
     let org = server.create_org(&admin, "Recover Orphan").await;
@@ -2282,12 +2310,13 @@ async fn mark_orphaned_claimed_jobs_unknown_marks_as_unknown() {
             .execute(&mut conn)
             .expect("Failed to set job to claimed");
     }
+    insert_whole_job_execution(&server, job_uuid);
 
-    // Call mark_orphaned_claimed_jobs_unknown with a 5-second timeout
+    // Call mark_orphaned_sent_executions_unknown with a 5-second timeout
     let log = slog::Logger::root(slog::Discard, slog::o!());
     let heartbeat_timeout = std::time::Duration::from_secs(5);
     let mut conn = server.db_conn();
-    let marked = mark_orphaned_claimed_jobs_unknown(
+    let marked = mark_orphaned_sent_executions_unknown(
         &log,
         &mut conn,
         heartbeat_timeout,
@@ -2308,11 +2337,11 @@ async fn mark_orphaned_claimed_jobs_unknown_marks_as_unknown() {
     );
 }
 
-/// Test that `mark_orphaned_claimed_jobs_unknown` spares recently-claimed jobs.
-/// A job claimed within the heartbeat timeout should survive into
+/// Test that `mark_orphaned_sent_executions_unknown` spares recently sent executions.
+/// An execution sent within the heartbeat timeout should survive into
 /// Phase 2 (`JobTimeout::spawn`) rather than being marked early.
 #[tokio::test]
-async fn mark_orphaned_claimed_jobs_unknown_spares_recently_claimed() {
+async fn mark_orphaned_sent_executions_unknown_spares_recently_sent() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "recover-recent@example.com").await;
     let org = server.create_org(&admin, "Recover Recent").await;
@@ -2341,6 +2370,7 @@ async fn mark_orphaned_claimed_jobs_unknown_spares_recently_claimed() {
             .execute(&mut conn)
             .expect("Failed to set job to claimed");
     }
+    insert_whole_job_execution(&server, job_uuid);
 
     // Use a custom clock pinned to base_timestamp so the cutoff is deterministic
     let clock = bencher_json::Clock::Custom(Arc::new(base_timestamp));
@@ -2348,7 +2378,7 @@ async fn mark_orphaned_claimed_jobs_unknown_spares_recently_claimed() {
     let log = slog::Logger::root(slog::Discard, slog::o!());
     let heartbeat_timeout = std::time::Duration::from_secs(5);
     let mut conn = server.db_conn();
-    let marked = mark_orphaned_claimed_jobs_unknown(&log, &mut conn, heartbeat_timeout, &clock);
+    let marked = mark_orphaned_sent_executions_unknown(&log, &mut conn, heartbeat_timeout, &clock);
     assert_eq!(
         marked, 0,
         "Recently claimed job should NOT be marked (within heartbeat timeout)"
@@ -2395,7 +2425,7 @@ async fn spawn_heartbeat_timeout_marks_running_job_unknown() {
         Some(base_timestamp()),
     );
 
-    let job_id = get_job_id(&server, job_uuid);
+    let execution_id = insert_whole_job_execution(&server, job_uuid);
 
     // Create the infrastructure JobTimeout::spawn needs
     let connection = Arc::new(Mutex::new(server.db_conn()));
@@ -2415,7 +2445,7 @@ async fn spawn_heartbeat_timeout_marks_running_job_unknown() {
     .spawn(
         log,
         connection,
-        job_id,
+        execution_id,
         &heartbeat_tasks,
         bencher_json::Clock::Custom(Arc::new(move || now)),
         server.context().callbacks.clone(),
@@ -2458,6 +2488,7 @@ async fn spawn_heartbeat_timeout_keeps_full_limit_between_heartbeats() {
         Some(base_timestamp()),
     );
     set_job_last_heartbeat(&server, job_uuid, base_timestamp());
+    let execution_id = insert_whole_job_execution(&server, job_uuid);
 
     let (clock, mock_time) = mock_clock(0);
     let heartbeat_tasks = HeartbeatTasks::new();
@@ -2470,7 +2501,7 @@ async fn spawn_heartbeat_timeout_keeps_full_limit_between_heartbeats() {
     .spawn(
         slog::Logger::root(slog::Discard, slog::o!()),
         Arc::new(Mutex::new(server.db_conn())),
-        get_job_id(&server, job_uuid),
+        execution_id,
         &heartbeat_tasks,
         clock,
         server.context().callbacks.clone(),
@@ -2533,6 +2564,7 @@ async fn spawn_heartbeat_timeout_cancels_unknown_job_at_deadline_from_started() 
         Some(base_timestamp()),
     );
     set_job_last_heartbeat(&server, job_uuid, base_timestamp());
+    let execution_id = insert_whole_job_execution(&server, job_uuid);
 
     let (clock, mock_time) = mock_clock(6);
     let heartbeat_tasks = HeartbeatTasks::new();
@@ -2545,7 +2577,7 @@ async fn spawn_heartbeat_timeout_cancels_unknown_job_at_deadline_from_started() 
     .spawn(
         slog::Logger::root(slog::Discard, slog::o!()),
         Arc::new(Mutex::new(server.db_conn())),
-        get_job_id(&server, job_uuid),
+        execution_id,
         &heartbeat_tasks,
         clock,
         server.context().callbacks.clone(),
@@ -2587,6 +2619,7 @@ async fn spawn_heartbeat_timeout_cancels_unknown_job_at_deadline_from_claimed() 
     let job_uuid = insert_test_job_with_timeout(&server, report_id, spec_id, 10);
     set_job_status(&server, job_uuid, JobStatus::Unknown);
     set_job_times(&server, job_uuid, Some(base_timestamp()), None);
+    let execution_id = insert_whole_job_execution(&server, job_uuid);
 
     let (clock, mock_time) = mock_clock(6);
     let heartbeat_tasks = HeartbeatTasks::new();
@@ -2599,7 +2632,7 @@ async fn spawn_heartbeat_timeout_cancels_unknown_job_at_deadline_from_claimed() 
     .spawn(
         slog::Logger::root(slog::Discard, slog::o!()),
         Arc::new(Mutex::new(server.db_conn())),
-        get_job_id(&server, job_uuid),
+        execution_id,
         &heartbeat_tasks,
         clock,
         server.context().callbacks.clone(),
@@ -2621,44 +2654,47 @@ async fn spawn_heartbeat_timeout_cancels_unknown_job_at_deadline_from_claimed() 
     assert_eq!(get_status(&server, job_uuid), JobStatus::Canceled);
 }
 
-/// The query startup recovery arms heartbeat timeouts from returns every job
-/// still in flight, including one whose outcome is Unknown, and no other job.
+/// The query startup recovery arms heartbeat timeouts from returns every execution
+/// still in flight, including one whose outcome is Unknown, and no other execution.
 #[tokio::test]
-async fn in_flight_jobs_include_unknown() {
+async fn in_flight_executions_include_unknown() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "in-flight@example.com").await;
     let org = server.create_org(&admin, "In Flight").await;
     let project = server.create_project(&admin, &org, "In Flight proj").await;
 
     let project_id = get_project_id(&server, project.slug.as_ref());
-    let report_id = create_test_report(&server, project_id);
+    let first_report_id = create_test_report(&server, project_id);
     let (_, spec_id) = insert_test_spec(&server);
 
     let mut expected = Vec::new();
     for status in [
-        JobStatus::Pending,
-        JobStatus::Claimed,
-        JobStatus::Running,
-        JobStatus::Completed,
-        JobStatus::Processed,
-        JobStatus::Failed,
-        JobStatus::Canceled,
-        JobStatus::Unknown,
+        ExecutionStatus::Sent,
+        ExecutionStatus::Running,
+        ExecutionStatus::Completed,
+        ExecutionStatus::Failed,
+        ExecutionStatus::Canceled,
+        ExecutionStatus::Unknown,
     ] {
+        let report_id = create_sibling_report(&server, first_report_id);
         let job_uuid = insert_test_job(&server, report_id, spec_id);
-        set_job_status(&server, job_uuid, status);
-        if matches!(
-            status,
-            JobStatus::Claimed | JobStatus::Running | JobStatus::Unknown
-        ) {
-            expected.push(job_uuid);
+        set_job_status(&server, job_uuid, JobStatus::Running);
+        let execution_id = insert_whole_job_execution(&server, job_uuid);
+        diesel::update(
+            schema::job_execution::table.filter(schema::job_execution::id.eq(execution_id)),
+        )
+        .set(schema::job_execution::status.eq(status))
+        .execute(&mut server.db_conn())
+        .expect("Failed to set the execution's status");
+        if status.is_in_flight() {
+            expected.push(execution_id);
         }
     }
 
-    let mut in_flight: Vec<_> = in_flight_jobs(&mut server.db_conn())
-        .expect("Failed to query in-flight jobs")
+    let mut in_flight: Vec<_> = in_flight_executions(&mut server.db_conn())
+        .expect("Failed to query in-flight executions")
         .into_iter()
-        .map(|job| job.uuid)
+        .map(|execution| execution.id)
         .collect();
     in_flight.sort_unstable();
     expected.sort_unstable();
@@ -2752,25 +2788,28 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
     // Claim the job via channel WS.
     let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 5).await;
     let claimed = claimed.expect("Expected to claim a job");
-    assert_eq!(claimed.uuid, job_uuid);
 
-    // Get the JobId for JobTimeout::spawn
-    let job_id: JobId = {
+    // Get the execution for JobTimeout::spawn
+    let execution_id = {
         let mut conn = server.db_conn();
-        schema::job::table
+        schema::job_execution::table
+            .inner_join(schema::job::table)
             .filter(schema::job::uuid.eq(job_uuid))
-            .select(schema::job::id)
+            .filter(schema::job_execution::uuid.eq(claimed.uuid))
+            .select(schema::job_execution::id)
             .first(&mut conn)
-            .expect("Failed to get job ID")
+            .expect("Failed to get the job's execution")
     };
 
-    // Clear last_heartbeat so the freshness check is skipped
+    // Age last_heartbeat past the timeout so the freshness check passes
     {
         let mut conn = server.db_conn();
-        diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
-            .set(schema::job::last_heartbeat.eq(None::<DateTime>))
-            .execute(&mut conn)
-            .expect("Failed to clear last_heartbeat");
+        diesel::update(
+            schema::job_execution::table.filter(schema::job_execution::id.eq(execution_id)),
+        )
+        .set(schema::job_execution::last_heartbeat.eq(base_timestamp()))
+        .execute(&mut conn)
+        .expect("Failed to age last_heartbeat");
     }
 
     // Simulate server recovery: spawn heartbeat timeout for the claimed job
@@ -2790,7 +2829,7 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
     .spawn(
         log,
         connection,
-        job_id,
+        execution_id,
         &heartbeat_tasks,
         bencher_json::Clock::System,
         server.context().callbacks.clone(),
@@ -2912,7 +2951,9 @@ async fn reprocess_completed_job_no_output_arms_deadline() {
     let (_, spec_id) = insert_test_spec(&server);
     let job_uuid = insert_test_job_with_project(&server, report_id, project.uuid, spec_id);
 
-    // Started before the server's clock by more than its timeout plus grace period.
+    // Started before the server's clock by more than its timeout plus grace period, by a runner.
+    let runner = create_runner(&server, &admin.token, "Reprocess deadline runner").await;
+    set_job_runner_id(&server, job_uuid, get_runner_id(&server, runner.uuid));
     set_job_status(&server, job_uuid, JobStatus::Completed);
     set_job_times(
         &server,
@@ -3464,15 +3505,6 @@ async fn reprocess_completed_jobs_malformed_output() {
 }
 
 #[expect(clippy::expect_used, reason = "test helper")]
-fn get_job_id(server: &TestServer, job_uuid: bencher_json::JobUuid) -> JobId {
-    schema::job::table
-        .filter(schema::job::uuid.eq(job_uuid))
-        .select(schema::job::id)
-        .first(&mut server.db_conn())
-        .expect("Failed to get job ID")
-}
-
-#[expect(clippy::expect_used, reason = "test helper")]
 fn get_status(server: &TestServer, job_uuid: bencher_json::JobUuid) -> JobStatus {
     schema::job::table
         .filter(schema::job::uuid.eq(job_uuid))
@@ -3517,6 +3549,11 @@ fn set_job_times(
 fn set_job_last_heartbeat(server: &TestServer, job_uuid: bencher_json::JobUuid, at: DateTime) {
     diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
         .set(schema::job::last_heartbeat.eq(Some(at)))
+        .execute(&mut server.db_conn())
+        .expect("Failed to set last heartbeat");
+    // The job's whole-job execution, once it has one, hears the heartbeat too.
+    diesel::update(schema::job_execution::table.filter(schema::job_execution::uuid.eq(job_uuid)))
+        .set(schema::job_execution::last_heartbeat.eq(at))
         .execute(&mut server.db_conn())
         .expect("Failed to set last heartbeat");
 }

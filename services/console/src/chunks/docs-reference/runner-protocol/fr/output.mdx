@@ -1,12 +1,17 @@
 ## Sortie du Job
 
 Lorsqu'un Runner envoie `completed` ou `failed`,
-la sortie complète est stockée dans le même backend de stockage OCI utilisé pour les Images de conteneur,
-au chemin `{project}/output/v0/jobs/{job}`.
+la sortie de cette exécution est stockée aussitôt dans le même backend de stockage OCI utilisé pour les Images de conteneur,
+au chemin `{project}/output/v0/executions/{execution}`.
+Lorsque chaque itération du Job a son issue,
+le serveur assemble la sortie du Job à partir de ses exécutions, dans l'ordre des itérations,
+et la stocke au chemin `{project}/output/v0/jobs/{job}`.
 
 La sortie stockée contient un tableau `results` par itération et, en cas d'échec, une chaîne `error`.
 Chaque itération enregistre son `exit_code`, son `stdout`, son `stderr`,
 ainsi qu'une carte de tous les fichiers de sortie collectés avec leur contenu.
+Avec `allow_failure`, une itération dont l'exécution a échoué ne garde que son `exit_code` et son `stderr`,
+de sorte qu'elle garde sa place et qu'aucune Metric n'en atteint le Report.
 Une fois la sortie stockée, le serveur exécute l'[adaptateur du harnais de benchmark][adapters] sur les résultats
 pour analyser les Metrics et les Alerts dans le Report, faisant passer le Job à `processed`.
 

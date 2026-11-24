@@ -318,6 +318,15 @@ impl OciStorage {
             .join(job.to_string())
     }
 
+    /// Returns the key for the output blob of one execution of a job
+    fn execution_output_key(&self, project: ProjectUuid, execution: bencher_json::JobUuid) -> Path {
+        self.repository_prefix(&project)
+            .join("output")
+            .join("v0")
+            .join("executions")
+            .join(execution.to_string())
+    }
+
     // ==================== Object Store Helpers ====================
 
     /// Reads an object in full, mapping a missing object to `not_found`.
@@ -948,8 +957,37 @@ impl OciStorage {
         project: ProjectUuid,
         job: bencher_json::JobUuid,
     ) -> Result<Option<bencher_json::runner::JsonJobOutput>, OciStorageError> {
-        let key = self.job_output_key(project, job);
-        match self.store.get(&key).await {
+        self.get_output(&self.job_output_key(project, job)).await
+    }
+
+    pub(crate) async fn put_execution_output(
+        &self,
+        project: ProjectUuid,
+        execution: bencher_json::JobUuid,
+        output: &bencher_json::runner::JsonJobOutput,
+    ) -> Result<(), OciStorageError> {
+        let data = serde_json::to_vec(output).map_err(|e| OciStorageError::Json(e.to_string()))?;
+        self.put(
+            &self.execution_output_key(project, execution),
+            Bytes::from(data),
+        )
+        .await
+    }
+
+    pub(crate) async fn get_execution_output(
+        &self,
+        project: ProjectUuid,
+        execution: bencher_json::JobUuid,
+    ) -> Result<Option<bencher_json::runner::JsonJobOutput>, OciStorageError> {
+        self.get_output(&self.execution_output_key(project, execution))
+            .await
+    }
+
+    async fn get_output(
+        &self,
+        key: &Path,
+    ) -> Result<Option<bencher_json::runner::JsonJobOutput>, OciStorageError> {
+        match self.store.get(key).await {
             Ok(result) => {
                 let data = result
                     .bytes()
@@ -1417,6 +1455,12 @@ mod tests {
                 .job_output_key(repository, JOB.parse().unwrap())
                 .as_ref(),
             format!("{PROJECT}/output/v0/jobs/{JOB}")
+        );
+        assert_eq!(
+            storage
+                .execution_output_key(repository, JOB.parse().unwrap())
+                .as_ref(),
+            format!("{PROJECT}/output/v0/executions/{JOB}")
         );
     }
 

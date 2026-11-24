@@ -1,12 +1,17 @@
 ## Saída do Job
 
 Quando um Runner envia `completed` ou `failed`,
-a saída completa é armazenada no mesmo backend de armazenamento OCI usado para as Images de contêiner,
-no caminho `{project}/output/v0/jobs/{job}`.
+a saída dessa execução é armazenada de imediato no mesmo backend de armazenamento OCI usado para as Images de contêiner,
+no caminho `{project}/output/v0/executions/{execution}`.
+Quando cada iteração do Job tem seu resultado,
+o servidor monta a saída do Job a partir de suas execuções, na ordem das iterações,
+e a armazena no caminho `{project}/output/v0/jobs/{job}`.
 
 A saída armazenada contém um array `results` por iteração e, em caso de falha, uma string `error`.
 Cada iteração registra seu `exit_code`, `stdout`, `stderr`
 e um mapa de quaisquer arquivos de saída coletados para seus conteúdos.
+Com `allow_failure`, uma iteração cuja execução falhou mantém apenas seu `exit_code` e seu `stderr`,
+de modo que mantém seu lugar e nenhuma Metric dela chega ao Report.
 Após a saída ser armazenada, o servidor executa o [adaptador de harness de benchmark][adapters] sobre os resultados
 para analisar Metrics e Alerts no Report, transicionando o Job para `processed`.
 

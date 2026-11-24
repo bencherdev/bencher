@@ -4,15 +4,15 @@ Mensajes enviados desde el servidor al Runner.
 
 | Event    | Descripción                                       | Payload                                                          |
 | -------- | ------------------------------------------------- | ---------------------------------------------------------------- |
-| `ack`    | Confirma un mensaje recibido                      | `job` opcional (UUID del Job)                                    |
-| `job`    | Asigna un Job reclamado al Runner                 | El Job reclamado: su Spec, la configuración del Job, y un token de descarga OCI de corta duración |
+| `ack`    | Confirma un mensaje recibido                      | `job` opcional (el UUID del mensaje `job`)                       |
+| `job`    | Asigna una ejecución de un Job al Runner          | El UUID de la ejecución, la Spec del Job, su configuración del Job como una iteración con lo que queda del timeout del Job, y un token de descarga OCI de corta duración |
 | `no_job` | El tiempo de espera del poll expiró sin Job disponible | Ninguno                                                     |
 | `cancel` | El Job fue cancelado o agotó su tiempo; detén la ejecución | Ninguno                                                |
 | `update` | El Runner debe auto-actualizarse a una nueva versión | `version`, `url` (URL de descarga), y `checksum` (SHA-256)    |
 
-El token de descarga OCI en un mensaje `job` se genera cuando se reclama el Job y nunca se almacena.
+El token de descarga OCI en un mensaje `job` se genera para esa ejecución y nunca se almacena.
 Está limitado al único proyecto al que pertenece el Job, es solo de descarga, y es de corta duración,
-de modo que un Runner comprometido solo puede descargar Images del proyecto del Job que reclamó.
+de modo que un Runner comprometido solo puede descargar Images del proyecto del Job que se le envió.
 
 En el canal de actualización `stable`, se envía un `update` cuando la versión del Runner difiere de la versión del servidor.
 En el canal de actualización `canary`, `version` es `canary`
