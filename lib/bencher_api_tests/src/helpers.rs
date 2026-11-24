@@ -9,7 +9,7 @@ use bencher_json::{
     OAuthAccessToken, OAuthAuthorizationUuid, OAuthGrantUuid, OAuthRefreshToken, OAuthResource,
     OAuthScopes, OAuthTokenHash, OrganizationUuid, ParameterSet, PlanLevel, ReportUuid,
     ResourceName, TestbedUuid, TokenUuid, UserKeyUuid, UserUuid, VariantUuid, VersionUuid,
-    system::config::JsonOAuthServer,
+    organization::member::OrganizationRole, system::config::JsonOAuthServer,
 };
 use bencher_rbac::project::Role;
 use bencher_schema::{
@@ -483,6 +483,25 @@ pub fn user_organizations(server: &TestServer, user: UserUuid) -> Vec<Organizati
         .inner_join(schema::organization::table)
         .filter(schema::user::uuid.eq(user))
         .select(schema::organization::uuid)
+        .load(&mut server.db_conn())
+        .expect("Failed to get organization roles")
+}
+
+/// Each user who holds a role in an organization, with that role, in the order they got it.
+#[expect(
+    clippy::expect_used,
+    reason = "test helper querying organization roles"
+)]
+pub fn organization_roles(
+    server: &TestServer,
+    organization: OrganizationUuid,
+) -> Vec<(UserUuid, OrganizationRole)> {
+    schema::organization_role::table
+        .inner_join(schema::user::table)
+        .inner_join(schema::organization::table)
+        .filter(schema::organization::uuid.eq(organization))
+        .order(schema::organization_role::id)
+        .select((schema::user::uuid, schema::organization_role::role))
         .load(&mut server.db_conn())
         .expect("Failed to get organization roles")
 }

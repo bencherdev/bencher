@@ -196,6 +196,129 @@ async fn run_post_at_once_creates_the_project_once() {
     );
 }
 
+// POST /v0/run - concurrent runs by one user to an unclaimed project, both queued on the writer
+// before either claims its organization, both create their report, and the user claims the
+// organization once, as its only Leader
+#[cfg(feature = "plus")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn run_post_at_once_by_a_user_claims_the_organization_once() {
+    use bencher_api_tests::helpers::organization_roles;
+    use bencher_json::organization::member::OrganizationRole;
+
+    let server = TestServer::new().await;
+    let _admin = server.signup("Admin", "runclaimoneadmin@example.com").await;
+    let slug = "run-claimed-at-once";
+    let organization = unclaimed_run_project(&server, slug).await;
+    let user = server.signup("Claim User", "runclaimone@example.com").await;
+    let run = |token: &str| {
+        server
+            .client
+            .post(server.api_url("/v0/run"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(token),
+            )
+            .json(&run_body(slug))
+    };
+
+    let responses = server
+        .send_behind_the_writer(vec![vec![run(&user.token), run(&user.token)]])
+        .await;
+
+    for (status, body) in responses {
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+    }
+    assert_eq!(
+        organization_roles(&server, organization),
+        vec![(user.uuid, OrganizationRole::Leader)]
+    );
+}
+
+// POST /v0/run - two users race to claim the organization of an unclaimed project, the first
+// user's run queued on the writer before the second's. The first user claims it, as its only
+// Leader, and the second user's run is denied, as it would be on the claimed project.
+#[cfg(feature = "plus")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn run_post_at_once_by_two_users_claims_the_organization_for_one() {
+    use bencher_api_tests::helpers::organization_roles;
+    use bencher_json::organization::member::OrganizationRole;
+
+    let server = TestServer::new().await;
+    let _admin = server.signup("Admin", "runclaimtwoadmin@example.com").await;
+    let slug = "run-contested-claim";
+    let organization = unclaimed_run_project(&server, slug).await;
+    let first = server
+        .signup("First User", "runclaimfirst@example.com")
+        .await;
+    let second = server
+        .signup("Second User", "runclaimsecond@example.com")
+        .await;
+    let run = |token: &str| {
+        server
+            .client
+            .post(server.api_url("/v0/run"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(token),
+            )
+            .json(&run_body(slug))
+    };
+
+    let statuses = server
+        .send_behind_the_writer(vec![vec![run(&first.token)], vec![run(&second.token)]])
+        .await
+        .into_iter()
+        .map(|(status, _)| status)
+        .collect::<Vec<_>>();
+
+    assert_eq!(statuses, [StatusCode::CREATED, StatusCode::FORBIDDEN]);
+    assert_eq!(
+        organization_roles(&server, organization),
+        vec![(first.uuid, OrganizationRole::Leader)]
+    );
+    for (token, expected) in [
+        (&first.token, StatusCode::CREATED),
+        (&second.token, StatusCode::FORBIDDEN),
+    ] {
+        let resp = run(token).send().await.expect("Request failed");
+        assert_eq!(resp.status(), expected);
+    }
+}
+
+/// Create an unclaimed project with an anonymous run, and return its organization.
+#[cfg(feature = "plus")]
+async fn unclaimed_run_project(server: &TestServer, slug: &str) -> bencher_json::OrganizationUuid {
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .json(&run_body(slug))
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read response");
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let projects = bencher_api_tests::helpers::projects(server);
+    let (_, organization) = projects
+        .iter()
+        .find(|(project, _)| project == slug)
+        .expect("No unclaimed project");
+    *organization
+}
+
+#[cfg(feature = "plus")]
+fn run_body(slug: &str) -> serde_json::Value {
+    serde_json::json!({
+        "project": slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "context": { "bencher.dev/v0/repo/name": slug }
+    })
+}
+
 // POST /v0/run - a run made with a project key names that key on its report
 #[tokio::test]
 async fn run_post_with_a_project_key_names_the_key() {

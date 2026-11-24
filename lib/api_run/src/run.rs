@@ -8,6 +8,7 @@ use bencher_schema::{
     context::ApiContext,
     error::{bad_request_error, unauthorized_error, with_auth_hint},
     model::{
+        organization::Claim,
         project::{
             QueryProject,
             report::{NewRunReport, QueryReport},
@@ -161,25 +162,16 @@ async fn post_inner(
     let mut is_claimed = query_organization.is_claimed(public_conn!(context, public_user))?;
     // If the organization is claimed, check permissions
     if is_claimed {
-        match public_user {
-            PublicUser::Public(remote_ip) => {
-                slog::info!(log, "Public user attempted to create a run for a claimed project"; "project" => ?query_project.uuid, "remote_ip" => ?remote_ip);
-
-                return Err(unauthorized_error(format!(
-                    "This project ({slug}) has already been claimed. Provide a valid API token (`--token`) or project key (`--key`) to authenticate.",
-                    slug = query_project.slug
-                )));
-            },
-            PublicUser::Auth(auth_user) => {
-                let auth_user = auth_user.reload(public_conn!(context, public_user))?;
-                query_project.try_allowed(&context.rbac, &auth_user, Permission::Create)?;
-            },
-        }
+        check_claimed(log, context, public_user, &query_project).await?;
     // If the organization is not claimed and the user is authenticated, claim it
     } else if let PublicUser::Auth(auth_user) = public_user {
-        query_organization
-            .claim(log, context, &auth_user.user)
-            .await?;
+        // A run that loses the race to another user's claim gets the checks of a claimed project.
+        if let Claim::Taken = query_organization
+            .try_claim(log, context, &auth_user.user)
+            .await?
+        {
+            check_claimed(log, context, public_user, &query_project).await?;
+        }
         is_claimed = true;
     }
 
@@ -195,6 +187,29 @@ async fn post_inner(
         json_run,
     )
     .await
+}
+
+/// Check that the user may create a run in a project of a claimed organization.
+async fn check_claimed(
+    log: &Logger,
+    context: &ApiContext,
+    public_user: &PublicUser,
+    query_project: &QueryProject,
+) -> Result<(), HttpError> {
+    match public_user {
+        PublicUser::Public(remote_ip) => {
+            slog::info!(log, "Public user attempted to create a run for a claimed project"; "project" => ?query_project.uuid, "remote_ip" => ?remote_ip);
+
+            Err(unauthorized_error(format!(
+                "This project ({slug}) has already been claimed. Provide a valid API token (`--token`) or project key (`--key`) to authenticate.",
+                slug = query_project.slug
+            )))
+        },
+        PublicUser::Auth(auth_user) => {
+            let auth_user = auth_user.reload(public_conn!(context, public_user))?;
+            query_project.try_allowed(&context.rbac, &auth_user, Permission::Create)
+        },
+    }
 }
 
 async fn post_inner_project_key(

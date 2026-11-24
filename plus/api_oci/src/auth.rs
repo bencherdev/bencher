@@ -16,7 +16,7 @@ use bencher_rbac::project::Permission;
 use bencher_schema::{
     context::{ApiContext, RateLimiting},
     model::{
-        organization::QueryOrganization,
+        organization::{Claim, QueryOrganization},
         project::QueryProject,
         user::{QueryUser, auth::AuthUser, public::PublicUser},
     },
@@ -399,7 +399,16 @@ async fn handle_existing_project(
     if is_claimed {
         handle_claimed_project(log, rqctx, context, project, public_user, claims).await
     } else {
-        handle_unclaimed_project(log, context, project, organization, public_user, claims).await
+        handle_unclaimed_project(
+            log,
+            rqctx,
+            context,
+            project,
+            organization,
+            public_user,
+            claims,
+        )
+        .await
     }
 }
 
@@ -456,6 +465,7 @@ async fn handle_claimed_project(
 /// Handle push to an unclaimed project (allows unauthenticated, auto-claims if authenticated)
 async fn handle_unclaimed_project(
     log: &Logger,
+    rqctx: &RequestContext<ApiContext>,
     context: &ApiContext,
     project: QueryProject,
     organization: QueryOrganization,
@@ -472,8 +482,8 @@ async fn handle_unclaimed_project(
 
     // If authenticated, claim the organization for the user
     if let PublicUser::Auth(auth_user) = public_user {
-        organization
-            .claim(log, context, &auth_user.user)
+        let claim = organization
+            .try_claim(log, context, &auth_user.user)
             .await
             .map_err(|e| {
                 slog::error!(
@@ -487,6 +497,10 @@ async fn handle_unclaimed_project(
                     "Failed to claim organization: {e}. Push rejected to prevent security issues."
                 ))
             })?;
+        // A push that loses the race to another user's claim gets the checks of a claimed project.
+        if let Claim::Taken = claim {
+            return handle_claimed_project(log, rqctx, context, project, public_user, claims).await;
+        }
     }
 
     Ok(PushAccess { project, claims })
