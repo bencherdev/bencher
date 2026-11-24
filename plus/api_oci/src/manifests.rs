@@ -20,7 +20,7 @@ use crate::auth::{
     check_oci_bandwidth, record_oci_bandwidth, require_push_access, resolve_project,
     validate_pull_access, validate_push_access,
 };
-use crate::error::storage_error;
+use crate::error::{RegistryError, protocol_response, storage_error};
 use crate::response::{DOCKER_CONTENT_DIGEST, OCI_SUBJECT, oci_cors_headers};
 
 /// Parse a reference string, returning the correct OCI error code on failure.
@@ -86,7 +86,7 @@ pub struct ManifestPath {
 pub async fn oci_manifest_options(
     _rqctx: RequestContext<ApiContext>,
     _path: Path<ManifestPath>,
-) -> Result<CorsResponse, HttpError> {
+) -> Result<CorsResponse, RegistryError> {
     Ok(Endpoint::cors(&[Get.into(), Put.into(), Delete.into()]))
 }
 
@@ -97,6 +97,14 @@ pub async fn oci_manifest_options(
     tags = ["oci"],
 }]
 pub async fn oci_manifest_exists(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<ManifestPath>,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_manifest_exists_inner(rqctx, path).await)
+}
+
+async fn oci_manifest_exists_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<ManifestPath>,
 ) -> Result<Response<Body>, HttpError> {
@@ -150,6 +158,14 @@ pub async fn oci_manifest_exists(
     tags = ["oci"],
 }]
 pub async fn oci_manifest_get(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<ManifestPath>,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_manifest_get_inner(rqctx, path).await)
+}
+
+async fn oci_manifest_get_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<ManifestPath>,
 ) -> Result<Response<Body>, HttpError> {
@@ -217,6 +233,15 @@ pub async fn oci_manifest_get(
     tags = ["oci"],
 }]
 pub async fn oci_manifest_put(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<ManifestPath>,
+    body: UntypedBody,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_manifest_put_inner(rqctx, path, body).await)
+}
+
+async fn oci_manifest_put_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<ManifestPath>,
     body: UntypedBody,
@@ -431,6 +456,14 @@ async fn verify_referenced_blobs(
     tags = ["oci"],
 }]
 pub async fn oci_manifest_delete(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<ManifestPath>,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_manifest_delete_inner(rqctx, path).await)
+}
+
+async fn oci_manifest_delete_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<ManifestPath>,
 ) -> Result<Response<Body>, HttpError> {

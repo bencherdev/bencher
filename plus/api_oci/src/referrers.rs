@@ -16,7 +16,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::auth::validate_pull_access;
-use crate::error::storage_error;
+use crate::error::{RegistryError, protocol_response, storage_error};
 use crate::response::{OCI_FILTERS_APPLIED, oci_cors_headers};
 
 /// Path parameters for referrers endpoint
@@ -46,7 +46,7 @@ pub struct ReferrersQuery {
 pub async fn oci_referrers_options(
     _rqctx: RequestContext<ApiContext>,
     _path: Path<ReferrersPath>,
-) -> Result<CorsResponse, HttpError> {
+) -> Result<CorsResponse, RegistryError> {
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
@@ -60,6 +60,15 @@ pub async fn oci_referrers_options(
     tags = ["oci"],
 }]
 pub async fn oci_referrers_list(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<ReferrersPath>,
+    query: Query<ReferrersQuery>,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_referrers_list_inner(rqctx, path, query).await)
+}
+
+async fn oci_referrers_list_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<ReferrersPath>,
     query: Query<ReferrersQuery>,

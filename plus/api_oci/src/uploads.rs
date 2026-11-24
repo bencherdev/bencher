@@ -32,10 +32,11 @@ use crate::auth::{
     apply_public_rate_limit, check_oci_bandwidth, record_oci_bandwidth, resolve_project,
 };
 use crate::blobs::UPLOADS_REF;
-use crate::error::storage_error;
+use crate::error::{RegistryError, protocol_response, storage_error};
 use crate::response::{DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers};
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
 use bencher_json::ProjectResourceId;
+use bencher_json::oci::{OCI_ERROR_BLOB_UPLOAD_INVALID, OCI_ERROR_BLOB_UPLOAD_UNKNOWN};
 use bencher_oci_storage::{Digest, UploadId};
 use bencher_schema::context::ApiContext;
 use dropshot::{
@@ -69,7 +70,7 @@ pub struct UploadCompleteQuery {
 fn validate_uploads_ref(reference: &str) -> Result<(), HttpError> {
     if reference != UPLOADS_REF {
         return Err(HttpError::for_client_error(
-            None,
+            Some(OCI_ERROR_BLOB_UPLOAD_UNKNOWN.to_owned()),
             ClientErrorStatusCode::NOT_FOUND,
             format!("Invalid path: expected 'uploads', got '{reference}'"),
         ));
@@ -146,7 +147,7 @@ pub(crate) async fn stream_to_storage(
 pub async fn oci_upload_session_options(
     _rqctx: RequestContext<ApiContext>,
     _path: Path<UploadSessionPath>,
-) -> Result<CorsResponse, HttpError> {
+) -> Result<CorsResponse, RegistryError> {
     Ok(Endpoint::cors(&[
         Get.into(),
         Patch.into(),
@@ -162,6 +163,14 @@ pub async fn oci_upload_session_options(
     tags = ["oci"],
 }]
 pub async fn oci_upload_status(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<UploadSessionPath>,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_upload_status_inner(rqctx, path).await)
+}
+
+async fn oci_upload_status_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<UploadSessionPath>,
 ) -> Result<Response<Body>, HttpError> {
@@ -237,6 +246,15 @@ pub async fn oci_upload_chunk(
     rqctx: RequestContext<ApiContext>,
     path: Path<UploadSessionPath>,
     body: StreamingBody,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_upload_chunk_inner(rqctx, path, body).await)
+}
+
+async fn oci_upload_chunk_inner(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<UploadSessionPath>,
+    body: StreamingBody,
 ) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
     let path = path.into_inner();
@@ -309,20 +327,14 @@ pub async fn oci_upload_chunk(
 
             if partial_parse || neither_parsed || start_mismatch || inverted_range {
                 // Return 416 with Location and Range headers per OCI spec
-                let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
-                let response = oci_cors_headers(
-                    Response::builder()
-                        .status(http::StatusCode::RANGE_NOT_SATISFIABLE)
-                        .header(http::header::LOCATION, location)
-                        .header(http::header::RANGE, format_upload_range(current_size))
-                        .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
-                    &[http::Method::PATCH],
-                )
-                .body(Body::empty())
-                .map_err(|e| {
-                    HttpError::for_internal_error(format!("Failed to build response: {e}"))
-                })?;
-                return Ok(response);
+                return Err(range_not_satisfiable(
+                    &repository_name,
+                    &upload_id,
+                    current_size,
+                    format!(
+                        "Content-Range {range_str} does not continue the upload at {current_size}"
+                    ),
+                ));
             }
 
             // Compute expected length for post-stream validation
@@ -352,18 +364,12 @@ pub async fn oci_upload_chunk(
         let bytes_received = new_size - current_size;
         if bytes_received != expected {
             // Data is in the upload session but length doesn't match Content-Range
-            let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
-            let response = oci_cors_headers(
-                Response::builder()
-                    .status(http::StatusCode::RANGE_NOT_SATISFIABLE)
-                    .header(http::header::LOCATION, location)
-                    .header(http::header::RANGE, format_upload_range(new_size))
-                    .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
-                &[http::Method::PATCH],
-            )
-            .body(Body::empty())
-            .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
-            return Ok(response);
+            return Err(range_not_satisfiable(
+                &repository_name,
+                &upload_id,
+                new_size,
+                format!("Received {bytes_received} bytes, but Content-Range has {expected}"),
+            ));
         }
     }
 
@@ -384,6 +390,38 @@ pub async fn oci_upload_chunk(
     Ok(response)
 }
 
+/// A 416 for a chunk that does not fit its Content-Range, with the upload's Location and Range
+/// per the OCI spec, so the client can resume from what the upload holds.
+fn range_not_satisfiable(
+    repository_name: &str,
+    upload_id: &UploadId,
+    size: u64,
+    message: String,
+) -> HttpError {
+    let headers = match oci_cors_headers(
+        Response::builder()
+            .header(
+                http::header::LOCATION,
+                format!("/v2/{repository_name}/blobs/uploads/{upload_id}"),
+            )
+            .header(http::header::RANGE, format_upload_range(size))
+            .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
+        &[http::Method::PATCH],
+    )
+    .body(())
+    {
+        Ok(response) => response.into_parts().0.headers,
+        Err(e) => return HttpError::for_internal_error(format!("Failed to build response: {e}")),
+    };
+    HttpError {
+        status_code: ClientErrorStatusCode::RANGE_NOT_SATISFIABLE.into(),
+        error_code: Some(OCI_ERROR_BLOB_UPLOAD_INVALID.to_owned()),
+        external_message: message.clone(),
+        internal_message: message,
+        headers: Some(Box::new(headers)),
+    }
+}
+
 /// Complete an upload (with digest verification)
 #[endpoint {
     method = PUT,
@@ -392,6 +430,19 @@ pub async fn oci_upload_chunk(
     request_body_max_bytes = crate::OCI_REQUEST_BODY_MAX_BYTES,
 }]
 pub async fn oci_upload_complete(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<UploadSessionPath>,
+    query: Query<UploadCompleteQuery>,
+    body: StreamingBody,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(
+        &log,
+        oci_upload_complete_inner(rqctx, path, query, body).await,
+    )
+}
+
+async fn oci_upload_complete_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<UploadSessionPath>,
     query: Query<UploadCompleteQuery>,
@@ -487,6 +538,14 @@ pub async fn oci_upload_complete(
     tags = ["oci"],
 }]
 pub async fn oci_upload_cancel(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<UploadSessionPath>,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_upload_cancel_inner(rqctx, path).await)
+}
+
+async fn oci_upload_cancel_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<UploadSessionPath>,
 ) -> Result<Response<Body>, HttpError> {

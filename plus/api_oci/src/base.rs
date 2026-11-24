@@ -16,6 +16,7 @@ use crate::auth::{
     apply_public_rate_limit, apply_user_rate_limit, extract_oci_bearer_token,
     unauthorized_with_www_authenticate,
 };
+use crate::error::{RegistryError, protocol_response};
 use crate::response::{APPLICATION_JSON, EMPTY_JSON_BODY, oci_cors_headers};
 
 /// CORS preflight for OCI base endpoint
@@ -27,7 +28,7 @@ use crate::response::{APPLICATION_JSON, EMPTY_JSON_BODY, oci_cors_headers};
 }]
 pub async fn oci_base_options(
     _rqctx: RequestContext<ApiContext>,
-) -> Result<CorsResponse, HttpError> {
+) -> Result<CorsResponse, RegistryError> {
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
@@ -36,16 +37,21 @@ pub async fn oci_base_options(
 /// Returns 200 OK if a valid Bearer token is provided.
 /// Returns 401 Unauthorized with WWW-Authenticate header if not authenticated.
 /// Accepts auth (user) and public (anonymous) OCI tokens.
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
 #[endpoint {
     method = GET,
     path = "/v2/",
     tags = ["oci"],
 }]
-pub async fn oci_base(rqctx: RequestContext<ApiContext>) -> Result<Response<Body>, HttpError> {
+pub async fn oci_base(rqctx: RequestContext<ApiContext>) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_base_inner(rqctx).await)
+}
+
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
+async fn oci_base_inner(rqctx: RequestContext<ApiContext>) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
 
     // Extract Bearer token — required for all access

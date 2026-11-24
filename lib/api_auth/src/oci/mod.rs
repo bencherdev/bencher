@@ -17,7 +17,7 @@
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post};
-use bencher_json::oci::{OCI_ERROR_DENIED, OCI_ERROR_UNAUTHORIZED, oci_error_body};
+use bencher_json::oci::{OCI_ERROR_DENIED, OCI_ERROR_UNAUTHORIZED};
 use bencher_json::{Email, Jwt, ProjectKey, ProjectKeyHash, ProjectResourceId, UserKey};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -37,6 +37,14 @@ use dropshot::{
 use http::Response;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+mod error;
+
+pub use error::{
+    ErrorBody, OAuthError, OAuthErrorBody, OciErrors, ProtocolError, RegistryError,
+    protocol_response,
+};
+use error::{OAUTH_ERROR_INVALID_REQUEST, OAUTH_ERROR_UNSUPPORTED_GRANT_TYPE};
 
 /// OCI token TTL: 5 minutes (300 seconds)
 pub const OCI_TOKEN_TTL: u32 = 300;
@@ -122,6 +130,14 @@ pub async fn auth_oci_token_options(
 }]
 pub async fn auth_oci_token_get(
     rqctx: RequestContext<ApiContext>,
+    query: Query<TokenQuery>,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, auth_oci_token_get_inner(rqctx, query).await)
+}
+
+async fn auth_oci_token_get_inner(
+    rqctx: RequestContext<ApiContext>,
     _query: Query<TokenQuery>,
 ) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
@@ -157,18 +173,6 @@ pub async fn auth_oci_token_get(
         .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))
 }
 
-/// Build an `OAuth2` token-endpoint error body per RFC 6749 §5.2.
-///
-/// The token endpoint speaks `OAuth2`, so its errors use `{"error", "error_description"}`
-/// rather than the OCI registry's `oci_error_body` envelope.
-fn oauth_error_body(error: &str, description: &str) -> String {
-    serde_json::json!({
-        "error": error,
-        "error_description": description,
-    })
-    .to_string()
-}
-
 /// OCI token endpoint (POST) — `OAuth2` token exchange
 ///
 /// Accepts `application/x-www-form-urlencoded` body with `grant_type=password`.
@@ -181,36 +185,38 @@ fn oauth_error_body(error: &str, description: &str) -> String {
 pub async fn auth_oci_token_post(
     rqctx: RequestContext<ApiContext>,
     body: UntypedBody,
+) -> Result<Response<Body>, OAuthError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, auth_oci_token_post_inner(rqctx, body).await)
+}
+
+async fn auth_oci_token_post_inner(
+    rqctx: RequestContext<ApiContext>,
+    body: UntypedBody,
 ) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
 
     let form: OAuthTokenForm = serde_urlencoded::from_bytes(body.as_bytes()).map_err(|e| {
         HttpError::for_client_error(
-            None,
+            Some(OAUTH_ERROR_INVALID_REQUEST.to_owned()),
             ClientErrorStatusCode::BAD_REQUEST,
-            oauth_error_body("invalid_request", &format!("Invalid form body: {e}")),
+            format!("Invalid form body: {e}"),
         )
     })?;
 
     if form.grant_type == "refresh_token" {
         return Err(HttpError::for_client_error(
-            None,
+            Some(OAUTH_ERROR_UNSUPPORTED_GRANT_TYPE.to_owned()),
             ClientErrorStatusCode::BAD_REQUEST,
-            oauth_error_body(
-                "unsupported_grant_type",
-                "Bencher does not issue refresh tokens",
-            ),
+            "Bencher does not issue refresh tokens".to_owned(),
         ));
     }
 
     if form.grant_type != "password" {
         return Err(HttpError::for_client_error(
-            None,
+            Some(OAUTH_ERROR_UNSUPPORTED_GRANT_TYPE.to_owned()),
             ClientErrorStatusCode::BAD_REQUEST,
-            oauth_error_body(
-                "unsupported_grant_type",
-                &format!("expected \"password\", got \"{}\"", form.grant_type),
-            ),
+            format!("expected \"password\", got \"{}\"", form.grant_type),
         ));
     }
 
@@ -221,12 +227,9 @@ pub async fn auth_oci_token_post(
 
     let Some(credentials) = credentials else {
         return Err(HttpError::for_client_error(
-            None,
+            Some(OAUTH_ERROR_INVALID_REQUEST.to_owned()),
             ClientErrorStatusCode::BAD_REQUEST,
-            oauth_error_body(
-                "invalid_request",
-                "grant_type=password requires username and password",
-            ),
+            "grant_type=password requires username and password".to_owned(),
         ));
     };
 
@@ -415,9 +418,9 @@ async fn user_oci_token(
 
         if !auth_user.is_admin(&context.rbac) {
             return Err(HttpError::for_client_error(
-                None,
+                Some(OCI_ERROR_DENIED.to_owned()),
                 ClientErrorStatusCode::FORBIDDEN,
-                oci_error_body(OCI_ERROR_DENIED, "Only server admins can pull OCI images"),
+                "Only server admins can pull OCI images".to_owned(),
             ));
         }
     }
@@ -454,13 +457,10 @@ async fn user_oci_token(
                     })
                     .map_err(|_err| {
                         HttpError::for_client_error(
-                            None,
+                            Some(OCI_ERROR_DENIED.to_owned()),
                             ClientErrorStatusCode::FORBIDDEN,
-                            oci_error_body(
-                                OCI_ERROR_DENIED,
-                                &format!(
-                                    "Access denied to repository: {repo_name}. You need Create permission to push.",
-                                ),
+                            format!(
+                                "Access denied to repository: {repo_name}. You need Create permission to push.",
                             ),
                         )
                     })?;
@@ -507,9 +507,9 @@ pub fn unauthorized_with_www_authenticate(
     }
 
     let mut error = HttpError::for_client_error(
-        None,
+        Some(OCI_ERROR_UNAUTHORIZED.to_owned()),
         ClientErrorStatusCode::UNAUTHORIZED,
-        oci_error_body(OCI_ERROR_UNAUTHORIZED, "Authentication required"),
+        "Authentication required".to_owned(),
     );
 
     // Best-effort: header may fail if value is not valid ASCII
@@ -541,12 +541,10 @@ async fn project_key_oci_token(
     // Only bare metal runners should be pulling, and they use runner tokens.
     if actions.contains(&OciAction::Pull) && !actions.contains(&OciAction::Push) {
         return Err(HttpError::for_client_error(
-            None,
+            Some(OCI_ERROR_DENIED.to_owned()),
             ClientErrorStatusCode::FORBIDDEN,
-            oci_error_body(
-                OCI_ERROR_DENIED,
-                "Project keys cannot be used for pull-only access. Use a runner token to pull.",
-            ),
+            "Project keys cannot be used for pull-only access. Use a runner token to pull."
+                .to_owned(),
         ));
     }
 
@@ -569,12 +567,9 @@ async fn project_key_oci_token(
         && !query_project.matches_resource_id(&repo_rid)
     {
         return Err(HttpError::for_client_error(
-            None,
+            Some(OCI_ERROR_DENIED.to_owned()),
             ClientErrorStatusCode::FORBIDDEN,
-            oci_error_body(
-                OCI_ERROR_DENIED,
-                "Project key is not authorized for the requested repository",
-            ),
+            "Project key is not authorized for the requested repository".to_owned(),
         ));
     }
 

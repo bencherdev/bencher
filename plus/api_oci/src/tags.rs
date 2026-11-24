@@ -12,7 +12,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::auth::validate_pull_access;
-use crate::error::storage_error;
+use crate::error::{RegistryError, protocol_response, storage_error};
 use crate::response::{APPLICATION_JSON, oci_cors_headers};
 
 /// Path parameters for tags list
@@ -50,7 +50,7 @@ pub struct TagsListResponse {
 pub async fn oci_tags_options(
     _rqctx: RequestContext<ApiContext>,
     _path: Path<TagsPath>,
-) -> Result<CorsResponse, HttpError> {
+) -> Result<CorsResponse, RegistryError> {
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
@@ -71,6 +71,15 @@ const MAX_PAGE_SIZE: u32 = 10_000;
     tags = ["oci"],
 }]
 pub async fn oci_tags_list(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<TagsPath>,
+    query: Query<TagsQuery>,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_tags_list_inner(rqctx, path, query).await)
+}
+
+async fn oci_tags_list_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<TagsPath>,
     query: Query<TagsQuery>,
