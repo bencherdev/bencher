@@ -2,21 +2,23 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 
 ## Job 수명 주기
 
-각 Job은 청구, 실행, 처리되면서 고정된 상태 집합을 거칩니다.
+각 Job은 그 실행들이 전송, 실행, 처리되면서 고정된 상태 집합을 거칩니다.
+Job은 첫 번째 실행부터 결과가 정해질 때까지, 실행 사이에도 `running` 상태를 유지합니다.
 
 | From      | To          | 트리거                                                                 |
 | --------- | ----------- | ---------------------------------------------------------------------- |
-| pending   | claimed     | Runner가 Job을 청구합니다                                              |
+| pending   | claimed     | Runner가 Job의 첫 번째 실행을 받습니다                                 |
 | pending   | canceled    | 사용자가 Job을 취소합니다                                              |
 | claimed   | running     | Runner가 `running`을 보냅니다                                          |
 | claimed   | failed      | Runner가 `failed`를 보냅니다                                                 |
 | claimed   | unknown     | 서버가 Runner와의 연결을 잃습니다                                                  |
 | claimed   | canceled    | 사용자가 Job을 취소합니다                                              |
-| running   | completed   | Runner가 `completed`를 보냅니다                                        |
-| running   | failed      | Runner가 `failed`를 보냅니다                                                 |
-| running   | unknown     | 서버가 Runner와의 연결을 잃습니다                                                  |
+| running   | completed   | Job의 모든 반복의 결과가 정해집니다                                    |
+| running   | failed      | 실행이 `allow_failure` 없이 실패하거나, Job의 시간이 다 됩니다         |
+| running   | unknown     | 서버가 진행 중인 유일한 실행의 Runner와의 연결을 잃습니다              |
 | running   | canceled    | 사용자가 Job을 취소하거나, 강제(hard) Job 타임아웃을 초과합니다       |
-| unknown   | completed   | Runner가 `completed`를 보냅니다                                              |
+| unknown   | running     | Runner가 결과를 다시 보내고, Job에 반복이 남아 있습니다                |
+| unknown   | completed   | Runner가 결과를 다시 보내고, 모든 반복의 결과가 정해집니다             |
 | unknown   | failed      | Runner가 `failed`를 보냅니다                                                 |
 | unknown   | canceled    | 사용자가 Job을 취소하거나, 강제(hard) Job 타임아웃을 초과합니다                              |
 | completed | processed   | 서버가 결과를 성공적으로 처리합니다                                    |

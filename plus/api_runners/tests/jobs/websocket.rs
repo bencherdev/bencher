@@ -2,8 +2,9 @@ use super::common::{
     WsStream, assert_ws_closed, associate_runner_spec, connect_channel_ws as connect_channel,
     create_runner, create_test_report, get_project_id, get_runner_id, insert_test_job,
     insert_test_job_with_optional_fields, insert_test_job_with_timeout, insert_test_spec,
-    plan_project, post_metrics, recv_server_msg as recv_msg, runner_metadata,
-    send_runner_msg as send_msg, set_job_runner_id, set_job_status, ws_url,
+    insert_whole_job_execution, job_of, latest_execution, plan_project, post_metrics,
+    recv_server_msg as recv_msg, runner_metadata, send_runner_msg as send_msg, set_job_runner_id,
+    set_job_status, ws_url,
 };
 use super::report_parse;
 use api_runners::{RunnerMessage, ServerMessage};
@@ -60,7 +61,11 @@ pub(super) async fn setup_claimed_job(
     let response = recv_msg(&mut ws).await;
     match response {
         ServerMessage::Job(job) => {
-            assert_eq!(job.uuid, job_uuid, "Claimed job UUID should match");
+            assert_eq!(
+                job_of(server, &job),
+                job_uuid,
+                "Claimed job UUID should match"
+            );
         },
         ServerMessage::Ack { .. }
         | ServerMessage::NoJob
@@ -737,7 +742,7 @@ async fn channel_lifecycle_with_full_spec() {
     let response = recv_msg(&mut ws).await;
     let claimed = match response {
         ServerMessage::Job(job) => {
-            assert_eq!(job.uuid, job_uuid);
+            assert_eq!(job_of(&server, &job), job_uuid);
             *job
         },
         ServerMessage::Ack { .. }
@@ -1464,18 +1469,22 @@ async fn channel_completed_multiple_iterations_with_file_output() {
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
-/// A build time Job sends a failed iteration's metrics map empty, so that
-/// iteration's stdout never reaches the adapter and the Job keeps the build time
-/// of the iteration that succeeded.
+/// A whole build time Job an older server sent as 1 execution keeps each of its runs under
+/// `allow_failure`: its failed run is a gap, so that run's stdout never reaches the adapter, and
+/// the Job keeps the build time of the run that succeeded.
 #[tokio::test]
 async fn channel_completed_build_time_with_a_failed_iteration() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
-        setup_claimed_job(&server, "build-time-failed").await;
-
-    send_msg(&mut ws, &RunnerMessage::Running).await;
-    let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack { .. }));
+    let (mut ws, job_uuid, _report_id) =
+        setup_reconnect_with_job_in(&server, "build-time-failed", JobStatus::Running).await;
+    // A runner reports a run that exited non-zero as completed only under `allow_failure`.
+    diesel::sql_query(
+        "UPDATE job SET config = json_set(config, '$.allow_failure', json('true'), '$.iter', 2)
+            WHERE uuid = ?",
+    )
+    .bind::<diesel::sql_types::Text, _>(job_uuid.to_string())
+    .execute(&mut server.db_conn())
+    .expect("Failed to allow failure");
 
     let metrics = std::collections::BTreeMap::from([(
         camino::Utf8PathBuf::from("\0bencher"),
@@ -1513,6 +1522,45 @@ async fn channel_completed_build_time_with_a_failed_iteration() {
         .load(&mut server.db_conn())
         .expect("Failed to load build times");
     assert_eq!(build_times, [12.5]);
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// A whole Job an older server sent as 1 execution fails on `Failed` under `allow_failure`, even
+/// with a run that succeeded.
+///
+/// Kills: a server that reads the whole Job's `Failed` as gaps and processes the run that
+/// succeeded.
+#[tokio::test]
+async fn channel_failed_whole_job_fails_under_allow_failure() {
+    let server = TestServer::new().await;
+    let (mut ws, job_uuid, _report_id) =
+        setup_reconnect_with_job_in(&server, "whole-failed-allowed", JobStatus::Running).await;
+    diesel::sql_query(
+        "UPDATE job SET config = json_set(config, '$.allow_failure', json('true'), '$.iter', 2)
+            WHERE uuid = ?",
+    )
+    .bind::<diesel::sql_types::Text, _>(job_uuid.to_string())
+    .execute(&mut server.db_conn())
+    .expect("Failed to allow failure");
+
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Failed {
+            job: job_uuid,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: Some(r#"{"bench":{"latency":{"value":1.0}}}"#.into()),
+                stderr: None,
+                output: None,
+            }],
+            error: "Benchmark timed out".to_owned(),
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
     ws.close(None).await.expect("Failed to close WebSocket");
 }
@@ -1615,7 +1663,7 @@ async fn channel_job_timeout() {
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     match response {
-        ServerMessage::Job(job) => assert_eq!(job.uuid, job_uuid),
+        ServerMessage::Job(job) => assert_eq!(job_of(&server, &job), job_uuid),
         ServerMessage::Ack { .. }
         | ServerMessage::NoJob
         | ServerMessage::Cancel
@@ -2354,7 +2402,7 @@ async fn channel_multi_job_cycle() {
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     let first_job_uuid = match response {
-        ServerMessage::Job(job) => job.uuid,
+        ServerMessage::Job(job) => job_of(&server, &job),
         ServerMessage::Ack { .. }
         | ServerMessage::NoJob
         | ServerMessage::Cancel
@@ -2400,7 +2448,7 @@ async fn channel_multi_job_cycle() {
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     let second_job_uuid = match response {
-        ServerMessage::Job(job) => job.uuid,
+        ServerMessage::Job(job) => job_of(&server, &job),
         ServerMessage::Ack { .. }
         | ServerMessage::NoJob
         | ServerMessage::Cancel
@@ -2478,6 +2526,7 @@ async fn channel_completed_during_idle() {
     // Set job to Running with this runner (simulating a previously running job)
     set_job_runner_id(&server, job_uuid, runner_id);
     set_job_status(&server, job_uuid, JobStatus::Running);
+    insert_whole_job_execution(&server, job_uuid);
 
     // Connect a fresh channel (simulating reconnect)
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
@@ -2544,7 +2593,7 @@ async fn channel_completed_during_idle_idempotent() {
     send_msg(
         &mut ws2,
         &RunnerMessage::Completed {
-            job: job_uuid,
+            job: latest_execution(&server, job_uuid),
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: None,
@@ -2590,6 +2639,7 @@ async fn channel_failed_during_idle() {
     // Set job to Running with this runner
     set_job_runner_id(&server, job_uuid, runner_id);
     set_job_status(&server, job_uuid, JobStatus::Running);
+    insert_whole_job_execution(&server, job_uuid);
 
     // Connect a fresh channel (simulating reconnect)
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
@@ -2622,6 +2672,7 @@ async fn channel_failed_during_idle() {
 /// Put a job owned by a fresh runner in `status`, then connect that runner's channel
 /// without sending Ready, as a runner reconnecting with an unacknowledged result would.
 /// Returns `(ws, job_uuid, report_id)`.
+#[expect(clippy::expect_used, reason = "test helper")]
 pub(super) async fn setup_reconnect_with_job_in(
     server: &TestServer,
     suffix: &str,
@@ -2647,6 +2698,12 @@ pub(super) async fn setup_reconnect_with_job_in(
     associate_runner_spec(server, runner_id, spec_id);
     set_job_runner_id(server, job_uuid, runner_id);
     set_job_status(server, job_uuid, status);
+    // Sent just now, so a silent execution's result is still within its budget.
+    diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
+        .set(schema::job::claimed.eq(Some(bencher_json::DateTime::now())))
+        .execute(&mut server.db_conn())
+        .expect("Failed to set when the job was claimed");
+    insert_whole_job_execution(server, job_uuid);
 
     let ws = connect_channel(server, runner.uuid, &runner_key).await;
     (ws, job_uuid, report_id)
@@ -2759,7 +2816,11 @@ async fn channel_ready_no_poll_timeout() {
     let response = recv_msg(&mut ws).await;
     match response {
         ServerMessage::Job(job) => {
-            assert_eq!(job.uuid, job_uuid, "Claimed job UUID should match");
+            assert_eq!(
+                job_of(&server, &job),
+                job_uuid,
+                "Claimed job UUID should match"
+            );
         },
         ServerMessage::Ack { .. }
         | ServerMessage::NoJob
@@ -2886,8 +2947,8 @@ async fn channel_concurrent_connections_same_runner() {
     let resp1 = recv_msg(&mut ws1).await;
     let resp2 = recv_msg(&mut ws2).await;
 
-    let got_job1 = matches!(&resp1, ServerMessage::Job(j) if j.uuid == job_uuid);
-    let got_job2 = matches!(&resp2, ServerMessage::Job(j) if j.uuid == job_uuid);
+    let got_job1 = matches!(&resp1, ServerMessage::Job(j) if job_of(&server, j) == job_uuid);
+    let got_job2 = matches!(&resp2, ServerMessage::Job(j) if job_of(&server, j) == job_uuid);
 
     // Exactly one should have claimed the job
     assert!(
@@ -3152,7 +3213,7 @@ async fn channel_paused_claims_no_job() {
     .await;
     let response = recv_msg(&mut ws).await;
     assert!(
-        matches!(&response, ServerMessage::Job(job) if job.uuid == job_uuid),
+        matches!(&response, ServerMessage::Job(job) if job_of(&server, job) == job_uuid),
         "Expected the pending job, got: {response:?}"
     );
 
@@ -3264,7 +3325,7 @@ async fn channel_paused_during_job_does_not_reset_heartbeat() {
     send_msg(&mut ws, &paused_msg(1, Some(runner_metadata()))).await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack { job: Some(job) } if job == job_uuid),
+        matches!(resp, ServerMessage::Ack { job: Some(job) } if job == latest_execution(&server, job_uuid)),
         "Expected Ack for the job, got: {resp:?}"
     );
 

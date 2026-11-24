@@ -1,12 +1,17 @@
 ## Job-Ausgabe
 
 Wenn ein Runner `completed` oder `failed` sendet,
-wird die vollständige Ausgabe im selben OCI-Storage-Backend gespeichert, das auch für Container-Images verwendet wird,
-unter dem Pfad `{project}/output/v0/jobs/{job}`.
+wird die Ausgabe dieser Ausführung sofort im selben OCI-Storage-Backend gespeichert, das auch für Container-Images verwendet wird,
+unter dem Pfad `{project}/output/v0/executions/{execution}`.
+Sobald jede Iteration des Jobs ihr Ergebnis hat,
+setzt der Server die Ausgabe des Jobs aus seinen Ausführungen in Iterationsreihenfolge zusammen
+und speichert sie unter dem Pfad `{project}/output/v0/jobs/{job}`.
 
 Die gespeicherte Ausgabe enthält ein `results`-Array pro Iteration und, im Fehlerfall, einen `error`-String.
 Jede Iteration zeichnet ihren `exit_code`, `stdout`, `stderr`
 und eine Zuordnung aller erfassten Ausgabedateien zu ihren Inhalten auf.
+Mit `allow_failure` behält eine Iteration, deren Lauf fehlgeschlagen ist, nur ihren `exit_code` und `stderr`,
+sodass sie ihren Platz hält und keine Metrics daraus in den Report gelangen.
 Nachdem die Ausgabe gespeichert ist, führt der Server den [Benchmark-Harness-Adapter][adapters] auf den Ergebnissen aus,
 um Metrics und Alerts in den Report zu parsen, wodurch der Job in `processed` übergeht.
 

@@ -9,25 +9,36 @@ Enquanto a conexão está aberta, um timeout de leitura detecta um Runner que es
 Apenas mensagens de protocolo válidas reiniciam o temporizador;
 JSON inválido, frames de ping/pong e mensagens binárias não.
 Em caso de timeout, um Job que rodou por mais tempo do que seu timeout mais um período de carência é marcado como `canceled`,
-e caso contrário marcado como `unknown` (o contato com o Runner foi perdido).
+e caso contrário a execução é marcada como `unknown` (o contato com o Runner foi perdido).
+Nenhuma outra execução do Job é enviada enquanto uma estiver `unknown`,
+e o Job fica `unknown` enquanto não tiver outra execução em andamento.
 
 ### Timeout Rígido do Job
 
 O servidor impõe uma duração máxima de execução rígida, independente do comportamento do Runner,
 de modo que um Runner com bug ou comprometido não possa rodar indefinidamente enviando heartbeats.
-Quando o limite (o timeout do Job mais um período de carência) é excedido,
-o Job é marcado como `canceled` e o Runner recebe uma mensagem `cancel`.
-O limite conta a partir de quando o Job começou a rodar, ou de quando foi reivindicado se nunca começou, e também se aplica a um Job `unknown`.
+O timeout do Job limita o tempo dentro das próprias execuções do Job, somadas:
+cada execução conta de seu `running` até seu resultado,
+e o tempo entre as execuções, quando outros Jobs rodam, não conta.
+Cada mensagem `job` leva o que resta do timeout do Job como seu timeout.
+Quando a soma excede o limite (o timeout do Job mais um período de carência),
+o Job é marcado como `canceled` e seus Runners recebem uma mensagem `cancel`.
+Um Job cujo tempo se esgota antes de sua última iteração é marcado como `failed`,
+com um erro que informa quantas de suas iterações rodaram.
+Defina `--job-timeout` para um Job de muitas iterações.
 
 ### Recuperação de Desconexão
 
-Se a conexão cai enquanto um Job ainda está em andamento,
+Se a conexão cai enquanto uma execução ainda está em andamento,
 o servidor agenda uma verificação após o timeout de heartbeat.
-Se o Runner reconectou e retomou os heartbeats, o Job continua;
-caso contrário, o Job é marcado como `unknown`, ou `canceled` se tiver excedido o timeout rígido.
-O servidor verifica um Job `unknown` novamente em seu prazo.
-Na inicialização, o servidor também marca Jobs `claimed` órfãos como `unknown`,
-reagenda timeouts para Jobs em andamento e `unknown`
+Se o Runner reconectou e retomou os heartbeats, a execução continua;
+caso contrário, a execução é marcada como `unknown`, ou o Job como `canceled` se tiver excedido o timeout rígido.
+O servidor verifica uma execução `unknown` novamente em seu prazo:
+o tempo com que foi enviada mais o período de carência, contado a partir de quando começou.
+Uma execução nunca é enviada novamente a outro Runner.
+Na inicialização, o servidor também marca como `unknown` as execuções órfãs que foram enviadas mas nunca começaram,
+reagenda timeouts para execuções em andamento,
+mantém `running` um Job entre suas execuções para sua próxima execução
 e reprocessa Jobs `completed` cujos resultados foram armazenados mas ainda não analisados;
 um Job `completed` cujos resultados foram perdidos é marcado como `unknown` para que o Runner possa reenviá-los.
 
@@ -36,10 +47,10 @@ um Job `completed` cujos resultados foram perdidos é marcado como `unknown` par
 A reconexão é suportada e idempotente.
 Reenviar `running` para um Job já em execução apenas atualiza sua atividade,
 e reenviar uma mensagem terminal `completed`, `failed` ou `canceled` é sempre seguro.
-Mensagens terminais carregam o UUID do Job e recebem um `ack`;
+Mensagens terminais carregam o UUID da execução e recebem um `ack`;
 se a conexão cair antes de o `ack` chegar,
 o Runner armazena o resultado e o reenvia na próxima conexão antes de ficar ocioso.
-O resultado de um Runner resolve um Job `unknown`.
+O resultado de um Runner resolve uma execução `unknown` até que seu prazo passe, e seu Job continua.
 Um Job `failed` ou `canceled` nunca muda de estado novamente: um resultado tardio é confirmado, para que o Runner pare de reenviá-lo, e descartado.
 
 ### Sem Retentativa Automática

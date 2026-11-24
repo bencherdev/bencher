@@ -197,6 +197,7 @@ impl TestServer {
             max_body_size,
             clock,
             runner_update_base_url,
+            heartbeat_timeout: None,
             rate_limiting,
             log,
             cloud_routes,
@@ -213,9 +214,10 @@ impl TestServer {
     #[cfg(feature = "plus")]
     #[expect(
         clippy::expect_used,
+        clippy::too_many_lines,
         clippy::unused_async,
         clippy::unused_async_trait_impl,
-        reason = "test server setup with fallible init; async for API parity"
+        reason = "test server setup that builds the whole context, with fallible init; async for API parity"
     )]
     pub async fn new_with_options(options: TestServerOptions) -> Self {
         let TestServerOptions {
@@ -223,6 +225,7 @@ impl TestServer {
             max_body_size,
             clock,
             runner_update_base_url,
+            heartbeat_timeout,
             rate_limiting,
             log,
             cloud_routes,
@@ -307,7 +310,7 @@ impl TestServer {
                 Some(clock),
             )
             .expect("Failed to create OCI storage"),
-            heartbeat_timeout: std::time::Duration::from_secs(5),
+            heartbeat_timeout: heartbeat_timeout.unwrap_or(std::time::Duration::from_secs(5)),
             job_timeout_grace_period: std::time::Duration::from_mins(1),
             heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
             callback_key,
@@ -553,6 +556,7 @@ pub struct TestServerOptions {
     pub max_body_size: Option<u64>,
     pub clock: Option<bencher_json::Clock>,
     pub runner_update_base_url: Option<url::Url>,
+    pub heartbeat_timeout: Option<std::time::Duration>,
     pub rate_limiting: Option<bencher_schema::context::RateLimiting>,
     pub log: Option<slog::Logger>,
     pub cloud_routes: bool,

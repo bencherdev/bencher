@@ -5,13 +5,22 @@ import FlowDiagram from "../flow-diagram.mdx";
 Après s'être connecté, le Runner entre dans une boucle d'interrogation inactive,
 envoyant `ready` jusqu'à ce que le serveur assigne un `job`
 (ou renvoie `no_job` lorsque le poll expire, ou `update` lorsqu'une nouvelle version est disponible).
-Une fois qu'il dispose d'un Job, le Runner envoie `running`,
+Chaque message `job` est une exécution : un lancement de l'Image du Job, comme un Job d'une itération.
+Une fois qu'il dispose d'une exécution, le Runner envoie `running`,
 diffuse des messages `heartbeat` pendant l'exécution du benchmark,
 et termine par un message terminal `completed` ou `failed`.
 Le serveur accuse réception de chaque message avec `ack`,
-et la connexion reste ouverte afin que le Runner retourne à la boucle inactive pour le Job suivant.
+et la connexion reste ouverte afin que le Runner retourne à la boucle inactive pour l'exécution suivante.
 
-Si un Job est annulé, le serveur répond à un `heartbeat` avec `cancel`.
+Le serveur forme les itérations d'un Job à partir de ses exécutions.
+Un Job de trois itérations part sous forme de trois messages `job`,
+qui peuvent aller à différents Runners du Spec du Job, en même temps,
+et entre les exécutions d'autres Jobs.
+Parmi les Jobs de même priorité, le Job dont la dernière exécution est partie il y a le plus longtemps passe en premier,
+de sorte qu'un Job d'une itération attend au plus une itération d'un Job plus long.
+
+Si un Job est annulé, ou se termine alors qu'une de ses exécutions est en cours sur un autre Runner,
+le serveur répond au prochain `running` ou `heartbeat` de cette exécution avec `cancel`.
 Le Runner arrête le benchmark et répond avec `canceled`, ce dont le serveur accuse réception.
 
 <FlowDiagram />

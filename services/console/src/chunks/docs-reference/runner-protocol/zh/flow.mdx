@@ -5,13 +5,22 @@ import FlowDiagram from "../flow-diagram.mdx";
 连接后，Runner 进入空闲轮询循环，
 持续发送 `ready` 直到服务器分配一个 `job`
 （或在轮询超时时返回 `no_job`，或在有新版本可用时返回 `update`）。
-一旦拿到 Job，Runner 发送 `running`，
+每条 `job` 消息是一次执行：Job 的 Image 的一次运行，作为只有一次迭代的 Job。
+一旦拿到一次执行，Runner 发送 `running`，
 在基准测试执行期间流式发送 `heartbeat` 消息，
 并以终止性的 `completed` 或 `failed` 消息结束。
 服务器用 `ack` 确认每条消息，
-连接保持打开，因此 Runner 会返回空闲循环以处理下一个 Job。
+连接保持打开，因此 Runner 会返回空闲循环以处理下一次执行。
 
-如果 Job 被取消，服务器会用 `cancel` 回复某个 `heartbeat`。
+服务器由 Job 的各次执行组成它的迭代。
+一个三次迭代的 Job 会作为三条 `job` 消息发出，
+这些消息可以发往该 Job 的 Spec 下的不同 Runner，可以同时进行，
+也可以穿插在其他 Job 的执行之间。
+在优先级相同的 Job 之间，最后一次执行发出时间最早的 Job 排在下一个，
+因此一个只有一次迭代的 Job 最多等待较长 Job 的一次迭代。
+
+如果 Job 被取消，或在它的某次执行仍在另一个 Runner 上进行时结束，
+服务器会用 `cancel` 回复该次执行的下一个 `running` 或 `heartbeat`。
 Runner 停止基准测试并回复 `canceled`，服务器随后确认它。
 
 <FlowDiagram />

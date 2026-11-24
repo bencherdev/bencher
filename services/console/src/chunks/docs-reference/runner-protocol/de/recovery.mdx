@@ -9,25 +9,36 @@ Während die Verbindung offen ist, erkennt ein Read-Timeout einen Runner, der ve
 Nur gültige Protokollnachrichten setzen den Timer zurück;
 ungültiges JSON, Ping/Pong-Frames und Binärnachrichten tun dies nicht.
 Bei einem Timeout wird ein Job, der länger als sein Timeout plus eine Karenzzeit gelaufen ist, als `canceled` markiert,
-andernfalls als `unknown` (der Kontakt zum Runner ging verloren).
+andernfalls wird die Ausführung als `unknown` markiert (der Kontakt zum Runner ging verloren).
+Solange eine Ausführung `unknown` ist, wird keine weitere Ausführung des Jobs versendet,
+und der Job ist `unknown`, solange keine andere seiner Ausführungen läuft.
 
 ### Hartes Job-Timeout
 
 Der Server erzwingt unabhängig vom Verhalten des Runner eine harte maximale Ausführungsdauer,
 sodass ein fehlerhafter oder kompromittierter Runner nicht durch das Senden von Heartbeats unbegrenzt laufen kann.
-Wird das Limit (das Job-Timeout plus eine Karenzzeit) überschritten,
-wird der Job als `canceled` markiert und der Runner erhält eine `cancel`-Nachricht.
-Das Limit zählt ab dem Start des Jobs, oder ab seiner Beanspruchung, falls er nie gestartet ist, und gilt auch für einen `unknown`-Job.
+Das Job-Timeout begrenzt die Zeit innerhalb der eigenen Ausführungen des Jobs, aufsummiert:
+Jede Ausführung zählt von ihrem `running` bis zu ihrem Ergebnis,
+und die Zeit zwischen den Ausführungen, in der andere Jobs laufen, zählt nicht.
+Jede `job`-Nachricht trägt den Rest des Job-Timeouts als ihr Timeout.
+Überschreitet die Summe das Limit (das Job-Timeout plus eine Karenzzeit),
+wird der Job als `canceled` markiert und seine Runner erhalten eine `cancel`-Nachricht.
+Ein Job, dessen Zeit vor seiner letzten Iteration abläuft, wird als `failed` markiert,
+mit einem Fehler, der nennt, wie viele seiner Iterationen gelaufen sind.
+Setzen Sie `--job-timeout` für einen Job mit vielen Iterationen.
 
 ### Wiederherstellung bei Verbindungsabbruch
 
-Bricht die Verbindung ab, während ein Job noch in Bearbeitung ist,
+Bricht die Verbindung ab, während eine Ausführung noch läuft,
 plant der Server nach dem Heartbeat-Timeout eine Prüfung ein.
-Hat sich der Runner erneut verbunden und die Heartbeats wieder aufgenommen, läuft der Job weiter;
-andernfalls wird der Job als `unknown` markiert, oder als `canceled`, falls er das harte Timeout überschritten hatte.
-Einen `unknown`-Job prüft der Server bei Ablauf seiner Frist erneut.
-Beim Start markiert der Server außerdem verwaiste `claimed`-Jobs als `unknown`,
-plant Timeouts für in Bearbeitung befindliche und `unknown`-Jobs neu
+Hat sich der Runner erneut verbunden und die Heartbeats wieder aufgenommen, läuft die Ausführung weiter;
+andernfalls wird die Ausführung als `unknown` markiert, oder der Job als `canceled`, falls er das harte Timeout überschritten hatte.
+Eine `unknown`-Ausführung prüft der Server bei Ablauf ihrer Frist erneut:
+die Zeit, mit der sie versendet wurde, plus die Karenzzeit, gezählt ab ihrem Start.
+Eine Ausführung wird nie erneut an einen anderen Runner versendet.
+Beim Start markiert der Server außerdem verwaiste Ausführungen, die versendet, aber nie gestartet wurden, als `unknown`,
+plant Timeouts für laufende Ausführungen neu,
+belässt einen Job zwischen seinen Ausführungen für seine nächste Ausführung auf `running`
 und verarbeitet `completed`-Jobs erneut, deren Ergebnisse gespeichert, aber noch nicht geparst wurden;
 ein `completed`-Job, dessen Ergebnisse verloren gingen, wird als `unknown` markiert, damit der Runner sie erneut senden kann.
 
@@ -36,10 +47,10 @@ ein `completed`-Job, dessen Ergebnisse verloren gingen, wird als `unknown` marki
 Wiederverbindung wird unterstützt und ist idempotent.
 Das erneute Senden von `running` für einen bereits laufenden Job aktualisiert nur dessen Lebenszeichen,
 und das erneute Senden einer terminalen `completed`-, `failed`- oder `canceled`-Nachricht ist immer sicher.
-Terminale Nachrichten tragen die Job-UUID und erhalten ein `ack`;
+Terminale Nachrichten tragen die UUID der Ausführung und erhalten ein `ack`;
 bricht die Verbindung ab, bevor das `ack` eintrifft,
 speichert der Runner das Ergebnis und sendet es bei der nächsten Verbindung erneut, bevor er in den Leerlauf geht.
-Das Ergebnis eines Runner löst einen `unknown`-Job auf.
+Das Ergebnis eines Runner löst eine `unknown`-Ausführung auf, bis ihre Frist abläuft, und ihr Job läuft weiter.
 Ein `failed`- oder `canceled`-Job ändert seinen Zustand nie wieder: Ein verspätetes Ergebnis wird bestätigt, damit der Runner es nicht erneut sendet, und verworfen.
 
 ### Kein automatischer erneuter Versuch

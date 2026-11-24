@@ -2,21 +2,23 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 
 ## Ciclo de Vida del Job
 
-Cada Job recorre un conjunto fijo de estados a medida que es reclamado, ejecutado y procesado.
+Cada Job recorre un conjunto fijo de estados a medida que sus ejecuciones se envían, se ejecutan y se procesan.
+Un Job permanece `running` desde su primera ejecución hasta su resultado, también entre sus ejecuciones.
 
 | Desde     | Hacia       | Disparador                                                             |
 | --------- | ----------- | ---------------------------------------------------------------------- |
-| pending   | claimed     | Un Runner reclama el Job                                                |
+| pending   | claimed     | Un Runner toma la primera ejecución del Job                             |
 | pending   | canceled    | Un usuario cancela el Job                                               |
 | claimed   | running     | El Runner envía `running`                                               |
 | claimed   | failed      | El Runner envía `failed`                                               |
 | claimed   | unknown     | El servidor pierde el contacto con el Runner                           |
 | claimed   | canceled    | Un usuario cancela el Job                                               |
-| running   | completed   | El Runner envía `completed`                                             |
-| running   | failed      | El Runner envía `failed`                                               |
-| running   | unknown     | El servidor pierde el contacto con el Runner                           |
+| running   | completed   | Cada iteración del Job tiene su resultado                               |
+| running   | failed      | Una ejecución falla sin `allow_failure`, o se agota el tiempo del Job  |
+| running   | unknown     | El servidor pierde el contacto con el Runner de su única ejecución en curso |
 | running   | canceled    | Un usuario cancela el Job, o se excede el tiempo de espera duro del Job |
-| unknown   | completed   | El Runner envía `completed`                                            |
+| unknown   | running     | El Runner reenvía su resultado, y al Job le quedan iteraciones         |
+| unknown   | completed   | El Runner reenvía su resultado, y cada iteración tiene su resultado    |
 | unknown   | failed      | El Runner envía `failed`                                               |
 | unknown   | canceled    | Un usuario cancela el Job, o se excede el tiempo de espera duro del Job |
 | completed | processed   | El servidor procesa correctamente los resultados                       |

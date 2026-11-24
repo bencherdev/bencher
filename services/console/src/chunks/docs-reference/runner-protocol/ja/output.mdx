@@ -1,12 +1,17 @@
 ## Job の出力
 
 Runner が `completed` または `failed` を送信すると、
-完全な出力は、コンテナ Image に使用されるのと同じ OCI ストレージバックエンドの
-`{project}/output/v0/jobs/{job}` というパスに保存されます。
+その実行の出力は、コンテナ Image に使用されるのと同じ OCI ストレージバックエンドの
+`{project}/output/v0/executions/{execution}` というパスに直ちに保存されます。
+Job のすべての反復の結果が確定すると、
+サーバーはその実行から反復の順に Job の出力を組み立て、
+`{project}/output/v0/jobs/{job}` というパスに保存します。
 
 保存された出力には、反復ごとの `results` 配列と、失敗時には `error` 文字列が含まれます。
 各反復は、その `exit_code`、`stdout`、`stderr`、
 そして収集された出力ファイルとその内容のマップを記録します。
+`allow_failure` の下では、実行が失敗した反復はその `exit_code` と `stderr` のみを保持するため、
+その位置は保たれ、そこからの Metric は Report に届きません。
 出力が保存された後、サーバーは結果に対して [ベンチマークハーネスアダプター][adapters] を実行し、
 Metric と Alert を解析して Report に取り込み、Job を `processed` へ遷移させます。
 

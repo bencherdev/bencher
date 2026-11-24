@@ -8,6 +8,10 @@ Messages sent from the Runner to the server.
 | `paused`    | The Runner is idle but takes no Job until its pause reasons clear; the server holds the poll and answers `no_job` | `reasons` (each with a `kind`: `raid` or `maintenance`), `since`, and every `ready` field |
 | `running`   | Job setup is complete and the benchmark is starting | None                                                                  |
 | `heartbeat` | Periodic liveness signal (about once per second)  | None                                                                    |
-| `completed` | The benchmark completed successfully              | `job` (Job UUID) and `results` (per-iteration output)                   |
-| `failed`    | The benchmark failed                              | `job` (Job UUID), `results`, and `error`                                |
-| `canceled`  | Acknowledges a cancellation from the server       | `job` (Job UUID)                                                        |
+| `completed` | The benchmark completed successfully              | `job` (the UUID of the `job` message) and `results` (the run's output)  |
+| `failed`    | The benchmark failed                              | `job` (the UUID of the `job` message), `results`, and `error`           |
+| `canceled`  | Acknowledges a cancellation from the server       | `job` (the UUID of the `job` message)                                   |
+
+The UUID of a `job` message names that execution, not the Job.
+The Runner echoes it, so a result names its execution exactly,
+even when it is resent after another execution of the same Job went out.
