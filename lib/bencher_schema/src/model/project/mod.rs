@@ -19,8 +19,9 @@ use crate::{
     ApiContext, auth_conn,
     context::{DbConnection, Rbac},
     error::{
-        BencherResource, ProjectAuthState, assert_parentage, bad_request_error, forbidden_error,
-        issue_error, resource_conflict_err, resource_not_found_err, unauthorized_error,
+        BencherResource, InsertRefusal, ProjectAuthState, assert_parentage, bad_request_error,
+        forbidden_error, issue_error, resource_conflict_err, resource_conflict_error,
+        resource_not_found_err, unauthorized_error,
     },
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_uuid},
@@ -29,8 +30,8 @@ use crate::{
         sql::last_insert_rowid,
     },
     model::{
-        organization::QueryOrganization,
-        user::{actor::ApiActor, auth::AuthUser, public::PublicUser},
+        organization::{GetOrInsertOrganization, QueryOrganization},
+        user::{UserId, actor::ApiActor, auth::AuthUser, public::PublicUser},
     },
     schema::{self, project as project_table},
     write_conn, write_transaction,
@@ -170,39 +171,29 @@ impl QueryProject {
         match public_user {
             PublicUser::Public(remote_ip) => {
                 slog::info!(log, "Creating on-the-fly project for public user"; "project_slug" => %project_slug, "remote_ip" => ?remote_ip);
-                let query_organization = QueryOrganization::get_or_create_from_project(
-                    context,
-                    &project_name,
-                    &project_slug,
-                )
-                .await?;
-                #[cfg(feature = "plus")]
-                InsertProject::rate_limit(context, &query_organization).await?;
-                // The organization and project share the same UUID so that
-                // on-the-fly unclaimed projects are easy to identify after claiming.
-                let insert_project = InsertProject::from_organization(
-                    &query_organization,
-                    project_name,
-                    project_slug.clone(),
-                );
-                let result = write_transaction!(context, |conn| {
-                    let existing = schema::project::table
-                        .filter(schema::project::slug.eq(&project_slug))
-                        .filter(schema::project::deleted.is_null())
-                        .first::<Self>(conn)
-                        .optional()?;
-                    if let Some(existing) = existing {
-                        return diesel::QueryResult::Ok(GetOrCreateProject::Existing(existing));
-                    }
-                    let id = Self::insert(conn, &insert_project)?;
-                    diesel::QueryResult::Ok(GetOrCreateProject::Inserted(id))
+                let (result, organization_inserted) = write_transaction!(context, |conn| {
+                    Self::get_or_insert_unclaimed(
+                        conn,
+                        #[cfg(feature = "plus")]
+                        &context.rate_limiting,
+                        project_name,
+                        &project_slug,
+                    )
                 })
-                .map_err(resource_conflict_err!(Project, &insert_project))?;
+                .map_err(|refusal| {
+                    refusal.into_http_error(BencherResource::Project, &project_slug)
+                })?;
+
+                #[cfg(feature = "otel")]
+                if organization_inserted {
+                    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
+                }
+                #[cfg(not(feature = "otel"))]
+                let _ = organization_inserted;
 
                 match result {
                     GetOrCreateProject::Existing(query_project) => Ok(query_project),
-                    GetOrCreateProject::Inserted(id) => {
-                        let query_project = insert_project.into_query(id);
+                    GetOrCreateProject::Inserted(query_project) => {
                         slog::debug!(log, "Created project: {query_project:?}");
                         #[cfg(feature = "plus")]
                         context.update_index(log, &query_project).await;
@@ -213,8 +204,6 @@ impl QueryProject {
             PublicUser::Auth(auth_user) => {
                 let query_organization =
                     QueryOrganization::get_or_create_from_user(context, auth_user).await?;
-                #[cfg(feature = "plus")]
-                InsertProject::rate_limit(context, &query_organization).await?;
                 // The choice was either to relax the schema constraint to allow duplicate project names
                 // or to append a number to the project name to ensure uniqueness.
                 let name =
@@ -225,7 +214,7 @@ impl QueryProject {
                 // If so then we need to reload the permissions.
                 // This is unlikely to be the case going forward, but it is needed for backwards compatibility.
                 let auth_user = auth_user.reload(auth_conn!(context))?;
-                Self::create(
+                Self::get_or_create_with_slug(
                     log,
                     context,
                     &auth_user,
@@ -235,6 +224,66 @@ impl QueryProject {
                 .await
             },
         }
+    }
+
+    /// Find the project with the slug, or insert it along with its unclaimed organization.
+    /// The check and the inserts share one write transaction, so a request that loses the race
+    /// to create the project gets the winner's and leaves no row behind.
+    fn get_or_insert_unclaimed(
+        conn: &mut DbConnection,
+        #[cfg(feature = "plus")] rate_limiting: &crate::context::RateLimiting,
+        project_name: ResourceName,
+        project_slug: &ProjectSlug,
+    ) -> Result<(GetOrCreateProject, bool), InsertRefusal> {
+        let existing = Self::find_slug(conn, project_slug).map_err(|e| {
+            InsertRefusal::Refused(resource_conflict_error(
+                BencherResource::Project,
+                project_slug,
+                e,
+            ))
+        })?;
+        if let Some(existing) = existing {
+            return Ok((GetOrCreateProject::Existing(existing), false));
+        }
+        let organization =
+            QueryOrganization::get_or_insert_for_project(conn, &project_name, project_slug)
+                .map_err(|e| {
+                    InsertRefusal::Refused(resource_conflict_error(
+                        BencherResource::Organization,
+                        project_slug,
+                        e,
+                    ))
+                })?;
+        let (query_organization, organization_inserted) = match organization {
+            GetOrInsertOrganization::Unclaimed(query_organization) => (query_organization, false),
+            GetOrInsertOrganization::Inserted(query_organization) => (query_organization, true),
+            GetOrInsertOrganization::Claimed => {
+                return Err(InsertRefusal::Refused(unauthorized_error(format!(
+                    "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) or project key (`--key`) to authenticate."
+                ))));
+            },
+        };
+        #[cfg(feature = "plus")]
+        InsertProject::rate_limit_conn(conn, rate_limiting, &query_organization)
+            .map_err(InsertRefusal::Refused)?;
+        // The organization and project share the same UUID so that
+        // on-the-fly unclaimed projects are easy to identify after claiming.
+        let insert_project = InsertProject::from_organization(
+            &query_organization,
+            project_name,
+            project_slug.clone(),
+        );
+        let id = Self::insert(conn, &insert_project).map_err(|e| {
+            InsertRefusal::Refused(resource_conflict_error(
+                BencherResource::Project,
+                &insert_project,
+                e,
+            ))
+        })?;
+        Ok((
+            GetOrCreateProject::Inserted(insert_project.into_query(id)),
+            organization_inserted,
+        ))
     }
 
     async fn unique_name(
@@ -333,6 +382,68 @@ impl QueryProject {
         query_organization: &QueryOrganization,
         insert_project: InsertProject,
     ) -> Result<Self, HttpError> {
+        Self::is_allowed_create(context, auth_user, query_organization)?;
+
+        let user_id = auth_user.id();
+        let query_project = write_transaction!(context, |conn| {
+            Self::insert_with_maintainer(conn, &insert_project, user_id)
+        })
+        .map_err(resource_conflict_err!(Project, &insert_project))
+        .map(|id| insert_project.into_query(id))?;
+
+        Self::created(log, context, &query_project).await;
+        Ok(query_project)
+    }
+
+    /// [`Self::create`], unless a project with the slug already exists, which it returns instead.
+    /// The check and the insert share one write transaction,
+    /// so a request that loses the race to create the project gets the winner's.
+    async fn get_or_create_with_slug(
+        log: &Logger,
+        context: &ApiContext,
+        auth_user: &AuthUser,
+        query_organization: &QueryOrganization,
+        insert_project: InsertProject,
+    ) -> Result<Self, HttpError> {
+        Self::is_allowed_create(context, auth_user, query_organization)?;
+
+        // The slug check, the creation limit, and the insert share one write transaction,
+        // so only the request that creates the project counts toward the limit.
+        let user_id = auth_user.id();
+        let result = write_transaction!(context, |conn| {
+            if let Some(existing) = Self::find_slug(conn, &insert_project.slug)? {
+                return Ok(GetOrCreateProject::Existing(existing));
+            }
+            #[cfg(feature = "plus")]
+            InsertProject::rate_limit_conn(conn, &context.rate_limiting, query_organization)
+                .map_err(InsertRefusal::Refused)?;
+            let id = Self::insert_with_maintainer(conn, &insert_project, user_id).map_err(|e| {
+                InsertRefusal::Refused(resource_conflict_error(
+                    BencherResource::Project,
+                    &insert_project,
+                    e,
+                ))
+            })?;
+            Ok::<_, InsertRefusal>(GetOrCreateProject::Inserted(
+                insert_project.clone().into_query(id),
+            ))
+        })
+        .map_err(|refusal| refusal.into_http_error(BencherResource::Project, &insert_project))?;
+
+        match result {
+            GetOrCreateProject::Existing(query_project) => Ok(query_project),
+            GetOrCreateProject::Inserted(query_project) => {
+                Self::created(log, context, &query_project).await;
+                Ok(query_project)
+            },
+        }
+    }
+
+    fn is_allowed_create(
+        context: &ApiContext,
+        auth_user: &AuthUser,
+        query_organization: &QueryOrganization,
+    ) -> Result<(), HttpError> {
         // Check to see if user has permission to create a project within the organization
         context
             .rbac
@@ -341,39 +452,48 @@ impl QueryProject {
                 bencher_rbac::organization::Permission::Create,
                 query_organization,
             )
-            .map_err(forbidden_error)?;
+            .map_err(forbidden_error)
+    }
 
+    /// Insert the project, and connect the user to it as a `Maintainer`.
+    fn insert_with_maintainer(
+        conn: &mut DbConnection,
+        insert_project: &InsertProject,
+        user_id: UserId,
+    ) -> diesel::QueryResult<ProjectId> {
+        let id = Self::insert(conn, insert_project)?;
         let timestamp = DateTime::now();
-        let user_id = auth_user.id();
+        let insert_proj_role = InsertProjectRole {
+            user_id,
+            project_id: id,
+            role: ProjectRole::Maintainer,
+            created: timestamp,
+            modified: timestamp,
+        };
+        diesel::insert_into(schema::project_role::table)
+            .values(&insert_proj_role)
+            .execute(conn)?;
+        Ok(id)
+    }
 
-        let query_project = write_transaction!(context, |conn| {
-            let id = Self::insert(conn, &insert_project)?;
-
-            // Connect the user to the project as a `Maintainer`
-            let insert_proj_role = InsertProjectRole {
-                user_id,
-                project_id: id,
-                role: ProjectRole::Maintainer,
-                created: timestamp,
-                modified: timestamp,
-            };
-            diesel::insert_into(schema::project_role::table)
-                .values(&insert_proj_role)
-                .execute(conn)?;
-
-            diesel::QueryResult::Ok(id)
-        })
-        .map_err(resource_conflict_err!(Project, &insert_project))
-        .map(|id| insert_project.into_query(id))?;
+    async fn created(log: &Logger, context: &ApiContext, query_project: &Self) {
         slog::debug!(log, "Created project: {query_project:?}");
 
         #[cfg(feature = "plus")]
-        context.update_index(log, &query_project).await;
+        context.update_index(log, query_project).await;
+        #[cfg(not(feature = "plus"))]
+        let _ = context;
 
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectCreate);
+    }
 
-        Ok(query_project)
+    fn find_slug(conn: &mut DbConnection, slug: &ProjectSlug) -> diesel::QueryResult<Option<Self>> {
+        schema::project::table
+            .filter(schema::project::slug.eq(slug))
+            .filter(schema::project::deleted.is_null())
+            .first(conn)
+            .optional()
     }
 
     fn insert(
@@ -655,10 +775,10 @@ impl QueryProject {
 
 enum GetOrCreateProject {
     Existing(QueryProject),
-    Inserted(ProjectId),
+    Inserted(QueryProject),
 }
 
-#[derive(Debug, diesel::Insertable)]
+#[derive(Debug, Clone, diesel::Insertable)]
 #[diesel(table_name = project_table)]
 pub struct InsertProject {
     pub uuid: ProjectUuid,
@@ -677,19 +797,32 @@ impl InsertProject {
         context: &ApiContext,
         query_organization: &QueryOrganization,
     ) -> Result<(), HttpError> {
+        Self::rate_limit_conn(
+            auth_conn!(context),
+            &context.rate_limiting,
+            query_organization,
+        )
+    }
+
+    #[cfg(feature = "plus")]
+    fn rate_limit_conn(
+        conn: &mut DbConnection,
+        rate_limiting: &crate::context::RateLimiting,
+        query_organization: &QueryOrganization,
+    ) -> Result<(), HttpError> {
         use crate::context::RateLimitingError;
 
-        let is_claimed = query_organization.is_claimed(auth_conn!(context))?;
+        let is_claimed = query_organization.is_claimed(conn)?;
 
         let resource = BencherResource::Project;
-        let (start_time, end_time) = context.rate_limiting.window();
+        let (start_time, end_time) = rate_limiting.window();
         // Include soft-deleted projects to prevent gaming rate limits via delete and recreate.
         let window_usage: u32 = schema::project::table
                 .filter(schema::project::organization_id.eq(query_organization.id))
                 .filter(schema::project::created.ge(start_time))
                 .filter(schema::project::created.le(end_time))
                 .count()
-                .get_result::<i64>(auth_conn!(context))
+                .get_result::<i64>(conn)
                 .map_err(resource_not_found_err!(Project, (query_organization, start_time, end_time)))?
                 .try_into()
                 .map_err(|e| {
@@ -700,7 +833,7 @@ impl InsertProject {
                     )}
                 )?;
 
-        context.rate_limiting.check_claimable_limit(
+        rate_limiting.check_claimable_limit(
             is_claimed,
             window_usage,
             |rate_limit| RateLimitingError::Organization {

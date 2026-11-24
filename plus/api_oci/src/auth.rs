@@ -338,7 +338,9 @@ pub async fn validate_push_access(
         Some(project) => {
             handle_existing_project(log, rqctx, context, project, &public_user, claims).await
         },
-        None => handle_nonexistent_project(log, context, repository, &public_user, claims).await,
+        None => {
+            handle_nonexistent_project(log, rqctx, context, repository, &public_user, claims).await
+        },
     }?;
     context
         .rate_limiting
@@ -383,24 +385,26 @@ async fn handle_existing_project(
     public_user: &PublicUser,
     claims: Option<AuthOciClaims>,
 ) -> Result<PushAccess, HttpError> {
-    let conn = public_conn!(context);
-    let organization = project
-        .organization(conn)
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to get organization: {e}")))?;
-
-    let is_claimed = organization.is_claimed(conn).map_err(|e| {
-        HttpError::for_internal_error(format!("Failed to check claimed status: {e}"))
-    })?;
+    let (organization, is_claimed) = {
+        let conn = public_conn!(context);
+        let organization = project.organization(conn).map_err(|e| {
+            HttpError::for_internal_error(format!("Failed to get organization: {e}"))
+        })?;
+        let is_claimed = organization.is_claimed(conn).map_err(|e| {
+            HttpError::for_internal_error(format!("Failed to check claimed status: {e}"))
+        })?;
+        (organization, is_claimed)
+    };
 
     if is_claimed {
-        handle_claimed_project(log, rqctx, context, project, public_user, claims)
+        handle_claimed_project(log, rqctx, context, project, public_user, claims).await
     } else {
         handle_unclaimed_project(log, context, project, organization, public_user, claims).await
     }
 }
 
 /// Handle push to a claimed project (requires authentication and RBAC permission)
-fn handle_claimed_project(
+async fn handle_claimed_project(
     log: &Logger,
     rqctx: &RequestContext<ApiContext>,
     context: &ApiContext,
@@ -424,9 +428,14 @@ fn handle_claimed_project(
         "project" => %project.uuid
     );
 
-    // Verify RBAC permission
-    project
-        .try_allowed(&context.rbac, auth_user, Permission::Create)
+    // Verify RBAC permission. A concurrent request may have given the user a role here since the
+    // user was loaded, such as by creating the user's organization, so a denial checks again.
+    let mut allowed = project.try_allowed(&context.rbac, auth_user, Permission::Create);
+    if allowed.is_err() {
+        let auth_user = auth_user.reload(public_conn!(context))?;
+        allowed = project.try_allowed(&context.rbac, &auth_user, Permission::Create);
+    }
+    allowed
         .inspect_err(|e| {
             slog::info!(log, "OCI RBAC check failed"; "error" => %e);
         })
@@ -486,6 +495,7 @@ async fn handle_unclaimed_project(
 /// Handle push to a non-existent project (UUID → 404, slug → auto-create)
 async fn handle_nonexistent_project(
     log: &Logger,
+    rqctx: &RequestContext<ApiContext>,
     context: &ApiContext,
     repository: &ProjectResourceId,
     public_user: &PublicUser,
@@ -526,7 +536,9 @@ async fn handle_nonexistent_project(
                 })
                 .await?;
 
-            Ok(PushAccess { project, claims })
+            // Another request may have created the project first,
+            // so it gets the same checks as a project that exists.
+            handle_existing_project(log, rqctx, context, project, public_user, claims).await
         },
     }
 }

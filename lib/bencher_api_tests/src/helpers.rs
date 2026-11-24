@@ -487,6 +487,27 @@ pub fn user_organizations(server: &TestServer, user: UserUuid) -> Vec<Organizati
         .expect("Failed to get organization roles")
 }
 
+/// Every organization, in the order it was created.
+#[expect(clippy::expect_used, reason = "test helper querying organizations")]
+pub fn organizations(server: &TestServer) -> Vec<OrganizationUuid> {
+    schema::organization::table
+        .order(schema::organization::id)
+        .select(schema::organization::uuid)
+        .load(&mut server.db_conn())
+        .expect("Failed to get organizations")
+}
+
+/// Every project, as its slug and the organization that holds it, in the order it was created.
+#[expect(clippy::expect_used, reason = "test helper querying projects")]
+pub fn projects(server: &TestServer) -> Vec<(String, OrganizationUuid)> {
+    schema::project::table
+        .inner_join(schema::organization::table)
+        .order(schema::project::id)
+        .select((schema::project::slug, schema::organization::uuid))
+        .load(&mut server.db_conn())
+        .expect("Failed to get projects")
+}
+
 /// Insert a metric as its named rows.
 ///
 /// The point estimate carries `metric_uuid` and the name `value`; each bound that
