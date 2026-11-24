@@ -20,6 +20,10 @@ pub enum Threshold {
 pub enum ThresholdError {
     #[error("Invalid threshold model: {0}")]
     BadModel(bencher_json::ValidError),
+    #[error(
+        "Invalid threshold model: the {0} test checks a line, so set it with `--changepoint-test`, not `--test`"
+    )]
+    LineTest(bencher_json::ModelTest),
 }
 
 impl TryFrom<CliThreshold> for Threshold {

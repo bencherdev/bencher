@@ -1,8 +1,8 @@
 use std::fmt;
 
 use bencher_valid::{
-    Boundary, BranchName, DateTime, DateTimeMillis, MetricName, Model, ModelTest, ResourceName,
-    SampleSize, Window,
+    Boundary, BranchName, Confirmations, DateTime, DateTimeMillis, MetricName, Model, ModelTest,
+    ResourceName, SampleSize, Significance, Window,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -289,6 +289,10 @@ pub struct JsonConsoleThresholdRowModel {
     pub lower_boundary: Option<Boundary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub upper_boundary: Option<Boundary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub significance: Option<Significance>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confirmations: Option<Confirmations>,
 }
 
 #[typeshare::typeshare]
@@ -307,6 +311,10 @@ pub struct JsonConsoleThresholdModel {
     pub lower_boundary: Option<Boundary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub upper_boundary: Option<Boundary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub significance: Option<Significance>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confirmations: Option<Confirmations>,
     pub created: DateTimeMillis,
     /// When a newer model, or the removal of the threshold's model, replaced it.
     /// Absent for the current model.
@@ -357,6 +365,34 @@ pub struct JsonConsoleThresholdMeasure {
 pub enum JsonUpdateThreshold {
     Model(JsonUpdateModel),
     Remove(JsonRemoveModel),
+    ModelNull(JsonUpdateModelNull),
+    RemoveNull(JsonRemoveModelNull),
+}
+
+impl JsonUpdateThreshold {
+    /// The model to set, or none to remove it, and the changepoint model: absent for no
+    /// change, `Some(None)` to remove it, or the changepoint model to set.
+    #[must_use]
+    pub fn into_models(self) -> (Option<Model>, Option<Option<Model>>) {
+        match self {
+            Self::Model(JsonUpdateModel {
+                model,
+                changepoint_model,
+            }) => (Some(model), changepoint_model.map(Some)),
+            Self::Remove(JsonRemoveModel {
+                test: (),
+                changepoint_model,
+            }) => (None, changepoint_model.map(Some)),
+            Self::ModelNull(JsonUpdateModelNull {
+                model,
+                changepoint_model: (),
+            }) => (Some(model), Some(None)),
+            Self::RemoveNull(JsonRemoveModelNull {
+                test: (),
+                changepoint_model: (),
+            }) => (None, Some(None)),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -365,11 +401,9 @@ pub struct JsonUpdateModel {
     #[serde(flatten)]
     pub model: Model,
     /// The changepoint model, whose test checks a line.
-    /// Set to `null` to remove the changepoint model.
     /// If not set, the changepoint model does not change.
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "schema", schemars(with = "Option<Model>"))]
-    pub changepoint_model: Option<Option<Model>>,
+    pub changepoint_model: Option<Model>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -377,14 +411,30 @@ pub struct JsonUpdateModel {
 pub struct JsonRemoveModel {
     pub test: (),
     /// The changepoint model, whose test checks a line.
-    /// Set to `null` to remove the changepoint model.
     /// If not set, the changepoint model does not change.
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "schema", schemars(with = "Option<Model>"))]
-    pub changepoint_model: Option<Option<Model>>,
+    pub changepoint_model: Option<Model>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateModelNull {
+    #[serde(flatten)]
+    pub model: Model,
+    /// Set to `null` to remove the changepoint model.
+    pub changepoint_model: (),
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonRemoveModelNull {
+    pub test: (),
+    /// Set to `null` to remove the changepoint model.
+    pub changepoint_model: (),
 }
 
 impl<'de> Deserialize<'de> for JsonUpdateThreshold {
+    #[expect(clippy::too_many_lines, reason = "one match arm per updatable field")]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -395,6 +445,8 @@ impl<'de> Deserialize<'de> for JsonUpdateThreshold {
         const WINDOW_FIELD: &str = "window";
         const LOWER_BOUNDARY_FIELD: &str = "lower_boundary";
         const UPPER_BOUNDARY_FIELD: &str = "upper_boundary";
+        const SIGNIFICANCE_FIELD: &str = "significance";
+        const CONFIRMATIONS_FIELD: &str = "confirmations";
         const CHANGEPOINT_MODEL_FIELD: &str = "changepoint_model";
 
         const FIELDS: &[&str] = &[
@@ -404,6 +456,8 @@ impl<'de> Deserialize<'de> for JsonUpdateThreshold {
             WINDOW_FIELD,
             LOWER_BOUNDARY_FIELD,
             UPPER_BOUNDARY_FIELD,
+            SIGNIFICANCE_FIELD,
+            CONFIRMATIONS_FIELD,
             CHANGEPOINT_MODEL_FIELD,
         ];
 
@@ -416,6 +470,8 @@ impl<'de> Deserialize<'de> for JsonUpdateThreshold {
             Window,
             LowerBoundary,
             UpperBoundary,
+            Significance,
+            Confirmations,
             ChangepointModel,
         }
 
@@ -438,6 +494,8 @@ impl<'de> Deserialize<'de> for JsonUpdateThreshold {
                 let mut window = None;
                 let mut lower_boundary = None;
                 let mut upper_boundary = None;
+                let mut significance = None;
+                let mut confirmations = None;
                 let mut changepoint_model = None;
 
                 while let Some(key) = map.next_key()? {
@@ -460,34 +518,73 @@ impl<'de> Deserialize<'de> for JsonUpdateThreshold {
                         Field::UpperBoundary => {
                             next_once(&mut map, &mut upper_boundary, UPPER_BOUNDARY_FIELD)?;
                         },
+                        Field::Significance => {
+                            next_once(&mut map, &mut significance, SIGNIFICANCE_FIELD)?;
+                        },
+                        Field::Confirmations => {
+                            next_once(&mut map, &mut confirmations, CONFIRMATIONS_FIELD)?;
+                        },
                         Field::ChangepointModel => {
                             next_once(&mut map, &mut changepoint_model, CHANGEPOINT_MODEL_FIELD)?;
                         },
                     }
                 }
 
-                match test {
-                    Some(Some(test)) => Ok(Self::Value::Model(JsonUpdateModel {
-                        model: Model {
-                            test,
-                            min_sample_size,
-                            max_sample_size,
-                            window,
-                            lower_boundary,
-                            upper_boundary,
-                        },
-                        changepoint_model,
-                    })),
-                    Some(None) => Ok(Self::Value::Remove(JsonRemoveModel {
-                        test: (),
-                        changepoint_model,
-                    })),
-                    None => Err(de::Error::missing_field(TEST_FIELD)),
-                }
+                let model = match test {
+                    Some(Some(test)) => Some(Model {
+                        test,
+                        min_sample_size,
+                        max_sample_size,
+                        window,
+                        lower_boundary,
+                        upper_boundary,
+                        significance,
+                        confirmations,
+                    }),
+                    Some(None) => None,
+                    None => return Err(de::Error::missing_field(TEST_FIELD)),
+                };
+                Ok(if let Some(None) = changepoint_model {
+                    update_threshold_null(model)
+                } else {
+                    update_threshold(model, changepoint_model.flatten())
+                })
             }
         }
 
         deserializer.deserialize_struct("JsonUpdateThreshold", FIELDS, UpdateThresholdVisitor)
+    }
+}
+
+/// The update body that sets the model, or removes it when there is none, and sets the changepoint
+/// model when there is one.
+fn update_threshold(model: Option<Model>, changepoint_model: Option<Model>) -> JsonUpdateThreshold {
+    if let Some(model) = model {
+        JsonUpdateThreshold::Model(JsonUpdateModel {
+            model,
+            changepoint_model,
+        })
+    } else {
+        JsonUpdateThreshold::Remove(JsonRemoveModel {
+            test: (),
+            changepoint_model,
+        })
+    }
+}
+
+/// The update body that sets the model, or removes it when there is none, and removes the
+/// changepoint model.
+fn update_threshold_null(model: Option<Model>) -> JsonUpdateThreshold {
+    if let Some(model) = model {
+        JsonUpdateThreshold::ModelNull(JsonUpdateModelNull {
+            model,
+            changepoint_model: (),
+        })
+    } else {
+        JsonUpdateThreshold::RemoveNull(JsonRemoveModelNull {
+            test: (),
+            changepoint_model: (),
+        })
     }
 }
 

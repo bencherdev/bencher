@@ -648,6 +648,8 @@ fn row_model_json(model: QueryModel) -> JsonConsoleThresholdRowModel {
         window,
         lower_boundary,
         upper_boundary,
+        significance,
+        confirmations,
     } = model.into_model();
     JsonConsoleThresholdRowModel {
         test,
@@ -656,6 +658,8 @@ fn row_model_json(model: QueryModel) -> JsonConsoleThresholdRowModel {
         window,
         lower_boundary,
         upper_boundary,
+        significance,
+        confirmations,
     }
 }
 
@@ -668,6 +672,8 @@ fn model_json(model: QueryModel) -> JsonConsoleThresholdModel {
         window,
         lower_boundary,
         upper_boundary,
+        significance,
+        confirmations,
         created,
         replaced,
         ..
@@ -680,6 +686,8 @@ fn model_json(model: QueryModel) -> JsonConsoleThresholdModel {
         window,
         lower_boundary,
         upper_boundary,
+        significance,
+        confirmations,
         created: created.into(),
         replaced: replaced.map(Into::into),
     }

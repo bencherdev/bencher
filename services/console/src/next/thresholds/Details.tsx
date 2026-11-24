@@ -17,7 +17,7 @@ import { runHost } from "../project";
 
 const CHANGE = "th-change";
 
-/** What the threshold applies to, its model, and every model it has had. */
+/** What the threshold applies to, and the model of each slot with every model it has had. */
 export const Cards = (props: {
 	slug: string;
 	threshold: JsonConsoleThreshold;
@@ -90,60 +90,91 @@ export const Cards = (props: {
 					)}
 				</Show>
 			</Card>
-			<Card
-				as="section"
-				variant="soft"
-				class="th-card"
-				aria-labelledby="th-model"
-			>
-				<h2 class="seclabel" id="th-model">
-					Model
-				</h2>
-				<Show
-					when={props.threshold.model}
-					fallback={<p class="th-note">No model</p>}
-				>
-					{(model) => (
-						<>
-							<dl>
-								<div class="kv">
-									<dt>test</dt>
-									<dd class="th-mono">{model().test}</dd>
-								</div>
-								<For each={modelRows(model())}>
-									{([field, value]) => (
-										<div class="kv">
-											<dt>{field}</dt>
-											<dd classList={{ "th-quiet": value === undefined }}>
-												{value ?? "none"}
-											</dd>
-										</div>
-									)}
-								</For>
-							</dl>
-							<p class="th-note">Set {dayText(model().created, props.now)}</p>
-						</>
-					)}
-				</Show>
-			</Card>
-			<Card
-				as="section"
-				variant="soft"
-				class="th-card"
-				aria-labelledby="th-history"
-			>
-				<h2 class="seclabel" id="th-history">
-					Model history
-				</h2>
-				<ol class="th-history">
-					<For each={props.threshold.models}>
-						{(model) => <HistoryRow model={model} now={props.now} />}
-					</For>
-				</ol>
-			</Card>
+			<ModelCard
+				id="th-model"
+				label="Model"
+				model={props.threshold.model}
+				now={props.now}
+			/>
+			<HistoryCard
+				id="th-history"
+				label="Model history"
+				models={props.threshold.models}
+				now={props.now}
+			/>
+			<Show when={props.threshold.changepoint_models.length > 0}>
+				<ModelCard
+					id="th-changepoint-model"
+					label="Changepoint model"
+					model={props.threshold.changepoint_model}
+					now={props.now}
+				/>
+				<HistoryCard
+					id="th-changepoint-history"
+					label="Changepoint model history"
+					models={props.threshold.changepoint_models}
+					now={props.now}
+				/>
+			</Show>
 		</div>
 	);
 };
+
+/** A slot's current model, field by field. */
+const ModelCard = (props: {
+	id: string;
+	label: string;
+	model: JsonConsoleThresholdModel | undefined;
+	now: number;
+}) => (
+	<Card as="section" variant="soft" class="th-card" aria-labelledby={props.id}>
+		<h2 class="seclabel" id={props.id}>
+			{props.label}
+		</h2>
+		<Show when={props.model} fallback={<p class="th-note">No model</p>}>
+			{(model) => (
+				<>
+					<dl>
+						<div class="kv">
+							<dt>test</dt>
+							<dd class="th-mono">{model().test}</dd>
+						</div>
+						<For each={modelRows(model())}>
+							{([field, value]) => (
+								<div class="kv">
+									<dt>{field}</dt>
+									<dd classList={{ "th-quiet": value === undefined }}>
+										{value ?? "none"}
+									</dd>
+								</div>
+							)}
+						</For>
+					</dl>
+					<p class="th-note">Set {dayText(model().created, props.now)}</p>
+				</>
+			)}
+		</Show>
+	</Card>
+);
+
+/** Every model a slot has had, newest first. */
+const HistoryCard = (props: {
+	id: string;
+	label: string;
+	models: JsonConsoleThresholdModel[];
+	now: number;
+}) => (
+	<Card as="section" variant="soft" class="th-card" aria-labelledby={props.id}>
+		<h2 class="seclabel" id={props.id}>
+			{props.label}
+		</h2>
+		<ol class="th-history">
+			<For each={props.models}>
+				{(model) => <HistoryRow model={model} now={props.now} />}
+			</For>
+		</ol>
+	</Card>
+);
 
 const HistoryRow = (props: {
 	model: JsonConsoleThresholdModel;
@@ -169,8 +200,8 @@ export const Change = (props: {
 	version: BmfVersion | undefined;
 }) => {
 	const snippet = () => {
-		const model = props.threshold.model;
-		if (!model || props.version === undefined) {
+		const { model, changepoint_model } = props.threshold;
+		if (props.version === undefined) {
 			return undefined;
 		}
 		const place = {
@@ -180,17 +211,24 @@ export const Change = (props: {
 			host: runHost(props.host),
 		};
 		const measure = props.threshold.measure.slug;
-		return props.version === 0
-			? {
-					kind: "flags" as const,
-					...declarationSnippetV0(place, { measure, model }),
-				}
-			: declarationSnippet(place, {
+		if (props.version === 0) {
+			// A version 0 report refuses a changepoint model, so its run declares only the model.
+			return model
+				? {
+						kind: "flags" as const,
+						...declarationSnippetV0(place, { measure, model }),
+					}
+				: undefined;
+		}
+		return model || changepoint_model
+			? declarationSnippet(place, {
 					measure,
 					metric: props.threshold.metric ?? VALUE,
 					parameters: props.threshold.parameters,
 					model,
-				});
+					changepoint_model,
+				})
+			: undefined;
 	};
 	return (
 		<Card

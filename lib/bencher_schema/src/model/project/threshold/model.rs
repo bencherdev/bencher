@@ -1,5 +1,6 @@
 use bencher_json::{
-    Boundary, DateTime, JsonModel, Model, ModelTest, ModelUuid, SampleSize, Window,
+    Boundary, Confirmations, DateTime, JsonModel, Model, ModelTest, ModelUuid, SampleSize,
+    Significance, Window,
 };
 use diesel::{
     ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
@@ -30,6 +31,8 @@ pub struct QueryModel {
     pub window: Option<Window>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
+    pub significance: Option<Significance>,
+    pub confirmations: Option<Confirmations>,
     pub created: DateTime,
     pub replaced: Option<DateTime>,
 }
@@ -63,6 +66,8 @@ impl QueryModel {
             window,
             lower_boundary,
             upper_boundary,
+            significance,
+            confirmations,
             ..
         } = self;
         Model {
@@ -72,6 +77,8 @@ impl QueryModel {
             window,
             lower_boundary,
             upper_boundary,
+            significance,
+            confirmations,
         }
     }
 
@@ -85,6 +92,8 @@ impl QueryModel {
             window,
             lower_boundary,
             upper_boundary,
+            significance,
+            confirmations,
             created,
             replaced,
             ..
@@ -103,6 +112,8 @@ impl QueryModel {
             window,
             lower_boundary,
             upper_boundary,
+            significance,
+            confirmations,
             created,
             replaced,
         }
@@ -120,15 +131,19 @@ pub struct InsertModel {
     pub window: Option<Window>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
+    pub significance: Option<Significance>,
+    pub confirmations: Option<Confirmations>,
     pub created: DateTime,
     pub replaced: Option<DateTime>,
 }
 
 impl InsertModel {
+    /// Refuse `count` more models for a threshold past its rate limit, which both slots share.
     #[cfg(feature = "plus")]
-    pub async fn rate_limit(
+    pub async fn rate_limit_with_count(
         context: &crate::ApiContext,
         query_threshold: &QueryThreshold,
+        count: std::num::NonZeroU32,
     ) -> Result<(), HttpError> {
         use crate::{auth_conn, context::RateLimitingError, error::issue_error};
 
@@ -156,10 +171,12 @@ impl InsertModel {
         // and the API endpoint to update an existing threshold would require authentication and would therefore be a claimed project.
         context
             .rate_limiting
-            .check_claimed_limit(window_usage, |rate_limit| RateLimitingError::Threshold {
-                threshold: query_threshold.clone(),
-                resource,
-                rate_limit,
+            .check_claimed_limit_with_count(window_usage, count, |rate_limit| {
+                RateLimitingError::Threshold {
+                    threshold: query_threshold.clone(),
+                    resource,
+                    rate_limit,
+                }
             })
     }
 
@@ -171,7 +188,9 @@ impl InsertModel {
             window,
             lower_boundary,
             upper_boundary,
-        } = model;
+            significance,
+            confirmations,
+        } = model.with_defaults();
         Self {
             uuid: ModelUuid::new(),
             threshold_id,
@@ -181,6 +200,8 @@ impl InsertModel {
             window,
             lower_boundary,
             upper_boundary,
+            significance,
+            confirmations,
             created: DateTime::now(),
             replaced: None,
         }
@@ -194,6 +215,8 @@ impl InsertModel {
             window,
             lower_boundary,
             upper_boundary,
+            significance,
+            confirmations,
             created,
             replaced,
             ..
@@ -207,6 +230,8 @@ impl InsertModel {
             window,
             lower_boundary,
             upper_boundary,
+            significance,
+            confirmations,
             created,
             replaced,
         }

@@ -56,6 +56,9 @@ const RESOURCES: Record<`${ReportWarningResource}`, string> = {
 	threshold: "Threshold",
 	adapter: "Adapter",
 	average: "Average",
+	changepoint_model: "Changepoint model",
+	significance: "Significance",
+	confirmations: "Confirmations",
 };
 
 const ACTIONS: Record<`${ReportWarningAction}`, string> = {

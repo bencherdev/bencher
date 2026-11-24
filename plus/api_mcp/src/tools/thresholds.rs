@@ -84,7 +84,13 @@ pub fn create_tool(name: &'static str) -> Tool {
          in the filter is a subset of its parameters; the default checks every variant. \
          `metric` names the metric the threshold checks and defaults to `value`. \
          Every threshold that matches a metric row runs, so a row may earn several boundaries \
-         and several alerts.",
+         and several alerts. \
+         `changepoint_model` is the slot for a model whose test checks a line, `changepoint`: \
+         `max_sample_size` is its window of points, from 2 to 1000, `lower_boundary` and \
+         `upper_boundary` are relative changes, `significance` is the chance of a false \
+         alarm, above 0 and below 1, and `confirmations` is the count of consecutive scans \
+         that confirm a changepoint, from 1 to 20, 5 when it is not set. Only the `changepoint` \
+         test takes a `significance` or `confirmations`.",
         json_schema::<CreateThresholdInput>(),
     )
     .with_raw_output_schema(json_schema::<JsonThreshold>())
@@ -124,8 +130,9 @@ pub fn update_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "Update a threshold's statistical model, or remove the model by setting `test` to null. \
-         `changepoint_model` is the slot for a model whose test checks a line: leave it out to \
-         keep it, or set it to null to remove it.",
+         `changepoint_model` is the slot for a model whose test checks a line, `changepoint`: \
+         leave it out to keep it, or set it to null to remove it. \
+         The update changes every slot it names, or none of them.",
         json_schema::<UpdateThresholdInput>(),
     )
     .with_raw_output_schema(json_schema::<JsonThreshold>())

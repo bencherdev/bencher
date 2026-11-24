@@ -16,6 +16,13 @@ const LATENCY = {
 		upper_boundary: 0.99,
 	},
 } as const;
+const CHANGEPOINT = {
+	test: "changepoint",
+	max_sample_size: 50,
+	upper_boundary: 0.05,
+	significance: 0.001,
+	confirmations: 5,
+} as const;
 
 describe("declarationSnippet", () => {
 	// Kills a flag dropped, misordered, or left without its continuation, a model
@@ -119,6 +126,102 @@ describe("declarationSnippet", () => {
 						metric: "value",
 						parameters: [{ n: 1 }, { n: 2 }],
 						model: { test: "percentage", lower_boundary: 0.1 },
+					},
+				],
+			},
+		});
+	});
+
+	// Kills a changepoint model left out of what declares the threshold, its
+	// significance or confirmations dropped, and groups out of step: the CLI pairs a group's
+	// options by place, so a group without an option another group has takes `_`.
+	test("declares a changepoint model as a group of its own", () => {
+		const snippet = declarationSnippet(PLACE, {
+			...LATENCY,
+			changepoint_model: CHANGEPOINT,
+		});
+		expect(snippet.kind).toBe("flags");
+		expect(snippet.text).toBe(
+			[
+				"export BENCHER_API_KEY=bencher_run_...",
+				"bencher run \\",
+				"  --project hashbrown \\",
+				"  --branch main \\",
+				"  --testbed ubuntu-latest \\",
+				"  --adapter json \\",
+				"  --threshold-measure latency \\",
+				"  --threshold-metric value \\",
+				"  --threshold-test t_test \\",
+				"  --threshold-min-sample-size 4 \\",
+				"  --threshold-max-sample-size 64 \\",
+				"  --threshold-upper-boundary 0.99 \\",
+				"  --threshold-significance _ \\",
+				"  --threshold-confirmations _ \\",
+				"  --threshold-measure latency \\",
+				"  --threshold-metric value \\",
+				"  --threshold-test changepoint \\",
+				"  --threshold-min-sample-size _ \\",
+				"  --threshold-max-sample-size 50 \\",
+				"  --threshold-upper-boundary 0.05 \\",
+				"  --threshold-significance 0.001 \\",
+				"  --threshold-confirmations 5 \\",
+				"  --file results.json",
+			].join("\n"),
+		);
+	});
+
+	// Kills a threshold with only a changepoint model declared by nothing, or
+	// by a metric group it does not have.
+	test("declares a threshold with only a changepoint model", () => {
+		const { text } = declarationSnippet(PLACE, {
+			...LATENCY,
+			model: undefined,
+			changepoint_model: CHANGEPOINT,
+		});
+		expect(text).toBe(
+			[
+				"export BENCHER_API_KEY=bencher_run_...",
+				"bencher run \\",
+				"  --project hashbrown \\",
+				"  --branch main \\",
+				"  --testbed ubuntu-latest \\",
+				"  --adapter json \\",
+				"  --threshold-measure latency \\",
+				"  --threshold-metric value \\",
+				"  --threshold-test changepoint \\",
+				"  --threshold-max-sample-size 50 \\",
+				"  --threshold-upper-boundary 0.05 \\",
+				"  --threshold-significance 0.001 \\",
+				"  --threshold-confirmations 5 \\",
+				"  --file results.json",
+			].join("\n"),
+		);
+	});
+
+	// Kills a changepoint model left out of the payload, or merged into the
+	// model's entry, which the report would then read as one model.
+	test("declares a changepoint model as a payload entry of its own", () => {
+		const parameters = [{ n: 1 }, { n: 2 }];
+		const snippet = declarationSnippet(PLACE, {
+			...LATENCY,
+			parameters,
+			changepoint_model: CHANGEPOINT,
+		});
+		expect(snippet.kind).toBe("payload");
+		expect(JSON.parse(snippet.text)).toEqual({
+			thresholds: {
+				models: [
+					{
+						measure: "latency",
+						metric: "value",
+						parameters,
+						model: LATENCY.model,
+					},
+					{
+						measure: "latency",
+						metric: "value",
+						parameters,
+						model: CHANGEPOINT,
 					},
 				],
 			},

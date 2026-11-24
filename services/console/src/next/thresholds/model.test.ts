@@ -5,6 +5,21 @@ import { durationText, modelRows, modelText } from "./text";
 const DAY = 86_400;
 
 describe("modelText", () => {
+	// Kills a changepoint model's significance or confirmations left off its line.
+	test("ends a changepoint model with its significance and confirmations", () => {
+		expect(
+			modelText({
+				test: "changepoint",
+				max_sample_size: 50,
+				upper_boundary: 0.05,
+				significance: 0.001,
+				confirmations: 5,
+			}),
+		).toBe(
+			"changepoint · upper_boundary 0.05 · max_sample_size 50 · significance 0.001 · confirmations 5",
+		);
+	});
+
 	// Kills a test renamed for reading, such as "t-test", and a separator other than the board's.
 	test("starts with the test by its API name", () => {
 		expect(modelText({ test: "delta_iqr" })).toBe("delta_iqr");
@@ -69,6 +84,27 @@ describe("modelText", () => {
 });
 
 describe("modelRows", () => {
+	// Kills a changepoint model drawn with the time window it refuses, or without its significance
+	// or confirmations.
+	test("lists a changepoint model's own fields, its significance and confirmations included", () => {
+		expect(
+			modelRows({
+				test: "changepoint",
+				max_sample_size: 50,
+				upper_boundary: 0.05,
+				significance: 0.001,
+				confirmations: 5,
+			}),
+		).toEqual([
+			["upper_boundary", "0.05"],
+			["lower_boundary", undefined],
+			["max_sample_size", "50"],
+			["min_sample_size", undefined],
+			["significance", "0.001"],
+			["confirmations", "5"],
+		]);
+	});
+
 	// Kills a missing field left out of the card, where it reads as none.
 	test("lists every field, the absent ones as undefined", () => {
 		expect(modelRows({ test: "z_score", upper_boundary: 0.99 })).toEqual([

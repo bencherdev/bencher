@@ -1,4 +1,6 @@
-use bencher_valid::{Boundary, DateTime, ModelTest, SampleSize, Window};
+use bencher_valid::{
+    Boundary, Confirmations, DateTime, ModelTest, SampleSize, Significance, Window,
+};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -16,6 +18,10 @@ pub struct JsonModel {
     pub window: Option<Window>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub significance: Option<Significance>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confirmations: Option<Confirmations>,
     pub created: DateTime,
     pub replaced: Option<DateTime>,
 }

@@ -184,6 +184,8 @@ diesel::table! {
         window -> Nullable<BigInt>,
         lower_boundary -> Nullable<Double>,
         upper_boundary -> Nullable<Double>,
+        significance -> Nullable<Double>,
+        confirmations -> Nullable<BigInt>,
         created -> BigInt,
         replaced -> Nullable<BigInt>,
     }

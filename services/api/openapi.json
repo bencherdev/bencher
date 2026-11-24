@@ -8552,7 +8552,7 @@
           "thresholds"
         ],
         "summary": "Create a threshold",
-        "description": "Create a threshold for a project. The user must have `create` permissions for the project, or provide a valid project key for the project. There can only be one threshold for any unique combination of: branch, testbed, parameters filter, measure, and metric name. A threshold with no parameters filter checks every variant, and a threshold that names no metric checks the conventional `value` name. Every threshold that matches a metric row runs: there is no winner among them. A branch, testbed, and measure can have at most 64 thresholds with a model. The model's test must check a metric, and the changepoint model's test must check a line.",
+        "description": "Create a threshold for a project. The user must have `create` permissions for the project, or provide a valid project key for the project. There can only be one threshold for any unique combination of: branch, testbed, parameters filter, measure, and metric name. A threshold with no parameters filter checks every variant, and a threshold that names no metric checks the conventional `value` name. Every threshold that matches a metric row runs: there is no winner among them. A branch, testbed, and measure can have at most 64 thresholds with a model in either slot. The model's test must check a metric, and the changepoint model's test must check a line.",
         "operationId": "proj_threshold_post",
         "parameters": [
           {
@@ -8739,7 +8739,7 @@
           "thresholds"
         ],
         "summary": "Update a threshold",
-        "description": "Update a threshold for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project. The new model will be added to the threshold and used going forward. The old model will be replaced but still show up in the report history and alerts created when it was active. A threshold with no model can only be given one while its branch, testbed, and measure have fewer than 64 thresholds with a model. The changepoint model changes only when the update names it, and its test must check a line.",
+        "description": "Update a threshold for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project. The new model will be added to the threshold and used going forward. The old model will be replaced but still show up in the report history and alerts created when it was active. A threshold with neither model can only be given one while its branch, testbed, and measure have fewer than 64 thresholds with a model in either slot. The changepoint model changes only when the update names it, and its test must check a line. An update changes every slot it names, or none of them.",
         "operationId": "proj_threshold_put",
         "parameters": [
           {
@@ -13179,6 +13179,12 @@
           "unknown"
         ]
       },
+      "Confirmations": {
+        "description": "The number of consecutive scans that must find a changepoint before it is confirmed.",
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0
+      },
       "Cpu": {
         "type": "integer",
         "format": "uint32",
@@ -14908,6 +14914,14 @@
       "JsonModel": {
         "type": "object",
         "properties": {
+          "confirmations": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Confirmations"
+              }
+            ]
+          },
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -14940,6 +14954,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "significance": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Significance"
               }
             ]
           },
@@ -16044,6 +16066,15 @@
               }
             ]
           },
+          "confirmations": {
+            "nullable": true,
+            "description": "The number of consecutive scans that must find a changepoint before it is confirmed, from 1 to 20. Optional for the `changepoint` test, which stores 5 when it is not set, and refused for every other test.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Confirmations"
+              }
+            ]
+          },
           "lower_boundary": {
             "nullable": true,
             "description": "The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.",
@@ -16094,6 +16125,15 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/ParameterFilter"
+              }
+            ]
+          },
+          "significance": {
+            "nullable": true,
+            "description": "The chance of a false alarm the test may take, for example `0.001`. Required for the `changepoint` test, where it is the largest p value of a changepoint on each scan, and refused for every other test.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Significance"
               }
             ]
           },
@@ -18225,7 +18265,7 @@
         "properties": {
           "changepoint_model": {
             "nullable": true,
-            "description": "The changepoint model, whose test checks a line. Set to `null` to remove the changepoint model. If not set, the changepoint model does not change.",
+            "description": "The changepoint model, whose test checks a line. If not set, the changepoint model does not change.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Model"
@@ -18240,6 +18280,28 @@
           }
         },
         "required": [
+          "test"
+        ]
+      },
+      "JsonRemoveModelNull": {
+        "type": "object",
+        "properties": {
+          "changepoint_model": {
+            "description": "Set to `null` to remove the changepoint model.",
+            "type": "string",
+            "enum": [
+              null
+            ]
+          },
+          "test": {
+            "type": "string",
+            "enum": [
+              null
+            ]
+          }
+        },
+        "required": [
+          "changepoint_model",
           "test"
         ]
       },
@@ -18696,7 +18758,7 @@
             ]
           },
           "model": {
-            "description": "The threshold model to use.",
+            "description": "The threshold model to use. A model with the `changepoint` test that its types or its rules refuse is skipped with a warning.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Model"
@@ -18745,7 +18807,7 @@
         "properties": {
           "models": {
             "nullable": true,
-            "description": "The thresholds to create or update for the report's branch and testbed. At BMF version 0 this is a map of measure UUID, slug, or name to the threshold model to use. At BMF version 1 this is a list of threshold entries. If a measure name or slug is provided, the measure will be created if it does not exist.",
+            "description": "The thresholds to create or update for the report's branch and testbed. At BMF version 0 this is a map of measure UUID, slug, or name to the threshold model to use. At BMF version 1 this is a list of threshold entries. If a measure name or slug is provided, the measure will be created if it does not exist. A `significance` or `confirmations` on a model whose test does not take it is set aside with a warning.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonReportThresholdModels"
@@ -20385,10 +20447,19 @@
         "properties": {
           "changepoint_model": {
             "nullable": true,
-            "description": "The changepoint model, whose test checks a line. Set to `null` to remove the changepoint model. If not set, the changepoint model does not change.",
+            "description": "The changepoint model, whose test checks a line. If not set, the changepoint model does not change.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Model"
+              }
+            ]
+          },
+          "confirmations": {
+            "nullable": true,
+            "description": "The number of consecutive scans that must find a changepoint before it is confirmed, from 1 to 20. Optional for the `changepoint` test, which stores 5 when it is not set, and refused for every other test.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Confirmations"
               }
             ]
           },
@@ -20416,6 +20487,15 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
+          },
+          "significance": {
+            "nullable": true,
+            "description": "The chance of a false alarm the test may take, for example `0.001`. Required for the `changepoint` test, where it is the largest p value of a changepoint on each scan, and refused for every other test.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Significance"
               }
             ]
           },
@@ -20447,6 +20527,93 @@
           }
         },
         "required": [
+          "test"
+        ]
+      },
+      "JsonUpdateModelNull": {
+        "type": "object",
+        "properties": {
+          "changepoint_model": {
+            "description": "Set to `null` to remove the changepoint model.",
+            "type": "string",
+            "enum": [
+              null
+            ]
+          },
+          "confirmations": {
+            "nullable": true,
+            "description": "The number of consecutive scans that must find a changepoint before it is confirmed, from 1 to 20. Optional for the `changepoint` test, which stores 5 when it is not set, and refused for every other test.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Confirmations"
+              }
+            ]
+          },
+          "lower_boundary": {
+            "nullable": true,
+            "description": "The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Boundary"
+              }
+            ]
+          },
+          "max_sample_size": {
+            "nullable": true,
+            "description": "The maximum number of historical samples used to perform the test. Only the most recent samples will be used if there are more. The new Metric being tested is not counted towards this maximum.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
+          },
+          "min_sample_size": {
+            "nullable": true,
+            "description": "The minimum number of historical samples required to perform the test. If there are fewer historical samples, the test will not be performed. The new Metric being tested is not counted towards this minimum.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
+          },
+          "significance": {
+            "nullable": true,
+            "description": "The chance of a false alarm the test may take, for example `0.001`. Required for the `changepoint` test, where it is the largest p value of a changepoint on each scan, and refused for every other test.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Significance"
+              }
+            ]
+          },
+          "test": {
+            "description": "The test used by the threshold model to calculate the baseline and boundary limits.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ModelTest"
+              }
+            ]
+          },
+          "upper_boundary": {
+            "nullable": true,
+            "description": "The upper boundary used to calculate the upper boundary limit. The requirements for this field depend on which `test` is selected.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Boundary"
+              }
+            ]
+          },
+          "window": {
+            "nullable": true,
+            "description": "The window of time for samples used to perform the test, in seconds. Samples outside of this window will be omitted.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Window"
+              }
+            ]
+          }
+        },
+        "required": [
+          "changepoint_model",
           "test"
         ]
       },
@@ -20635,6 +20802,12 @@
           },
           {
             "$ref": "#/components/schemas/JsonRemoveModel"
+          },
+          {
+            "$ref": "#/components/schemas/JsonUpdateModelNull"
+          },
+          {
+            "$ref": "#/components/schemas/JsonRemoveModelNull"
           }
         ]
       },
@@ -21158,6 +21331,15 @@
       "Model": {
         "type": "object",
         "properties": {
+          "confirmations": {
+            "nullable": true,
+            "description": "The number of consecutive scans that must find a changepoint before it is confirmed, from 1 to 20. Optional for the `changepoint` test, which stores 5 when it is not set, and refused for every other test.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Confirmations"
+              }
+            ]
+          },
           "lower_boundary": {
             "nullable": true,
             "description": "The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.",
@@ -21182,6 +21364,15 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
+          },
+          "significance": {
+            "nullable": true,
+            "description": "The chance of a false alarm the test may take, for example `0.001`. Required for the `changepoint` test, where it is the largest p value of a changepoint on each scan, and refused for every other test.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Significance"
               }
             ]
           },
@@ -21225,7 +21416,8 @@
           "t_test",
           "log_normal",
           "iqr",
-          "delta_iqr"
+          "delta_iqr",
+          "changepoint"
         ]
       },
       "ModelUuid": {
@@ -21691,7 +21883,10 @@
           "metric",
           "threshold",
           "adapter",
-          "average"
+          "average",
+          "changepoint_model",
+          "significance",
+          "confirmations"
         ]
       },
       "ResourceId": {
@@ -21804,6 +21999,11 @@
       "ServerUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "Significance": {
+        "description": "The chance of a false alarm a test may take, for example `0.001`.",
+        "type": "number",
+        "format": "double"
       },
       "Slug": {
         "type": "string"

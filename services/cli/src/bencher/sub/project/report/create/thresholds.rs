@@ -2,8 +2,8 @@ use bencher_client::types::{
     JsonReportThresholdEntry, JsonReportThresholdModels, JsonReportThresholds,
 };
 use bencher_json::{
-    Boundary, MeasureNameId, MetricName, ModelSlot, ParameterFilter, ParameterSet, SampleSize,
-    Window,
+    Boundary, Confirmations, MeasureNameId, MetricName, ModelSlot, ParameterFilter, ParameterSet,
+    SampleSize, Significance, Window,
 };
 
 use crate::{
@@ -11,10 +11,7 @@ use crate::{
     bencher::sub::project::threshold::model::Model,
     parser::{
         ElidedOption,
-        project::{
-            report::CliReportThresholds,
-            threshold::{CliModel, CliModelTest},
-        },
+        project::{report::CliReportThresholds, threshold::CliModelTest},
     },
 };
 
@@ -60,6 +57,10 @@ pub enum ThresholdsError {
     ExtraLowerBoundaries(Vec<ElidedOption<Boundary>>),
     #[error("There are more upper boundaries than model tests")]
     ExtraUpperBoundaries(Vec<ElidedOption<Boundary>>),
+    #[error("There are more significances than model tests")]
+    ExtraSignificances(Vec<ElidedOption<Significance>>),
+    #[error("There are more confirmations than model tests")]
+    ExtraConfirmations(Vec<ElidedOption<Confirmations>>),
 }
 
 impl TryFrom<CliReportThresholds> for Thresholds {
@@ -76,6 +77,8 @@ impl TryFrom<CliReportThresholds> for Thresholds {
             threshold_window,
             threshold_lower_boundary,
             threshold_upper_boundary,
+            threshold_significance,
+            threshold_confirmations,
             thresholds_reset,
         } = thresholds;
 
@@ -89,6 +92,8 @@ impl TryFrom<CliReportThresholds> for Thresholds {
         let mut windows = threshold_window.into_iter();
         let mut lower_boundaries = threshold_lower_boundary.into_iter();
         let mut upper_boundaries = threshold_upper_boundary.into_iter();
+        let mut significances = threshold_significance.into_iter();
+        let mut confirmations = threshold_confirmations.into_iter();
         for measure in threshold_measure {
             let metric = metrics.next().and_then(Into::into);
             let parameter_set = parameters.next().and_then(Into::into);
@@ -100,17 +105,22 @@ impl TryFrom<CliReportThresholds> for Thresholds {
             let window = windows.next();
             let lower_boundary = lower_boundaries.next();
             let upper_boundary = upper_boundaries.next();
+            let significance = significances.next();
+            let confirmation = confirmations.next();
 
-            let slot = bencher_json::ModelTest::from(test).slot();
-            let cli_model = CliModel {
+            let test = bencher_json::ModelTest::from(test);
+            let slot = test.slot();
+            let json_model = bencher_json::Model {
                 test,
                 min_sample_size: min_sample_size.and_then(Into::into),
                 max_sample_size: max_sample_size.and_then(Into::into),
                 window: window.and_then(Into::into),
                 lower_boundary: lower_boundary.and_then(Into::into),
                 upper_boundary: upper_boundary.and_then(Into::into),
+                significance: significance.and_then(Into::into),
+                confirmations: confirmation.and_then(Into::into),
             };
-            let model = Model::try_from(cli_model).map_err(|err| ThresholdsError::BadModel {
+            let model = Model::try_from(json_model).map_err(|err| ThresholdsError::BadModel {
                 measure: measure.clone(),
                 err,
             })?;
@@ -124,46 +134,16 @@ impl TryFrom<CliReportThresholds> for Thresholds {
             });
         }
 
-        let remaining_metrics = metrics.collect::<Vec<_>>();
-        if !remaining_metrics.is_empty() {
-            return Err(ThresholdsError::ExtraMetrics(remaining_metrics));
-        }
-        let remaining_parameters = parameters.collect::<Vec<_>>();
-        if !remaining_parameters.is_empty() {
-            return Err(ThresholdsError::ExtraParameters(remaining_parameters));
-        }
-        let remaining_tests = tests.collect::<Vec<_>>();
-        if !remaining_tests.is_empty() {
-            return Err(ThresholdsError::ExtraTests(remaining_tests));
-        }
-        let remaining_min_sample_sizes = min_sample_sizes.collect::<Vec<_>>();
-        if !remaining_min_sample_sizes.is_empty() {
-            return Err(ThresholdsError::ExtraMinSampleSizes(
-                remaining_min_sample_sizes,
-            ));
-        }
-        let remaining_max_sample_sizes = max_sample_sizes.collect::<Vec<_>>();
-        if !remaining_max_sample_sizes.is_empty() {
-            return Err(ThresholdsError::ExtraMaxSampleSizes(
-                remaining_max_sample_sizes,
-            ));
-        }
-        let remaining_windows = windows.collect::<Vec<_>>();
-        if !remaining_windows.is_empty() {
-            return Err(ThresholdsError::ExtraWindows(remaining_windows));
-        }
-        let remaining_lower_boundaries = lower_boundaries.collect::<Vec<_>>();
-        if !remaining_lower_boundaries.is_empty() {
-            return Err(ThresholdsError::ExtraLowerBoundaries(
-                remaining_lower_boundaries,
-            ));
-        }
-        let remaining_upper_boundaries = upper_boundaries.collect::<Vec<_>>();
-        if !remaining_upper_boundaries.is_empty() {
-            return Err(ThresholdsError::ExtraUpperBoundaries(
-                remaining_upper_boundaries,
-            ));
-        }
+        leftover(metrics, ThresholdsError::ExtraMetrics)?;
+        leftover(parameters, ThresholdsError::ExtraParameters)?;
+        leftover(tests, ThresholdsError::ExtraTests)?;
+        leftover(min_sample_sizes, ThresholdsError::ExtraMinSampleSizes)?;
+        leftover(max_sample_sizes, ThresholdsError::ExtraMaxSampleSizes)?;
+        leftover(windows, ThresholdsError::ExtraWindows)?;
+        leftover(lower_boundaries, ThresholdsError::ExtraLowerBoundaries)?;
+        leftover(upper_boundaries, ThresholdsError::ExtraUpperBoundaries)?;
+        leftover(significances, ThresholdsError::ExtraSignificances)?;
+        leftover(confirmations, ThresholdsError::ExtraConfirmations)?;
 
         Ok(Self {
             // Do not short circuit early if there are no measures
@@ -171,6 +151,19 @@ impl TryFrom<CliReportThresholds> for Thresholds {
             models: into_models(declared)?,
             reset: thresholds_reset,
         })
+    }
+}
+
+/// Refuse the values of an option that no measure is left to take.
+fn leftover<T>(
+    values: impl Iterator<Item = T>,
+    extra: impl FnOnce(Vec<T>) -> ThresholdsError,
+) -> Result<(), ThresholdsError> {
+    let values = values.collect::<Vec<_>>();
+    if values.is_empty() {
+        Ok(())
+    } else {
+        Err(extra(values))
     }
 }
 
@@ -275,6 +268,18 @@ mod tests {
         "_",
         "--threshold-upper-boundary",
         "0.99",
+    ];
+    const CHANGEPOINT: [&str; 10] = [
+        "--threshold-measure",
+        "latency",
+        "--threshold-test",
+        "changepoint",
+        "--threshold-lower-boundary",
+        "_",
+        "--threshold-upper-boundary",
+        "0.05",
+        "--threshold-max-sample-size",
+        "50",
     ];
     const THROUGHPUT: [&str; 8] = [
         "--threshold-measure",
@@ -405,6 +410,167 @@ mod tests {
             thresholds(&parameters),
             Err(ThresholdsError::ExtraParameters(_))
         ));
+    }
+
+    // A group with the changepoint test checks a line, so it sends the BMF version 1 list, with its
+    // significance, and a metric group and a changepoint group for one key are two entries.
+    #[test]
+    fn a_changepoint_group_goes_in_the_list() {
+        let flags = [
+            LATENCY.as_slice(),
+            &[
+                "--threshold-metric",
+                "p99",
+                "--threshold-max-sample-size",
+                "_",
+                "--threshold-significance",
+                "_",
+            ],
+            CHANGEPOINT.as_slice(),
+            &[
+                "--threshold-metric",
+                "p99",
+                "--threshold-significance",
+                "0.001",
+            ],
+        ]
+        .concat();
+        assert_eq!(
+            thresholds(&flags).unwrap(),
+            serde_json::json!({
+                "models": [
+                    {
+                        "measure": "latency",
+                        "metric": "p99",
+                        "model": model("upper_boundary"),
+                    },
+                    {
+                        "measure": "latency",
+                        "metric": "p99",
+                        "model": {
+                            "test": "changepoint",
+                            "upper_boundary": 0.05,
+                            "max_sample_size": 50,
+                            "significance": 0.001,
+                        },
+                    },
+                ],
+            })
+        );
+    }
+
+    // The list needs a metric for every entry, so a changepoint group needs one too.
+    #[test]
+    fn a_changepoint_group_needs_a_metric() {
+        let flags = [
+            CHANGEPOINT.as_slice(),
+            &["--threshold-significance", "0.001"],
+        ]
+        .concat();
+        let err = thresholds(&flags).unwrap_err();
+        assert!(
+            matches!(&err, ThresholdsError::MissingMetric(measure) if measure.to_string() == "latency"),
+            "{err}"
+        );
+    }
+
+    // A changepoint group sends the count of confirming scans it names.
+    #[test]
+    fn a_changepoint_group_sends_its_confirmations() {
+        let flags = [
+            CHANGEPOINT.as_slice(),
+            &[
+                "--threshold-metric",
+                "p99",
+                "--threshold-significance",
+                "0.001",
+                "--threshold-confirmations",
+                "3",
+            ],
+        ]
+        .concat();
+        assert_eq!(
+            thresholds(&flags).unwrap(),
+            serde_json::json!({
+                "models": [
+                    {
+                        "measure": "latency",
+                        "metric": "p99",
+                        "model": {
+                            "test": "changepoint",
+                            "upper_boundary": 0.05,
+                            "max_sample_size": 50,
+                            "significance": 0.001,
+                            "confirmations": 3,
+                        },
+                    },
+                ],
+            })
+        );
+    }
+
+    // A count of confirming scans with no group left to pair with is refused, and so is one on a
+    // metric test, and one out of its range is refused as the flag is read.
+    #[test]
+    fn thresholds_refuse_a_dangling_or_misplaced_confirmations() {
+        let dangling = [
+            LATENCY.as_slice(),
+            &[
+                "--threshold-confirmations",
+                "_",
+                "--threshold-confirmations",
+                "5",
+            ],
+        ]
+        .concat();
+        assert!(matches!(
+            thresholds(&dangling),
+            Err(ThresholdsError::ExtraConfirmations(_))
+        ));
+        let misplaced = [LATENCY.as_slice(), &["--threshold-confirmations", "5"]].concat();
+        let err = thresholds(&misplaced).unwrap_err();
+        assert!(
+            matches!(&err, ThresholdsError::BadModel { .. })
+                && err.to_string().contains("`confirmations`"),
+            "{err}"
+        );
+        for out_of_range in ["0", "21"] {
+            let flags = [
+                LATENCY.as_slice(),
+                &["--threshold-confirmations", out_of_range],
+            ]
+            .concat();
+            let err = Cli::try_parse_from(std::iter::once("bencher").chain(flags))
+                .err()
+                .expect("the flag is refused");
+            assert!(err.to_string().contains("`confirmations`"), "{err}");
+        }
+    }
+
+    // A significance with no group left to pair with is refused, and so is one on a metric test.
+    #[test]
+    fn thresholds_refuse_a_dangling_or_misplaced_significance() {
+        let dangling = [
+            LATENCY.as_slice(),
+            &[
+                "--threshold-significance",
+                "_",
+                "--threshold-significance",
+                "0.001",
+            ],
+        ]
+        .concat();
+        assert!(matches!(
+            thresholds(&dangling),
+            Err(ThresholdsError::ExtraSignificances(_))
+        ));
+        let misplaced = [LATENCY.as_slice(), &["--threshold-significance", "0.001"]].concat();
+        let err = thresholds(&misplaced).unwrap_err();
+        assert!(
+            matches!(&err, ThresholdsError::BadModel { .. })
+                && err.to_string().contains("`significance`"),
+            "{err}"
+        );
     }
 
     #[derive(clap::Parser)]

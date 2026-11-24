@@ -2,25 +2,30 @@ import type { ParameterSet } from "../report/row";
 import { json, quote } from "../report/snippet";
 import type { ModelLike } from "./text";
 
-/** A threshold as a run declares it: `measure` is the measure's slug. */
+/** A threshold as a run declares it, with a model in at least 1 slot: `measure` is the measure's slug. */
 export interface Declaration {
 	measure: string;
 	metric: string;
 	parameters?: readonly ParameterSet[] | undefined;
-	model: ModelLike;
+	model?: ModelLike | undefined;
+	changepoint_model?: ModelLike | undefined;
 }
 
 /**
- * What declares this threshold as it is: `bencher run` flags, or, for a filter
- * of several sets, which the flags cannot carry, the report payload's entry.
+ * What declares this threshold as it is: `bencher run` flags, with a group for
+ * the model of each slot, or, for a filter of several sets, which the flags
+ * cannot carry, the report payload's entries.
  */
 export const declarationSnippet = (
 	place: Place,
 	declaration: Declaration,
 ): { kind: "flags" | "payload"; text: string; code: Row[] } => {
 	const sets = declaration.parameters ?? [];
+	const models = [declaration.model, declaration.changepoint_model].filter(
+		(model): model is ModelLike => model != null,
+	);
 	if (sets.length > 1) {
-		const text = payload(declaration);
+		const text = payload(declaration, models);
 		return {
 			kind: "payload",
 			text,
@@ -28,9 +33,10 @@ export const declarationSnippet = (
 		};
 	}
 	const row = (text: string, flag = false) => ({ text, flag });
-	const { model } = declaration;
-	const option = (name: string, value: number | null | undefined) =>
-		value == null ? [] : [row(`  --threshold-${name} ${value}`, true)];
+	// The CLI pairs a group's options by place, so a group without an option another group has takes `_`.
+	const options = OPTIONS.filter(([, field]) =>
+		models.some((model) => model[field] != null),
+	);
 	const rows = [
 		row("export BENCHER_API_KEY=bencher_run_..."),
 		row("bencher run"),
@@ -39,17 +45,17 @@ export const declarationSnippet = (
 		row(`  --branch ${quote(place.branch)}`),
 		row(`  --testbed ${quote(place.testbed)}`),
 		row("  --adapter json"),
-		row(`  --threshold-measure ${quote(declaration.measure)}`, true),
-		row(`  --threshold-metric ${quote(declaration.metric)}`, true),
-		...sets.map((set) =>
-			row(`  --threshold-parameters ${quote(json(set))}`, true),
-		),
-		row(`  --threshold-test ${model.test}`, true),
-		...option("min-sample-size", model.min_sample_size),
-		...option("max-sample-size", model.max_sample_size),
-		...option("window", model.window),
-		...option("lower-boundary", model.lower_boundary),
-		...option("upper-boundary", model.upper_boundary),
+		...models.flatMap((model) => [
+			row(`  --threshold-measure ${quote(declaration.measure)}`, true),
+			row(`  --threshold-metric ${quote(declaration.metric)}`, true),
+			...sets.map((set) =>
+				row(`  --threshold-parameters ${quote(json(set))}`, true),
+			),
+			row(`  --threshold-test ${model.test}`, true),
+			...options.map(([name, field]) =>
+				row(`  --threshold-${name} ${model[field] ?? "_"}`, true),
+			),
+		]),
 		row("  --file results.json"),
 	];
 	const code = rows.map(({ text, flag }, index) => ({
@@ -63,6 +69,17 @@ export const declarationSnippet = (
 	};
 };
 
+// The `--threshold-*` options a model may set, by the field each takes.
+const OPTIONS = [
+	["min-sample-size", "min_sample_size"],
+	["max-sample-size", "max_sample_size"],
+	["window", "window"],
+	["lower-boundary", "lower_boundary"],
+	["upper-boundary", "upper_boundary"],
+	["significance", "significance"],
+	["confirmations", "confirmations"],
+] as const;
+
 /** Where the run reports; `host` is the API's URL on a self-hosted server. */
 interface Place {
 	project: string;
@@ -74,20 +91,24 @@ interface Place {
 type Row = { text: string; flag: boolean };
 
 // Only the model's own fields: the API's model also carries its identity and times.
-const payload = ({ measure, metric, parameters, model }: Declaration) => {
-	const {
-		test,
-		min_sample_size,
-		max_sample_size,
-		window,
-		lower_boundary,
-		upper_boundary,
-	} = model;
-	return JSON.stringify(
+const payload = (
+	{ measure, metric, parameters }: Declaration,
+	models: readonly ModelLike[],
+) =>
+	JSON.stringify(
 		{
 			thresholds: {
-				models: [
-					{
+				models: models.map(
+					({
+						test,
+						min_sample_size,
+						max_sample_size,
+						window,
+						lower_boundary,
+						upper_boundary,
+						significance,
+						confirmations,
+					}) => ({
 						measure,
 						metric,
 						parameters,
@@ -98,12 +119,13 @@ const payload = ({ measure, metric, parameters, model }: Declaration) => {
 							window,
 							lower_boundary,
 							upper_boundary,
+							significance,
+							confirmations,
 						},
-					},
-				],
+					}),
+				),
 			},
 		},
 		null,
 		2,
 	);
-};
