@@ -106,8 +106,8 @@ pub(crate) fn v0_parser(adapter: Adapter) -> Option<V0Parser> {
         Adapter::RustBench | Adapter::RustBenchText => AdapterRustBench::parse,
         Adapter::RustCriterion | Adapter::RustCriterionText => AdapterRustCriterion::parse,
         // The version 0 tree reads no structured Rust, Catch2, or Go output, no Vitest 5 report,
-        // no asv results file, no benchmark-ips export, and no Divan, tinybench, Deno, or mitata
-        // output.
+        // no asv results file, no benchmark-ips export, and no Divan, tinybench, Deno, mitata, or
+        // Haskell criterion output.
         Adapter::RustBenchJson
         | Adapter::RustCriterionJson
         | Adapter::RustDivan
@@ -118,7 +118,8 @@ pub(crate) fn v0_parser(adapter: Adapter) -> Option<V0Parser> {
         | Adapter::JsMitata
         | Adapter::JsTinybench
         | Adapter::PythonAsvJson
-        | Adapter::RubyBenchmarkIps => return None,
+        | Adapter::RubyBenchmarkIps
+        | Adapter::HaskellCriterion => return None,
         Adapter::RustIai => AdapterRustIai::parse,
         Adapter::RustGungraun => AdapterRustGungraun::parse,
         Adapter::RustGungraunStdout => AdapterRustGungraunStdout::parse,

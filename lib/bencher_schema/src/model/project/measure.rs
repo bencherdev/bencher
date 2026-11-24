@@ -283,6 +283,8 @@ fn built_in_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::mitata::LoadsAndStores::from_str(measure_str))
         .or_else(|| built_in::mitata::L1LoadMisses::from_str(measure_str))
         .or_else(|| built_in::mitata::L1StoreMisses::from_str(measure_str))
+        .or_else(|| built_in::haskell::GcCopied::from_str(measure_str))
+        .or_else(|| built_in::haskell::GcCollections::from_str(measure_str))
         .or_else(|| built_in::json::BuildTime::from_str(measure_str))
         .or_else(|| built_in::json::FileSize::from_str(measure_str))
         .or_else(|| built_in::iai::Instructions::from_str(measure_str))

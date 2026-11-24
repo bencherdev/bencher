@@ -1,0 +1,5 @@
+benchmarking fib/10
+*** Error: no data available for "allocated"
+crit: Prelude.undefined
+CallStack (from HasCallStack):
+  undefined, called at ./Criterion/IO/Printf.hs:52:17 in criterion-1.6.5.0-e4e28d974218e1abd5bbff47c84151036633d1ec860d55032bc343ae9f38ceb8:Criterion.IO.Printf

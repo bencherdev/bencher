@@ -11,6 +11,7 @@ use crate::{
             },
             dart::benchmark_harness::AdapterDartBenchmarkHarnessV1,
             go::bench::{AdapterGoBenchJson, AdapterGoBenchText, AdapterGoBenchV1},
+            haskell::criterion::AdapterHaskellCriterion,
             java::jmh::AdapterJavaJmhV1,
             js::{
                 benchmark::AdapterJsBenchmarkV1,
@@ -51,6 +52,7 @@ pub mod cpp;
 pub mod dart;
 mod finite;
 pub mod go;
+pub mod haskell;
 pub mod java;
 pub mod js;
 mod leaf;
@@ -119,6 +121,7 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::ShellHyperfine => AdapterShellHyperfineV1::parse(input, settings),
         Adapter::ShellHyperfineV1 => AdapterShellHyperfine1::parse(input, settings),
         Adapter::ShellHyperfineV2 => AdapterShellHyperfine2::parse(input, settings),
+        Adapter::HaskellCriterion => AdapterHaskellCriterion::parse(input, settings),
         Adapter::JsonV0 => convert_v0(adapter, input, settings),
     }
 }
@@ -139,7 +142,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 52] = [
+    const ADAPTERS: [Adapter; 53] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -192,6 +195,7 @@ mod test_bmf_v1 {
         Adapter::ShellHyperfineV2,
         Adapter::Dart,
         Adapter::DartBenchmarkHarness,
+        Adapter::HaskellCriterion,
     ];
 
     const LANGUAGES: [Adapter; 10] = [

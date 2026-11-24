@@ -49,6 +49,7 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"go_bench",
 	"go_bench_json",
 	"go_bench_text",
+	"haskell_criterion",
 	"java_jmh",
 	"js_benchmark",
 	"js_deno",
