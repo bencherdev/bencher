@@ -367,4 +367,11 @@ pub enum ExecutionError {
 
     #[error("Benchmark setup: {0}")]
     Setup(String),
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to flush the filesystem holding {path} to disk before the run: {source}")]
+    Flush {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
 }

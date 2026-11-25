@@ -53,6 +53,10 @@ pub fn local_execute(
     if cancel_flag.is_some_and(|flag| flag.load(Ordering::SeqCst)) {
         return Err(crate::error::ExecutionError::Canceled("job was canceled".to_owned()).into());
     }
+    // As on the VM path, so the writeback of the tree and of the blobs the
+    // pull wrote never runs during the run.
+    #[cfg(target_os = "linux")]
+    crate::flush::flush_filesystems(log, &[&unpack_dir, image.store_dir()])?;
     let oci_config = image.oci_config();
 
     // Canonicalize unpack_dir *after* unpacking so all symlinks within the
@@ -207,6 +211,7 @@ fn wait_with_timeout(
     // On Linux, this attempts to use pidfd_open for a race-free handle;
     // on other platforms (or old kernels) it falls back to the raw PID.
     let child_handle = ChildHandle::new(&child);
+    let had = deadline.remaining();
 
     let handle = std::thread::spawn(move || (child.wait_with_output(), Instant::now()));
 
@@ -220,8 +225,7 @@ fn wait_with_timeout(
             child_handle.kill();
             drop(handle.join());
             return Err(crate::error::ExecutionError::Timeout(format!(
-                "process did not complete within {}s",
-                deadline.timeout().as_secs()
+                "process did not complete within the {had:.1?} it had"
             ))
             .into());
         }
@@ -586,6 +590,7 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use super::*;
+    use crate::deadline::timeout_message::assert_names_the_time_left;
     use crate::error::ExecutionError;
 
     #[test]
@@ -603,6 +608,31 @@ mod tests {
             ),
             "a process with no time left is never spawned, got: {result:?}"
         );
+    }
+
+    #[test]
+    fn a_timeout_names_the_time_the_process_had_not_the_whole_timeout() {
+        // Kills a message that names the whole timeout, which under a Job's
+        // budget says "within 2s" of a process that had a fraction of it, and
+        // one that names any fixed time, which two processes with different
+        // times left cannot share.
+        let sooner = JobDeadline::start(Duration::from_millis(1400));
+        let later = JobDeadline::start(Duration::from_millis(2000));
+        std::thread::sleep(Duration::from_millis(1100));
+
+        for deadline in [sooner, later] {
+            let child = Command::new("sleep").arg("10").spawn().unwrap();
+            let left = deadline.remaining();
+
+            let Err(error) = wait_with_timeout(child, deadline, None) else {
+                panic!("the process must time out");
+            };
+
+            let RunnerError::Execution(ExecutionError::Timeout(message)) = error else {
+                panic!("the process must time out, got: {error}");
+            };
+            assert_names_the_time_left(&message, left);
+        }
     }
 
     #[test]

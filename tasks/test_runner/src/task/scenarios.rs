@@ -99,6 +99,11 @@ struct Scenario {
     /// Stop the runner for [`STOPPED_FOR`] once it logs this record, then let it
     /// go on.
     stopped_at: Option<&'static str>,
+    /// Stop the runner once it has flushed its files, with its temporary
+    /// directory on a filesystem of its own, and fail if the kernel in its jail
+    /// or a file of its tree still has a dirty page; `validate` sees the run
+    /// that goes on.
+    clean_at_boot: bool,
     /// A line the image must print in a plain run first, so a run that prints
     /// nothing cannot pass on a runner that boots no guest.
     control_marker: Option<&'static str>,
@@ -133,6 +138,7 @@ impl Default for Scenario {
             unusable_state_dir: false,
             nodev_state_dir: false,
             stopped_at: None,
+            clean_at_boot: false,
             control_marker: None,
             // Most scenarios are sandboxed, so the few that are not opt out.
             sandboxed: true,
@@ -774,6 +780,8 @@ fn run_and_validate(
         run_runner_behind_the_job_lock(image_path, &args, state_dir, runner_bin)
     } else if let Some(record) = scenario.stopped_at {
         run_runner_stopped_at(image_path, &args, record, runner_bin)
+    } else if scenario.clean_at_boot {
+        run_runner_clean_at_boot(image_path, &args, state_dir, scenario.sandboxed, runner_bin)
     } else if scenario.occupied_at_up_start {
         run_runner_up_beside_occupied_cgroup(runner_bin)
     } else if scenario.cache_in_a_foreign_state_dir {
@@ -834,7 +842,20 @@ fn all_scenarios() -> Vec<Scenario> {
             dockerfile: r#"FROM busybox
 CMD ["printf", "%s_%s\\n", "HELLO", "VM"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| assert_job_succeeded(output, "HELLO_VM"),
+            validate: |output| {
+                assert_job_succeeded(output, "HELLO_VM")?;
+                assert_flushed_before(output, "Booting VM")
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "boots_from_flushed_files",
+            description: "The kernel the VM boots from and the tree its disk is built from have no dirty page once the runner has flushed its files",
+            dockerfile: r#"FROM busybox
+CMD ["printf", "%s_%s\\n", "FLUSHED", "VM"]"#,
+            extra_args: &["--timeout", "60"],
+            clean_at_boot: true,
+            validate: |output| assert_job_succeeded(output, "FLUSHED_VM"),
             ..Scenario::default()
         },
         Scenario {
@@ -2266,7 +2287,7 @@ CMD ["echo", "hello from host"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("hello from host") {
-                    Ok(())
+                    assert_flushed_before(output, "Running the command on the host")
                 } else {
                     bail!(
                         "Expected 'hello from host' in output.\nstdout: {}\nstderr: {}",
@@ -2275,6 +2296,19 @@ CMD ["echo", "hello from host"]"#,
                     )
                 }
             },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "nosandbox_runs_on_flushed_files",
+            description: "Non-sandboxed: the tree the command runs from has no dirty page once the runner has flushed its files",
+            // Long enough that a runner stopped at its flush has not yet run the
+            // command and removed the tree before the tree is read.
+            dockerfile: r#"FROM busybox:musl
+CMD ["sh", "-c", "sleep 1 && printf '%s_%s\\n' FLUSHED HOST"]"#,
+            sandboxed: false,
+            extra_args: &["--timeout", "60"],
+            clean_at_boot: true,
+            validate: |output| assert_job_succeeded(output, "FLUSHED_HOST"),
             ..Scenario::default()
         },
         Scenario {
@@ -3634,14 +3668,149 @@ fn run_runner_stopped_at(
     record: &str,
     runner_bin: &Utf8Path,
 ) -> Result<ScenarioOutput> {
-    let mut child = spawn_runner(image_path, args, runner_bin)?;
-    let mut streamed = StreamedOutput::start(&mut child);
-    let reached = streamed.wait_for_record(record);
-    if reached.is_ok() {
-        kill_pid(child.id(), libc::SIGSTOP);
+    let child = spawn_runner(image_path, args, runner_bin)?;
+    let (output, ()) = run_runner_held_at(child, record, || {
         std::thread::sleep(STOPPED_FOR);
-        kill_pid(child.id(), libc::SIGCONT);
+        Ok(())
+    })?;
+    Ok(output)
+}
+
+/// The record the runner logs once it has flushed a run's files, just before
+/// the VM boots or the command starts.
+const FLUSHED: &str = "Flushed the run's files to disk";
+
+/// Stopped at its flush, so its files are still there to read and nothing the
+/// boot writes is counted. Its temporary directory, which holds the tree, is a
+/// filesystem of its own, so a flush of the jail's filesystem alone leaves the
+/// tree dirty.
+fn run_runner_clean_at_boot(
+    image_path: &Utf8Path,
+    args: &[&str],
+    state_dir: &Utf8Path,
+    sandboxed: bool,
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let tree_fs = LoopExt4::mount(&super::work_dir().join("tree-fs"))?;
+    let child = runner_command(image_path, args, runner_bin)
+        .env("TMPDIR", tree_fs.at.as_str())
+        .spawn()?;
+    let (output, (kernel, tree)) = run_runner_held_at(child, FLUSHED, || {
+        let kernel = if sandboxed {
+            let (_, jail_root) = find_jail(&jail_parent(state_dir))?
+                .context("The runner flushed its files with no jail built")?;
+            dirty_kib(&jail_root.join("vmlinux"))?
+        } else {
+            0
+        };
+        let files = files_under(&tree_fs.at)?;
+        anyhow::ensure!(
+            !files.is_empty(),
+            "The runner wrote no file to {}, so no tree was read",
+            tree_fs.at
+        );
+        let mut tree = 0;
+        for file in files {
+            tree += dirty_kib(&file)?;
+        }
+        Ok((kernel, tree))
+    })?;
+    anyhow::ensure!(
+        kernel == 0 && tree == 0,
+        "Once the runner had flushed its files, {kernel} KiB of the kernel the VM boots from and {tree} KiB of the tree were still dirty.\nstderr: {}",
+        output.stderr
+    );
+    Ok(output)
+}
+
+/// An ext4 filesystem of its own, on a loop device over a sparse file beside
+/// the directory it is mounted over, unmounted and removed on drop.
+struct LoopExt4 {
+    at: Utf8PathBuf,
+    image: Utf8PathBuf,
+}
+
+impl LoopExt4 {
+    fn mount(at: &Utf8Path) -> Result<Self> {
+        let image = at.with_extension("img");
+        fs::File::create(&image)
+            .and_then(|file| file.set_len(1 << 30))
+            .with_context(|| format!("Failed to create {image}"))?;
+        // Made before the filesystem, so a failure from here removes the image.
+        let ext4 = Self {
+            at: at.to_owned(),
+            image,
+        };
+        let made = Command::new("mkfs.ext4")
+            .args(["-q", "-F", ext4.image.as_str()])
+            .status()
+            .context("Failed to run mkfs.ext4")?;
+        anyhow::ensure!(made.success(), "mkfs.ext4 {} failed", ext4.image);
+        fs::create_dir_all(at).with_context(|| format!("Failed to create {at}"))?;
+        let mounted = Command::new("mount")
+            .args(["-o", "loop", ext4.image.as_str(), at.as_str()])
+            .status()
+            .context("Failed to run mount")?;
+        anyhow::ensure!(
+            mounted.success(),
+            "mount -o loop {} {at} failed",
+            ext4.image
+        );
+        Ok(ext4)
     }
+}
+
+impl Drop for LoopExt4 {
+    fn drop(&mut self) {
+        drop(Command::new("umount").arg(self.at.as_str()).status());
+        drop(fs::remove_file(&self.image));
+    }
+}
+
+/// Every regular file with something in it under `dir`, once for all its hard
+/// links, without following a symlink.
+fn files_under(dir: &Utf8Path) -> Result<Vec<Utf8PathBuf>> {
+    use std::os::unix::fs::MetadataExt as _;
+
+    let mut files = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    let mut dirs = vec![dir.to_owned()];
+    while let Some(dir) = dirs.pop() {
+        for entry in dir
+            .read_dir_utf8()
+            .with_context(|| format!("Failed to read {dir}"))?
+        {
+            let entry = entry.with_context(|| format!("Failed to read an entry under {dir}"))?;
+            let metadata = entry
+                .metadata()
+                .with_context(|| format!("Failed to stat {}", entry.path()))?;
+            if metadata.is_dir() {
+                dirs.push(entry.into_path());
+            } else if metadata.is_file()
+                && metadata.len() > 0
+                && seen.insert((metadata.dev(), metadata.ino()))
+            {
+                files.push(entry.into_path());
+            }
+        }
+    }
+    Ok(files)
+}
+
+/// Stop the runner once it logs `record`, run `while_stopped`, then let it go
+/// on to its exit.
+fn run_runner_held_at<T>(
+    mut child: std::process::Child,
+    record: &str,
+    while_stopped: impl FnOnce() -> Result<T>,
+) -> Result<(ScenarioOutput, T)> {
+    let mut streamed = StreamedOutput::start(&mut child);
+    let reached = streamed.wait_for_record(record).and_then(|_record| {
+        kill_pid(child.id(), libc::SIGSTOP);
+        let checked = while_stopped();
+        kill_pid(child.id(), libc::SIGCONT);
+        checked
+    });
     let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
     let status = loop {
         if let Some(status) = child.try_wait()? {
@@ -3655,17 +3824,110 @@ fn run_runner_stopped_at(
         std::thread::sleep(PROBE_INTERVAL);
     };
     let (stdout, stderr) = streamed.join();
-    reached.with_context(|| format!("stdout: {stdout}\nstderr: {stderr}"))?;
+    let checked = reached.with_context(|| format!("stdout: {stdout}\nstderr: {stderr}"))?;
     let status = status.with_context(|| {
         format!(
             "The runner did not exit within {PROBE_TIMEOUT:?}.\nstdout: {stdout}\nstderr: {stderr}"
         )
     })?;
-    Ok(ScenarioOutput {
+    let output = ScenarioOutput {
         stdout,
         stderr,
         exit_code: status.code().unwrap_or(-1),
-    })
+    };
+    Ok((output, checked))
+}
+
+/// The KiB of `path` dirty in the page cache, read through a shared mapping of
+/// the whole file, which `smaps` counts a page cache page's dirty flag in.
+fn dirty_kib(path: &Utf8Path) -> Result<u64> {
+    use std::os::fd::AsRawFd as _;
+
+    /// The smallest page size, so a step touches every page whatever the size.
+    const STEP: usize = 4096;
+
+    let file = fs::File::open(path).with_context(|| format!("Failed to open {path}"))?;
+    let len = usize::try_from(file.metadata()?.len())?;
+    anyhow::ensure!(len > 0, "{path} is empty, so no page of it can be read");
+    #[expect(unsafe_code, reason = "mmap has no std wrapper")]
+    // SAFETY: a new read-only mapping of a file held open for the call, which
+    // aliases nothing and is unmapped below.
+    let mapping = unsafe {
+        libc::mmap(
+            std::ptr::null_mut(),
+            len,
+            libc::PROT_READ,
+            libc::MAP_SHARED,
+            file.as_raw_fd(),
+            0,
+        )
+    };
+    if mapping == libc::MAP_FAILED {
+        return Err(std::io::Error::last_os_error())
+            .with_context(|| format!("Failed to map {path}"));
+    }
+    // Only a page that has been read is mapped, and only a mapped page counted.
+    for offset in (0..len).step_by(STEP) {
+        #[expect(unsafe_code, reason = "reading the mapping made above")]
+        // SAFETY: `offset` is less than `len`, so the byte is inside the mapping.
+        let byte = unsafe { mapping.cast::<u8>().add(offset) };
+        #[expect(unsafe_code, reason = "reading the mapping made above")]
+        // SAFETY: `byte` points inside the mapping, which is readable.
+        let _read: u8 = unsafe { std::ptr::read_volatile(byte) };
+    }
+    let smaps = fs::read_to_string("/proc/self/smaps").context("Failed to read smaps");
+    #[expect(unsafe_code, reason = "munmap has no std wrapper")]
+    // SAFETY: the mapping made above, of `len` bytes, which nothing uses after.
+    let unmapped = unsafe { libc::munmap(mapping, len) };
+    if unmapped != 0 {
+        return Err(std::io::Error::last_os_error())
+            .with_context(|| format!("Failed to unmap {path}"));
+    }
+    mapping_dirty_kib(&smaps?, mapping.addr())
+}
+
+/// The dirty KiB of the mapping that starts at `start`, from an `smaps` listing.
+fn mapping_dirty_kib(smaps: &str, start: usize) -> Result<u64> {
+    let header = format!("{start:x}-");
+    let mut lines = smaps.lines().skip_while(|line| !line.starts_with(&header));
+    lines
+        .next()
+        .with_context(|| format!("No mapping at {start:x} in smaps"))?;
+    let mut dirty = 0;
+    for line in lines.take_while(|line| !line.starts_with("VmFlags:")) {
+        if let Some(kib) = line
+            .strip_prefix("Shared_Dirty:")
+            .or_else(|| line.strip_prefix("Private_Dirty:"))
+        {
+            dirty += kib
+                .trim()
+                .trim_end_matches("kB")
+                .trim()
+                .parse::<u64>()
+                .with_context(|| format!("Unreadable smaps line: {line}"))?;
+        }
+    }
+    Ok(dirty)
+}
+
+/// The runner's flush, logged with its duration before `next`, so no writeback
+/// of what the run's preparation wrote is left to run during the run.
+fn assert_flushed_before(output: &ScenarioOutput, next: &str) -> Result<()> {
+    let flushed = records(&output.stderr).position(|record| {
+        text(&record, "msg") == Some(FLUSHED)
+            && record
+                .get("flush_ms")
+                .is_some_and(serde_json::Value::is_u64)
+    });
+    let started = records(&output.stderr).position(|record| text(&record, "msg") == Some(next));
+    anyhow::ensure!(
+        flushed
+            .zip(started)
+            .is_some_and(|(flushed, started)| flushed < started),
+        "Expected a {FLUSHED:?} record with its flush_ms before {next:?}.\nstderr: {}",
+        output.stderr
+    );
+    Ok(())
 }
 
 /// The runner's own failure exit, so a crash or a signal does not read as a
@@ -4864,14 +5126,20 @@ fn spawn_runner(
     args: &[&str],
     runner_bin: &Utf8Path,
 ) -> Result<std::process::Child> {
-    Ok(Command::new(runner_bin.as_str())
+    Ok(runner_command(image_path, args, runner_bin).spawn()?)
+}
+
+/// `runner run` of `image_path`, with its output piped.
+fn runner_command(image_path: &Utf8Path, args: &[&str], runner_bin: &Utf8Path) -> Command {
+    let mut command = Command::new(runner_bin.as_str());
+    command
         .arg("run")
         .arg("--image")
         .arg(image_path.as_str())
         .args(args)
         .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()?)
+        .stderr(std::process::Stdio::piped());
+    command
 }
 
 /// Far more than a runner logs before any record a scenario waits for; past
@@ -5876,6 +6144,45 @@ mod tests {
             "the state directory"
         );
         assert!(temp_dir().starts_with(returned), "the image trees");
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn a_file_just_written_reads_dirty_until_it_is_synced() {
+        // Kills a reading that is always clean, which would pass a runner that
+        // boots on files still to be written back. On the crate's target disk,
+        // since a tmpfs page is never written back.
+        let dir = tempfile::tempdir_in(super::super::work_dir()).unwrap();
+        let path = Utf8PathBuf::try_from(dir.path().join("written")).unwrap();
+        let file = fs::File::create(&path).unwrap();
+        std::io::Write::write_all(&mut &file, &vec![1; 1 << 20]).unwrap();
+
+        let written = dirty_kib(&path).unwrap();
+        file.sync_all().unwrap();
+        let synced = dirty_kib(&path).unwrap();
+
+        assert!(
+            written > 0 && synced == 0,
+            "{written} KiB dirty once written and {synced} KiB once synced"
+        );
+    }
+
+    #[test]
+    fn only_the_mapping_asked_for_is_counted() {
+        // A neighbour's dirty pages would read as the kernel's.
+        let smaps = "\
+7f0000000000-7f0000001000 r--s 00000000 fd:01 12 /jail/root/vmlinux
+Shared_Dirty:          4 kB
+Private_Dirty:         8 kB
+VmFlags: rd sh mr mw me ms sd
+7f0000001000-7f0000002000 rw-p 00000000 00:00 0
+Shared_Dirty:         16 kB
+Private_Dirty:        32 kB
+VmFlags: rd wr mr mw me ac sd
+";
+
+        assert_eq!(mapping_dirty_kib(smaps, 0x7f00_0000_0000).unwrap(), 12);
+        assert_eq!(mapping_dirty_kib(smaps, 0x7f00_0000_1000).unwrap(), 48);
     }
 
     #[test]

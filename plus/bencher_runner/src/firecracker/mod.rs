@@ -183,54 +183,47 @@ pub fn run_firecracker(
     // accepted its configuration, and pin them to dedicated benchmark cores
     // before the guest's init runs: a required companion to the isolated
     // cpuset partition, which has no load balancing between cores.
-    let until = deadline.extended_by(SHUTDOWN_ALLOWANCE);
-    let ended = match fc_process.wait_for_vcpus(config.vcpus, until, cancel_flag) {
-        Ok(Some(Started::Vcpus(threads))) => {
-            let pinning = config
-                .cpu_layout
-                .as_ref()
-                .filter(|layout| layout.has_isolation());
-            if let Some(layout) = pinning {
-                pin::pin_vcpu_threads(log, &threads, layout, config.vcpus);
-            }
+    let ended = wait_in_time(deadline, |until| {
+        match fc_process.wait_for_vcpus(config.vcpus, until, cancel_flag) {
+            Ok(Some(Started::Vcpus(threads))) => {
+                let pinning = config
+                    .cpu_layout
+                    .as_ref()
+                    .filter(|layout| layout.has_isolation());
+                if let Some(layout) = pinning {
+                    pin::pin_vcpu_threads(log, &threads, layout, config.vcpus);
+                }
 
-            // Step 4: Wait for the guest to power off
-            info!(log, "Waiting for the VM to power off";
-                "timeout_secs" => deadline.timeout().as_secs(),
-                "remaining_ms" => u64::try_from(deadline.remaining().as_millis()).unwrap_or(u64::MAX),
-                "shutdown_allowance_secs" => SHUTDOWN_ALLOWANCE.as_secs(),
-            );
-            match pinning {
-                Some(layout) => {
-                    let task_dir = fc_process.task_dir();
-                    repin_then_wait(
-                        until,
-                        |deadline| fc_process.wait_for_exit(deadline, cancel_flag),
-                        || pin::read_tasks(&task_dir),
-                        |threads| pin::pin_threads_again(log, threads, layout),
-                    )
-                },
-                None => fc_process.wait_for_exit(until, cancel_flag),
-            }
-        },
-        Ok(Some(Started::Exited(status))) => {
-            warn!(
-                log,
-                "The VM ran and powered off before its vCPU threads were seen, so none was pinned"
-            );
-            Ok(Some(status))
-        },
-        Ok(None) => Ok(None),
-        Err(e) => Err(e),
-    };
-    let ended = match ended {
-        Ok(Some(status)) => Ok(status),
-        Ok(None) => Err(FirecrackerError::Timeout(format!(
-            "VM execution timed out after {:?}",
-            deadline.timeout()
-        ))),
-        Err(e) => Err(e),
-    };
+                // Step 4: Wait for the guest to power off
+                info!(log, "Waiting for the VM to power off";
+                    "timeout_secs" => deadline.timeout().as_secs(),
+                    "remaining_ms" => u64::try_from(deadline.remaining().as_millis()).unwrap_or(u64::MAX),
+                    "shutdown_allowance_secs" => SHUTDOWN_ALLOWANCE.as_secs(),
+                );
+                match pinning {
+                    Some(layout) => {
+                        let task_dir = fc_process.task_dir();
+                        repin_then_wait(
+                            until,
+                            |deadline| fc_process.wait_for_exit(deadline, cancel_flag),
+                            || pin::read_tasks(&task_dir),
+                            |threads| pin::pin_threads_again(log, threads, layout),
+                        )
+                    },
+                    None => fc_process.wait_for_exit(until, cancel_flag),
+                }
+            },
+            Ok(Some(Started::Exited(status))) => {
+                warn!(
+                    log,
+                    "The VM ran and powered off before its vCPU threads were seen, so none was pinned"
+                );
+                Ok(Some(status))
+            },
+            Ok(None) => Ok(None),
+            Err(e) => Err(e),
+        }
+    });
     let elapsed = start_time.elapsed();
     let run_metrics = RunMetrics {
         wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
@@ -257,6 +250,21 @@ pub fn run_firecracker(
     config
         .results
         .read_from_emptied_jail(&cgroup, config.max_file_count, config.max_content_size)
+}
+
+/// Wait for the VM with `wait`, given `deadline` and the shutdown allowance, and
+/// time out naming the time the VM had, which under a Job's budget is a part of
+/// its timeout. The wait is a parameter, so a test can stand in for it.
+fn wait_in_time<W>(deadline: JobDeadline, wait: W) -> Result<ExitStatus, FirecrackerError>
+where
+    W: FnOnce(JobDeadline) -> Result<Option<ExitStatus>, FirecrackerError>,
+{
+    let had = deadline.remaining();
+    wait(deadline.extended_by(SHUTDOWN_ALLOWANCE))?.ok_or_else(|| {
+        FirecrackerError::Timeout(format!(
+            "VM execution timed out after the {had:.1?} it had, and {SHUTDOWN_ALLOWANCE:?} more to power off"
+        ))
+    })
 }
 
 /// Pin the VMM's threads again after [`REPIN_AFTER`], read anew so any started
@@ -359,10 +367,33 @@ fn verify_placement(cgroup: &CgroupManager, pid: u32) -> Result<(), FirecrackerE
 
 #[cfg(test)]
 mod tests {
+    use crate::deadline::timeout_message::assert_names_the_time_left;
     use crate::error::JailError;
     use crate::log::discard;
 
     use super::*;
+
+    #[test]
+    fn a_vm_timeout_names_the_time_the_vm_had_not_the_whole_timeout() {
+        // Kills a message that names the whole timeout, which under a Job's
+        // budget says "after 2s" of a VM booted with a fraction of it left, and
+        // one that names any fixed time, which two VMs with different times
+        // left cannot share.
+        let sooner = JobDeadline::start(Duration::from_millis(1400));
+        let later = JobDeadline::start(Duration::from_millis(2000));
+        std::thread::sleep(Duration::from_millis(1100));
+
+        for deadline in [sooner, later] {
+            let left = deadline.remaining();
+
+            let result = wait_in_time(deadline, |_until| Ok(None));
+
+            let Err(FirecrackerError::Timeout(message)) = result else {
+                panic!("a VM still up at its deadline must time out, got: {result:?}");
+            };
+            assert_names_the_time_left(&message, left);
+        }
+    }
 
     #[test]
     fn a_vm_cgroup_that_cannot_be_created_fails_the_job() {
