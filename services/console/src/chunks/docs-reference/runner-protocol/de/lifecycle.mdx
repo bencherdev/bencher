@@ -14,12 +14,12 @@ Ein Job bleibt von seiner ersten Ausführung bis zu seinem Ergebnis `running`, a
 | claimed   | unknown     | Der Server verliert den Kontakt zum Runner                             |
 | claimed   | canceled    | Ein Benutzer bricht den Job ab                                         |
 | running   | completed   | Jede Iteration des Jobs hat ihr Ergebnis                               |
-| running   | failed      | Eine Ausführung schlägt ohne `allow_failure` fehl, oder die Zeit des Jobs läuft ab |
+| running   | failed      | Der Runner sendet `failed`, ein Lauf schlägt ohne `allow_failure` fehl, seine Ausgabe kann nicht gelesen werden, oder die Zeit des Jobs läuft ab |
 | running   | unknown     | Der Server verliert den Kontakt zum Runner seiner einzigen laufenden Ausführung |
 | running   | canceled    | Ein Benutzer bricht den Job ab, oder das harte Job-Timeout wird überschritten |
 | unknown   | running     | Der Runner sendet sein Ergebnis erneut, und der Job hat noch Iterationen |
 | unknown   | completed   | Der Runner sendet sein Ergebnis erneut, und jede Iteration hat ihr Ergebnis |
-| unknown   | failed      | Der Runner sendet `failed`                                             |
+| unknown   | failed      | Der Runner sendet `failed`, oder sendet erneut eine Ausgabe, die nicht gelesen werden kann |
 | unknown   | canceled    | Ein Benutzer bricht den Job ab, oder das harte Job-Timeout wird überschritten |
 | completed | processed   | Der Server verarbeitet die Ergebnisse erfolgreich                      |
 | completed | failed      | Der Server kann die Ergebnisse nicht verarbeiten                       |

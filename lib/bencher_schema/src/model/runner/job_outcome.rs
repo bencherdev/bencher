@@ -225,26 +225,14 @@ pub enum AssembleError {
 }
 
 /// The job's results to process, from each execution's stored output in iteration order.
-///
-/// Under `allow_failure`, a failed execution is 1 gap that holds only an exit code and why it
-/// failed, so the next iteration keeps its number and nothing of the failed execution is processed.
 pub async fn assemble_results(
     context: &ApiContext,
     job_executions: &JobExecutions,
 ) -> Result<Vec<JsonIterationOutput>, AssembleError> {
     let job = &job_executions.job;
-    let allow_failure = job.config.allow_failure.unwrap_or_default();
     let mut results = Vec::with_capacity(job_executions.executions.len());
     for (execution, output) in stored_outputs(context, job_executions).await? {
-        if execution.status == ExecutionStatus::Failed && allow_failure {
-            if execution.is_whole_job(job) {
-                results.extend(whole_job_gaps(output));
-            } else {
-                results.push(gap(output));
-            }
-        } else {
-            results.extend(output.results);
-        }
+        results.extend(execution_runs(job, execution, execution.status, output));
     }
     Ok(results)
 }
@@ -289,6 +277,27 @@ async fn stored_outputs<'a>(
         outputs.push((execution, output));
     }
     Ok(outputs)
+}
+
+/// The runs an execution that ended with `status` gives its job to parse and process.
+///
+/// Under `allow_failure`, a failed execution is 1 gap that holds only an exit code and why it
+/// failed, so the next iteration keeps its number and nothing of the failed execution is processed.
+pub fn execution_runs(
+    job: &QueryJob,
+    execution: &QueryJobExecution,
+    status: ExecutionStatus,
+    output: JsonJobOutput,
+) -> Vec<JsonIterationOutput> {
+    if status == ExecutionStatus::Failed && job.config.allow_failure.unwrap_or_default() {
+        if execution.is_whole_job(job) {
+            whole_job_gaps(output)
+        } else {
+            vec![gap(output)]
+        }
+    } else {
+        output.results
+    }
 }
 
 /// The 1 iteration of a run that failed under `allow_failure`: its non-zero exit code and standard

@@ -14,12 +14,12 @@ Un Job permanece `running` desde su primera ejecución hasta su resultado, tambi
 | claimed   | unknown     | El servidor pierde el contacto con el Runner                           |
 | claimed   | canceled    | Un usuario cancela el Job                                               |
 | running   | completed   | Cada iteración del Job tiene su resultado                               |
-| running   | failed      | Una ejecución falla sin `allow_failure`, o se agota el tiempo del Job  |
+| running   | failed      | El Runner envía `failed`, una ejecución falla sin `allow_failure`, su salida no se puede leer, o se agota el tiempo del Job |
 | running   | unknown     | El servidor pierde el contacto con el Runner de su única ejecución en curso |
 | running   | canceled    | Un usuario cancela el Job, o se excede el tiempo de espera duro del Job |
 | unknown   | running     | El Runner reenvía su resultado, y al Job le quedan iteraciones         |
 | unknown   | completed   | El Runner reenvía su resultado, y cada iteración tiene su resultado    |
-| unknown   | failed      | El Runner envía `failed`                                               |
+| unknown   | failed      | El Runner envía `failed`, o reenvía una salida que no se puede leer |
 | unknown   | canceled    | Un usuario cancela el Job, o se excede el tiempo de espera duro del Job |
 | completed | processed   | El servidor procesa correctamente los resultados                       |
 | completed | failed      | El servidor no logra procesar los resultados                           |

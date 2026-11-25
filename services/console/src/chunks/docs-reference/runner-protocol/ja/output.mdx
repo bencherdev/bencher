@@ -12,7 +12,9 @@ Job のすべての反復の結果が確定すると、
 そして収集された出力ファイルとその内容のマップを記録します。
 `allow_failure` の下では、実行が失敗した反復はその `exit_code` と `stderr` のみを保持するため、
 その位置は保たれ、そこからの Metric は Report に届きません。
-出力が保存された後、サーバーは結果に対して [ベンチマークハーネスアダプター][adapters] を実行し、
+各実行の出力は保存されるとすぐに [ベンチマークハーネスアダプター][adapters] で解析され、
+読み取れない出力は `allow_failure` の下でも Job をただちに失敗させます。
+Job の出力が保存された後、サーバーは結果に対して [ベンチマークハーネスアダプター][adapters] を実行し、
 Metric と Alert を解析して Report に取り込み、Job を `processed` へ遷移させます。
 
 出力は、[`GET /v0/projects/{project}/jobs/{job}` API][job query api] で Job を照会したときに返されます。

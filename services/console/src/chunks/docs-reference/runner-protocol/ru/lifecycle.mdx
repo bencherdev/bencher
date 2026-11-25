@@ -14,12 +14,12 @@ Job остаётся в состоянии `running` от первого вып�
 | claimed   | unknown     | Сервер теряет связь с Runner                                           |
 | claimed   | canceled    | Пользователь отменяет Job                                              |
 | running   | completed   | У каждой итерации Job есть итог                                        |
-| running   | failed      | Выполнение завершается с ошибкой без `allow_failure`, или время Job истекает |
+| running   | failed      | Runner отправляет `failed`, запуск завершается с ошибкой без `allow_failure`, его вывод нельзя прочитать, или время Job истекает |
 | running   | unknown     | Сервер теряет связь с Runner её единственного идущего выполнения       |
 | running   | canceled    | Пользователь отменяет Job, или превышен жёсткий тайм-аут Job           |
 | unknown   | running     | Runner повторно отправляет свой результат, и у Job остаются итерации   |
 | unknown   | completed   | Runner повторно отправляет свой результат, и у каждой итерации есть итог |
-| unknown   | failed      | Runner отправляет `failed`                                             |
+| unknown   | failed      | Runner отправляет `failed` или повторно отправляет вывод, который нельзя прочитать |
 | unknown   | canceled    | Пользователь отменяет Job, или превышен жёсткий тайм-аут Job           |
 | completed | processed   | Сервер успешно обрабатывает результаты                                 |
 | completed | failed      | Сервер не может обработать результаты                                  |

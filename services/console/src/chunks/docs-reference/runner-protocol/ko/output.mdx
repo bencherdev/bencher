@@ -12,7 +12,9 @@ Job의 모든 반복의 결과가 정해지면,
 그리고 수집된 출력 파일과 그 내용의 맵을 기록합니다.
 `allow_failure`에서는 실행이 실패한 반복은 `exit_code`와 `stderr`만 유지하므로,
 자리를 지키면서도 그 반복의 Metric은 Report에 들어가지 않습니다.
-출력이 저장된 후, 서버는 결과에 대해 [벤치마크 하니스 어댑터][adapters]를 실행하여
+각 실행의 출력은 저장되는 즉시 [벤치마크 하니스 어댑터][adapters]로 파싱되며,
+읽을 수 없는 출력은 `allow_failure`에서도 Job을 즉시 실패시킵니다.
+Job의 출력이 저장된 후, 서버는 결과에 대해 [벤치마크 하니스 어댑터][adapters]를 실행하여
 Metric과 Alert를 Report로 파싱하고, Job을 `processed`로 전환합니다.
 
 출력은 [`GET /v0/projects/{project}/jobs/{job}` API][job query api]로 Job을 조회할 때 반환됩니다.

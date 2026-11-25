@@ -12,7 +12,9 @@ Cada iteración registra su `exit_code`, `stdout`, `stderr`,
 y un mapa de cualquier archivo de salida recolectado con su contenido.
 Con `allow_failure`, una iteración cuya ejecución falló conserva solo su `exit_code` y su `stderr`,
 de modo que mantiene su lugar y ninguna Metric de ella llega al Report.
-Después de que la salida se almacena, el servidor ejecuta el [adaptador del harness de benchmark][adapters] sobre los resultados
+La salida de cada ejecución se analiza con el [adaptador del harness de benchmark][adapters] en cuanto se almacena,
+y una salida que no se puede leer hace fallar el Job de inmediato, incluso con `allow_failure`.
+Después de que la salida del Job se almacena, el servidor ejecuta el [adaptador del harness de benchmark][adapters] sobre los resultados
 para analizar Metrics y Alerts en el Report, transicionando el Job a `processed`.
 
 La salida se devuelve cuando se consulta un Job con la [API `GET /v0/projects/{project}/jobs/{job}`][job query api].

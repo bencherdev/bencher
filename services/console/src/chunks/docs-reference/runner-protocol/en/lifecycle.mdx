@@ -14,12 +14,12 @@ A Job stays `running` from its first execution until its outcome, between its ex
 | claimed   | unknown     | The server loses contact with the Runner                               |
 | claimed   | canceled    | A user cancels the Job                                                  |
 | running   | completed   | Every iteration of the Job has its outcome                             |
-| running   | failed      | An execution fails without `allow_failure`, or the Job's time runs out |
+| running   | failed      | The Runner sends `failed`, a run fails without `allow_failure`, its output cannot be read, or the Job's time runs out |
 | running   | unknown     | The server loses contact with the Runner of its only execution in flight |
 | running   | canceled    | A user cancels the Job, or the hard Job timeout is exceeded             |
 | unknown   | running     | The Runner resends its result, and the Job has iterations left         |
 | unknown   | completed   | The Runner resends its result, and every iteration has its outcome     |
-| unknown   | failed      | The Runner sends `failed`                                              |
+| unknown   | failed      | The Runner sends `failed`, or resends output that cannot be read |
 | unknown   | canceled    | A user cancels the Job, or the hard Job timeout is exceeded            |
 | completed | processed   | The server successfully processes the results                          |
 | completed | failed      | The server fails to process the results                                |
