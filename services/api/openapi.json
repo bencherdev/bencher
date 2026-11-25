@@ -5280,6 +5280,354 @@
         }
       }
     },
+    "/v0/projects/{project}/changepoints": {
+      "get": {
+        "tags": [
+          "projects",
+          "changepoints"
+        ],
+        "summary": "List changepoints for a project",
+        "description": "List the changepoints of a project with one status, active by default. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the changepoints are sorted by modification date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of changepoints.",
+        "operationId": "proj_changepoints_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
+            "schema": {
+              "$ref": "#/components/schemas/ProjChangepointsSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "description": "If set to `true`, only returns changepoints with an archived branch, testbed, or measure. If not set or set to `false`, only returns changepoints with non-archived branches, testbeds, and measures.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "benchmark",
+            "description": "Filter by benchmark name, slug, or UUID, exact match.",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "branch",
+            "description": "Filter by branch name, slug, or UUID, exact match.",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "measure",
+            "description": "Filter by measure name, slug, or UUID, exact match.",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "description": "Filter by changepoint status. Defaults to `active`.",
+            "schema": {
+              "$ref": "#/components/schemas/ChangepointStatus"
+            }
+          },
+          {
+            "in": "query",
+            "name": "testbed",
+            "description": "Filter by testbed name, slug, or UUID, exact match.",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonChangepoints"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/projects/{project}/changepoints/{changepoint}": {
+      "get": {
+        "tags": [
+          "projects",
+          "changepoints"
+        ],
+        "summary": "View a changepoint",
+        "description": "View a changepoint for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
+        "operationId": "proj_changepoint_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "changepoint",
+            "description": "The UUID for a changepoint.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ChangepointUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonChangepoint"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "projects",
+          "changepoints"
+        ],
+        "summary": "Update a changepoint",
+        "description": "Update the status of a changepoint for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project. Use this endpoint to dismiss or reactivate a changepoint. A silenced or withdrawn changepoint cannot be changed.",
+        "operationId": "proj_changepoint_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "changepoint",
+            "description": "The UUID for a changepoint.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ChangepointUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdateChangepoint"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonChangepoint"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects/{project}/github": {
       "get": {
         "tags": [
@@ -13179,6 +13527,43 @@
           "unknown"
         ]
       },
+      "ChangepointStatus": {
+        "description": "The status of a changepoint a user can see.",
+        "oneOf": [
+          {
+            "description": "The changepoint is active.",
+            "type": "string",
+            "enum": [
+              "active"
+            ]
+          },
+          {
+            "description": "The changepoint has been dismissed by a user.",
+            "type": "string",
+            "enum": [
+              "dismissed"
+            ]
+          },
+          {
+            "description": "The changepoint has been silenced, because the head it is on was replaced.",
+            "type": "string",
+            "enum": [
+              "silenced"
+            ]
+          },
+          {
+            "description": "The changepoint has been withdrawn, because the step it found moved or vanished.",
+            "type": "string",
+            "enum": [
+              "withdrawn"
+            ]
+          }
+        ]
+      },
+      "ChangepointUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
       "Confirmations": {
         "description": "The number of consecutive scans that must find a changepoint before it is confirmed.",
         "type": "integer",
@@ -13673,6 +14058,190 @@
           "exp_year",
           "last_four"
         ]
+      },
+      "JsonChangepoint": {
+        "description": "A version at which a line stepped, found after the fact by a threshold's changepoint model.",
+        "type": "object",
+        "properties": {
+          "benchmark": {
+            "$ref": "#/components/schemas/JsonBenchmark"
+          },
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "degrees_of_freedom": {
+            "description": "The number of points on the two sides less 2.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "mean_after": {
+            "description": "The mean of the points from the changepoint on.",
+            "type": "number",
+            "format": "double"
+          },
+          "mean_before": {
+            "description": "The mean of the points before the changepoint.",
+            "type": "number",
+            "format": "double"
+          },
+          "metric": {
+            "description": "The name of the metrics the line is made of.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MetricName"
+              }
+            ]
+          },
+          "modified": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "percent_change": {
+            "nullable": true,
+            "description": "The change from the mean before to the mean after, as a percent of the mean before. It is 0 when the mean before is 0. Absent when it is not finite, which it is when the mean before is too close to 0.",
+            "type": "number",
+            "format": "double"
+          },
+          "pvalue": {
+            "description": "The two-sided p value of Student's t-test on the two sides.",
+            "type": "number",
+            "format": "double"
+          },
+          "scans": {
+            "nullable": true,
+            "description": "The scans that found the changepoint, oldest first, up to the one that confirmed it. While a changepoint is active its measured fields are its confirming scan's. Served only by the view of one changepoint.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonChangepointScan"
+            }
+          },
+          "status": {
+            "$ref": "#/components/schemas/ChangepointStatus"
+          },
+          "stddev_after": {
+            "description": "The sample standard deviation of the points from the changepoint on.",
+            "type": "number",
+            "format": "double"
+          },
+          "stddev_before": {
+            "description": "The sample standard deviation of the points before the changepoint.",
+            "type": "number",
+            "format": "double"
+          },
+          "threshold": {
+            "description": "The threshold that found the changepoint.\n\nIts branch is given at the head and the version the changepoint is on, and its `changepoint_model` is the model the changepoint was judged against.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonThreshold"
+              }
+            ]
+          },
+          "tstatistic": {
+            "nullable": true,
+            "description": "The t statistic of that test, positive when the mean before is the larger. Absent when it is infinite, which it is when both sides are constant at different values.",
+            "type": "number",
+            "format": "double"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/ChangepointUuid"
+          },
+          "variant": {
+            "description": "The variant of the benchmark the line is on.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonVariant"
+              }
+            ]
+          }
+        },
+        "required": [
+          "benchmark",
+          "created",
+          "degrees_of_freedom",
+          "mean_after",
+          "mean_before",
+          "metric",
+          "modified",
+          "pvalue",
+          "status",
+          "stddev_after",
+          "stddev_before",
+          "threshold",
+          "uuid",
+          "variant"
+        ]
+      },
+      "JsonChangepointScan": {
+        "description": "What one scan that found a changepoint measured.",
+        "type": "object",
+        "properties": {
+          "created": {
+            "description": "When the scan ran.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "degrees_of_freedom": {
+            "description": "The number of points on the two sides less 2.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "mean_after": {
+            "description": "The mean of the points from the changepoint on.",
+            "type": "number",
+            "format": "double"
+          },
+          "mean_before": {
+            "description": "The mean of the points before the changepoint.",
+            "type": "number",
+            "format": "double"
+          },
+          "percent_change": {
+            "nullable": true,
+            "description": "The change from the mean before to the mean after, as a percent of the mean before. It is 0 when the mean before is 0. Absent when it is not finite, which it is when the mean before is too close to 0.",
+            "type": "number",
+            "format": "double"
+          },
+          "pvalue": {
+            "description": "The two-sided p value of Student's t-test on the two sides.",
+            "type": "number",
+            "format": "double"
+          },
+          "stddev_after": {
+            "description": "The sample standard deviation of the points from the changepoint on.",
+            "type": "number",
+            "format": "double"
+          },
+          "stddev_before": {
+            "description": "The sample standard deviation of the points before the changepoint.",
+            "type": "number",
+            "format": "double"
+          },
+          "tstatistic": {
+            "nullable": true,
+            "description": "The t statistic of that test, positive when the mean before is the larger. Absent when it is infinite, which it is when both sides are constant at different values.",
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": [
+          "created",
+          "degrees_of_freedom",
+          "mean_after",
+          "mean_before",
+          "pvalue",
+          "stddev_after",
+          "stddev_before"
+        ]
+      },
+      "JsonChangepoints": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonChangepoint"
+        }
       },
       "JsonCheckout": {
         "type": "object",
@@ -20391,6 +20960,22 @@
           }
         }
       },
+      "JsonUpdateChangepoint": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "The new status of the changepoint.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UpdateChangepointStatus"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
       "JsonUpdateMeasure": {
         "type": "object",
         "properties": {
@@ -22057,6 +22642,25 @@
           }
         ]
       },
+      "UpdateChangepointStatus": {
+        "description": "The statuses a user may move a changepoint between.",
+        "oneOf": [
+          {
+            "description": "The changepoint is active.",
+            "type": "string",
+            "enum": [
+              "active"
+            ]
+          },
+          {
+            "description": "The changepoint has been dismissed by a user.",
+            "type": "string",
+            "enum": [
+              "dismissed"
+            ]
+          }
+        ]
+      },
       "Url": {
         "type": "string"
       },
@@ -22309,6 +22913,24 @@
           }
         ]
       },
+      "ProjChangepointsSort": {
+        "oneOf": [
+          {
+            "description": "Sort by changepoint creation date time.",
+            "type": "string",
+            "enum": [
+              "created"
+            ]
+          },
+          {
+            "description": "Sort by changepoint modified date time.",
+            "type": "string",
+            "enum": [
+              "modified"
+            ]
+          }
+        ]
+      },
       "ProjJobsSort": {
         "oneOf": [
           {
@@ -22557,6 +23179,10 @@
     {
       "name": "branches",
       "description": "Branches"
+    },
+    {
+      "name": "changepoints",
+      "description": "Changepoints"
     },
     {
       "name": "checkout"

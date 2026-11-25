@@ -39,3 +39,13 @@ macro_rules! filter_measure_name_id {
 }
 
 pub(crate) use filter_measure_name_id;
+
+#[cfg(feature = "plus")]
+macro_rules! filter_benchmark_name_id {
+    ($query:ident, $name_id:ident) => {
+        crate::macros::filter_name_id!(BenchmarkName, $query, benchmark, $name_id)
+    };
+}
+
+#[cfg(feature = "plus")]
+pub(crate) use filter_benchmark_name_id;

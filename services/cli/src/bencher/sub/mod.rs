@@ -18,6 +18,8 @@ use noise::Noise;
 pub use noise::NoiseError;
 use organization::{member::Member, organization::Organization};
 #[cfg(feature = "plus")]
+use project::changepoint::Changepoint;
+#[cfg(feature = "plus")]
 use project::job::Job;
 use project::{
     alert::Alert,
@@ -72,6 +74,8 @@ pub enum Sub {
     Metric(Metric),
     Threshold(Threshold),
     Alert(Alert),
+    #[cfg(feature = "plus")]
+    Changepoint(Changepoint),
     User(User),
     Token(Token),
     #[cfg(feature = "plus")]
@@ -118,6 +122,8 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Metric(metric) => Self::Metric(metric.try_into()?),
             CliSub::Threshold(threshold) => Self::Threshold(threshold.try_into()?),
             CliSub::Alert(alert) => Self::Alert(alert.try_into()?),
+            #[cfg(feature = "plus")]
+            CliSub::Changepoint(changepoint) => Self::Changepoint(changepoint.try_into()?),
             CliSub::User(user) => Self::User(user.try_into()?),
             CliSub::Token(token) => Self::Token(token.try_into()?),
             #[cfg(feature = "plus")]
@@ -160,6 +166,8 @@ impl SubCmd for Sub {
             Self::Metric(metric) => metric.exec().await,
             Self::Threshold(threshold) => threshold.exec().await,
             Self::Alert(alert) => alert.exec().await,
+            #[cfg(feature = "plus")]
+            Self::Changepoint(changepoint) => changepoint.exec().await,
             Self::User(user) => user.exec().await,
             Self::Token(token) => token.exec().await,
             #[cfg(feature = "plus")]

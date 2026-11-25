@@ -2,6 +2,7 @@ pub mod alert;
 pub mod archive;
 pub mod benchmark;
 pub mod branch;
+pub mod changepoint;
 pub mod job;
 pub mod key;
 pub mod measure;

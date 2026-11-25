@@ -49,6 +49,8 @@ use crate::{
 
 pub mod alert;
 pub mod boundary;
+#[cfg(feature = "plus")]
+pub mod changepoint;
 pub mod model;
 
 crate::macros::typed_id::typed_id!(ThresholdId);
@@ -423,6 +425,11 @@ impl QueryThreshold {
             diesel::update(schema::model::table.filter(schema::model::id.eq(model_id)))
                 .set(&update_model)
                 .execute(conn)?;
+            // A candidate judged against the replaced model is never confirmed, and no user saw it.
+            #[cfg(feature = "plus")]
+            if slot == ModelSlot::ChangepointModel {
+                changepoint::QueryChangepoint::delete_candidates_of_threshold(conn, self.id)?;
+            }
         }
         Ok(())
     }

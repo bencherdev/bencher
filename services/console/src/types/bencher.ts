@@ -691,6 +691,96 @@ export interface JsonCardDetails {
 	exp_year: ExpirationYear;
 }
 
+/** What one scan that found a changepoint measured. */
+export interface JsonChangepointScan {
+	/** The mean of the points before the changepoint. */
+	mean_before: number;
+	/** The mean of the points from the changepoint on. */
+	mean_after: number;
+	/** The sample standard deviation of the points before the changepoint. */
+	stddev_before: number;
+	/** The sample standard deviation of the points from the changepoint on. */
+	stddev_after: number;
+	/** The two-sided p value of Student's t-test on the two sides. */
+	pvalue: number;
+	/**
+	 * The t statistic of that test, positive when the mean before is the larger.
+	 * Absent when it is infinite, which it is when both sides are constant at different values.
+	 */
+	tstatistic?: number;
+	/** The number of points on the two sides less 2. */
+	degrees_of_freedom: number;
+	/**
+	 * The change from the mean before to the mean after, as a percent of the mean before.
+	 * It is 0 when the mean before is 0.
+	 * Absent when it is not finite, which it is when the mean before is too close to 0.
+	 */
+	percent_change?: number;
+	/** When the scan ran. */
+	created: string;
+}
+
+/** The status of a changepoint a user can see. */
+export enum ChangepointStatus {
+	/** The changepoint is active. */
+	Active = "active",
+	/** The changepoint has been dismissed by a user. */
+	Dismissed = "dismissed",
+	/** The changepoint has been silenced, because the head it is on was replaced. */
+	Silenced = "silenced",
+	/** The changepoint has been withdrawn, because the step it found moved or vanished. */
+	Withdrawn = "withdrawn",
+}
+
+/** A version at which a line stepped, found after the fact by a threshold's changepoint model. */
+export interface JsonChangepoint {
+	uuid: Uuid;
+	/**
+	 * The threshold that found the changepoint.
+	 * 
+	 * Its branch is given at the head and the version the changepoint is on,
+	 * and its `changepoint_model` is the model the changepoint was judged against.
+	 */
+	threshold: JsonThreshold;
+	benchmark: JsonBenchmark;
+	/** The variant of the benchmark the line is on. */
+	variant: JsonVariant;
+	/** The name of the metrics the line is made of. */
+	metric: string;
+	/** The mean of the points before the changepoint. */
+	mean_before: number;
+	/** The mean of the points from the changepoint on. */
+	mean_after: number;
+	/** The sample standard deviation of the points before the changepoint. */
+	stddev_before: number;
+	/** The sample standard deviation of the points from the changepoint on. */
+	stddev_after: number;
+	/** The two-sided p value of Student's t-test on the two sides. */
+	pvalue: number;
+	/**
+	 * The t statistic of that test, positive when the mean before is the larger.
+	 * Absent when it is infinite, which it is when both sides are constant at different values.
+	 */
+	tstatistic?: number;
+	/** The number of points on the two sides less 2. */
+	degrees_of_freedom: number;
+	/**
+	 * The change from the mean before to the mean after, as a percent of the mean before.
+	 * It is 0 when the mean before is 0.
+	 * Absent when it is not finite, which it is when the mean before is too close to 0.
+	 */
+	percent_change?: number;
+	/**
+	 * The scans that found the changepoint, oldest first, up to the one that confirmed it.
+	 * While a changepoint is active its measured fields are its confirming scan's.
+	 * Served only by the view of one changepoint.
+	 */
+	scans?: JsonChangepointScan[];
+	status: ChangepointStatus;
+	created: string;
+	modified: string;
+}
+
 export interface JsonCheckout {
 	session: string;
 	url: string;
@@ -2742,6 +2832,19 @@ export interface JsonUpdateAlerts {
 	alerts?: Uuid[];
 	/** Change every alert that matches. */
 	filter?: JsonAlertsFilter;
+}
+
+/** The statuses a user may move a changepoint between. */
+export enum UpdateChangepointStatus {
+	/** The changepoint is active. */
+	Active = "active",
+	/** The changepoint has been dismissed by a user. */
+	Dismissed = "dismissed",
+}
+
+export interface JsonUpdateChangepoint {
+	/** The new status of the changepoint. */
+	status: UpdateChangepointStatus;
 }
 
 export interface JsonUpdatePlan {

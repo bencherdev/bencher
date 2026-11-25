@@ -56,6 +56,49 @@ diesel::table! {
 }
 
 diesel::table! {
+    changepoint (id) {
+        id -> Integer,
+        uuid -> Text,
+        project_id -> Integer,
+        head_id -> Integer,
+        testbed_id -> Integer,
+        spec_id -> Nullable<Integer>,
+        benchmark_id -> Integer,
+        variant_id -> Integer,
+        measure_id -> Integer,
+        metric -> Text,
+        version_id -> Integer,
+        threshold_id -> Integer,
+        model_id -> Integer,
+        mean_before -> Double,
+        mean_after -> Double,
+        stddev_before -> Double,
+        stddev_after -> Double,
+        pvalue -> Double,
+        tstatistic -> Nullable<Double>,
+        degrees_of_freedom -> Integer,
+        status -> Integer,
+        created -> BigInt,
+        modified -> BigInt,
+    }
+}
+
+diesel::table! {
+    changepoint_scan (id) {
+        id -> Integer,
+        changepoint_id -> Integer,
+        mean_before -> Double,
+        mean_after -> Double,
+        stddev_before -> Double,
+        stddev_after -> Double,
+        pvalue -> Double,
+        tstatistic -> Nullable<Double>,
+        degrees_of_freedom -> Integer,
+        created -> BigInt,
+    }
+}
+
+diesel::table! {
     commit (id) {
         id -> Integer,
         project_id -> Integer,
@@ -606,6 +649,17 @@ diesel::joinable!(boundary -> metric (metric_id));
 diesel::joinable!(boundary -> model (model_id));
 diesel::joinable!(boundary -> threshold (threshold_id));
 diesel::joinable!(branch -> project (project_id));
+diesel::joinable!(changepoint -> benchmark (benchmark_id));
+diesel::joinable!(changepoint -> head (head_id));
+diesel::joinable!(changepoint -> measure (measure_id));
+diesel::joinable!(changepoint -> model (model_id));
+diesel::joinable!(changepoint -> project (project_id));
+diesel::joinable!(changepoint -> spec (spec_id));
+diesel::joinable!(changepoint -> testbed (testbed_id));
+diesel::joinable!(changepoint -> threshold (threshold_id));
+diesel::joinable!(changepoint -> variant (variant_id));
+diesel::joinable!(changepoint -> version (version_id));
+diesel::joinable!(changepoint_scan -> changepoint (changepoint_id));
 diesel::joinable!(commit -> project (project_id));
 diesel::joinable!(head_version -> version (version_id));
 diesel::joinable!(job -> organization (organization_id));
@@ -680,6 +734,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     benchmark,
     boundary,
     branch,
+    changepoint,
+    changepoint_scan,
     commit,
     head,
     head_version,

@@ -17,6 +17,7 @@ mod allowed;
 pub mod badge;
 pub mod benchmarks;
 pub mod branches;
+pub mod changepoints;
 pub mod console;
 mod console_project;
 mod github;
@@ -231,6 +232,9 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(alerts::proj_alerts_get)?;
         api_description.register(alerts::proj_alert_get)?;
         api_description.register(alerts::proj_alert_patch)?;
+
+        #[cfg(feature = "plus")]
+        changepoints::register(api_description, http_options)?;
 
         // Badge
         if http_options {
