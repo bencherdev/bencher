@@ -380,7 +380,7 @@ fn percent_change(mean_before: f64, mean_after: f64) -> f64 {
 }
 
 /// The line a changepoint is on: one series of one threshold on one head, read under one spec.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ChangepointLine {
     pub project_id: ProjectId,
     pub head_id: HeadId,
@@ -1004,6 +1004,28 @@ mod tests {
             ),
             (100.0, 110.0, 0.0)
         );
+    }
+
+    // Kills a line read that leaves out any status, or that gives its rows newest first.
+    #[test]
+    fn a_line_holds_its_changepoints_in_every_status_oldest_first() {
+        let mut conn = setup_test_db();
+        let fixture = fixture(&mut conn);
+        let ids = [
+            ChangepointState::Withdrawn,
+            ChangepointState::Candidate,
+            ChangepointState::Active,
+            ChangepointState::Silenced,
+            ChangepointState::Dismissed,
+        ]
+        .map(|state| create_changepoint(&mut conn, &fixture, state, earlier()));
+
+        let found = QueryChangepoint::on_line(&mut conn, &fixture.line)
+            .expect("Failed to read the line")
+            .into_iter()
+            .map(|changepoint| changepoint.id)
+            .collect::<Vec<_>>();
+        assert_eq!(found, ids);
     }
 
     #[test]

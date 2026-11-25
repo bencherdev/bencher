@@ -382,6 +382,14 @@ async fn into_context(
         github_app.clone(),
     );
 
+    #[cfg(feature = "plus")]
+    let changepoints = bencher_schema::context::Changepoints::spawn(
+        log.clone(),
+        &database,
+        shutdown.clone(),
+        clock.clone(),
+    );
+
     debug!(log, "Creating API context");
     Ok(ApiContext {
         console_url,
@@ -429,6 +437,8 @@ async fn into_context(
         callbacks,
         #[cfg(feature = "plus")]
         commit_titles,
+        #[cfg(feature = "plus")]
+        changepoints,
         #[cfg(feature = "plus")]
         runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
         #[cfg(feature = "plus")]

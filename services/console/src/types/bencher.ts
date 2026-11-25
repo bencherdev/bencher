@@ -767,7 +767,7 @@ export interface JsonChangepoint {
 	/**
 	 * The change from the mean before to the mean after, as a percent of the mean before.
 	 * It is 0 when the mean before is 0.
-	 * Absent when it is not finite, which it is when the mean before is too close to 0.
+	 * Absent when it is not finite.
 	 */
 	percent_change?: number;
 	/**

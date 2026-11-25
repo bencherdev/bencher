@@ -150,7 +150,7 @@ async fn shutdown(log: &Logger, server: HttpServer<ApiContext>) {
     // Everything shutdown needs out of the context, taken before `server.close()` consumes the
     // server.
     #[cfg(feature = "plus")]
-    let (rate_limiting, database_path, prune_task, callbacks, upload_sweep) = {
+    let (rate_limiting, database_path, prune_task, callbacks, upload_sweep, changepoints) = {
         let ctx = server.app_private();
         // Signal long-lived handlers (the runner WebSocket channel), the periodic rate limiting
         // prune, and callback deliveries to wind down, so the in-flight connection drain in
@@ -163,6 +163,7 @@ async fn shutdown(log: &Logger, server: HttpServer<ApiContext>) {
             ctx.rate_limiting_prune.take(),
             ctx.callbacks.clone(),
             ctx.oci_storage.close_upload_sweep(),
+            ctx.changepoints.clone(),
         )
     };
     // The commit title task stops at the shutdown signal above, at its next wait.
@@ -183,6 +184,10 @@ async fn shutdown(log: &Logger, server: HttpServer<ApiContext>) {
         }
         rate_limiting.prune_and_save(&database_path, log);
         upload_sweep.stop(log).await;
+        // The changepoint task stops at the shutdown signal above, at its next wait or in the scan
+        // of a line; a scan cut short before its write writes nothing, and the line is scanned
+        // again at its next report.
+        changepoints.drain(log).await;
         // Last, so a delivery slow to stop never delays the save. No handler is left to fire a
         // callback, and a detached heartbeat timeout that fires one after the drain begins finds
         // the owner closed and leaves it pending for the next start.

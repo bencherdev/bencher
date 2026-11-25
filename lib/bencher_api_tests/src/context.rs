@@ -264,13 +264,10 @@ impl TestServer {
         let callback_key = bencher_callback::CallbackKey::new(&DEFAULT_SECRET_KEY)
             .expect("Failed to derive callback key");
         let shutdown = bencher_schema::context::CancellationToken::new();
-        // Callbacks go to the recording sender, never through the real client.
-        let callback_sender = Arc::new(crate::RecordingSender::default());
-        let (callbacks, commit_titles) = background_tasks(
+        let (callback_sender, callbacks, commit_titles, changepoints) = background_tasks(
             &log,
             &database,
             &callback_key,
-            &callback_sender,
             &shutdown,
             &clock,
             github_app.as_ref(),
@@ -313,6 +310,7 @@ impl TestServer {
             callback_key,
             callbacks,
             commit_titles,
+            changepoints,
             runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
             openai_apps_challenge,
             oauth,
@@ -504,6 +502,8 @@ impl TestServer {
         let log = slog::Logger::root(slog::Discard, slog::o!());
         #[cfg(feature = "plus")]
         self.context().commit_titles.drain(&log).await;
+        #[cfg(feature = "plus")]
+        self.context().changepoints.drain(&log).await;
         drop(self.server.close().await);
         #[cfg(feature = "plus")]
         callbacks.drain(&log).await;
@@ -511,20 +511,23 @@ impl TestServer {
 }
 
 /// The tasks a test server runs, each with the server's GitHub App if it has one: callbacks to
-/// the recording sender, and the commit title task.
+/// the recording sender it returns, never through the real client, the commit title task, and the
+/// changepoint task.
 #[cfg(feature = "plus")]
 fn background_tasks(
     log: &slog::Logger,
     database: &Database,
     callback_key: &bencher_callback::CallbackKey,
-    callback_sender: &Arc<crate::RecordingSender>,
     shutdown: &bencher_schema::context::CancellationToken,
     clock: &bencher_json::Clock,
     github_app: Option<&Arc<bencher_github_client::GitHubApp>>,
 ) -> (
+    Arc<crate::RecordingSender>,
     bencher_schema::context::Callbacks,
     bencher_schema::context::CommitTitles,
+    bencher_schema::context::Changepoints,
 ) {
+    let callback_sender = Arc::new(crate::RecordingSender::default());
     let callbacks = bencher_schema::context::Callbacks::new_with_github_app(
         Arc::clone(&database.connection),
         database.auth_pool.clone(),
@@ -542,7 +545,13 @@ fn background_tasks(
         clock.clone(),
         github_app.cloned(),
     );
-    (callbacks, commit_titles)
+    let changepoints = bencher_schema::context::Changepoints::spawn(
+        log.clone(),
+        database,
+        shutdown.clone(),
+        clock.clone(),
+    );
+    (callback_sender, callbacks, commit_titles, changepoints)
 }
 
 /// The settings of a test server, each left at the plain test server's default when unset.

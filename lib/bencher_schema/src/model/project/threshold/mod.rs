@@ -51,6 +51,8 @@ pub mod alert;
 pub mod boundary;
 #[cfg(feature = "plus")]
 pub mod changepoint;
+#[cfg(feature = "plus")]
+pub mod changepoint_scan;
 pub mod model;
 
 crate::macros::typed_id::typed_id!(ThresholdId);

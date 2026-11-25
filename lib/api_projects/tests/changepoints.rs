@@ -32,6 +32,8 @@ const CHANGEPOINT_MIGRATION: &str = "20261125120000";
 
 /// A project with two branches, two testbeds, two measures, and two benchmarks, a threshold with a
 /// changepoint model on each line the tests use, and a report on each of those lines.
+/// The reports come before the thresholds, so none hands a line to the changepoint task, whose
+/// scan would change the changepoints a test writes on that line.
 struct Fixture {
     user: TestUser,
     slug: String,
@@ -70,6 +72,22 @@ impl Fixture {
             let (status, body) = f.send(server, Method::POST, resource, Some(&body)).await;
             assert_eq!(status, StatusCode::CREATED, "{resource}: {body}");
         }
+        for (day, branch, testbed) in [
+            (1, "main-branch", "main-testbed"),
+            (2, "other-branch", "main-testbed"),
+            (3, "main-branch", "other-testbed"),
+        ] {
+            let measures = json!({ "latency": { "value": 1.0 }, "throughput": { "value": 2.0 } });
+            let report = json!({
+                "branch": branch,
+                "testbed": testbed,
+                "start_time": format!("2024-01-{day:02}T00:00:00Z"),
+                "end_time": format!("2024-01-{day:02}T00:01:00Z"),
+                "results": [json!({ "bench-one": measures, "bench-two": measures }).to_string()],
+            });
+            let (status, body) = f.send(server, Method::POST, "reports", Some(&report)).await;
+            assert_eq!(status, StatusCode::CREATED, "{body}");
+        }
         for (branch, testbed, measure) in [
             ("main-branch", "main-testbed", "latency"),
             ("other-branch", "main-testbed", "latency"),
@@ -93,22 +111,6 @@ impl Fixture {
             let (status, body) = f
                 .send(server, Method::POST, "thresholds", Some(&threshold))
                 .await;
-            assert_eq!(status, StatusCode::CREATED, "{body}");
-        }
-        for (day, branch, testbed) in [
-            (1, "main-branch", "main-testbed"),
-            (2, "other-branch", "main-testbed"),
-            (3, "main-branch", "other-testbed"),
-        ] {
-            let measures = json!({ "latency": { "value": 1.0 }, "throughput": { "value": 2.0 } });
-            let report = json!({
-                "branch": branch,
-                "testbed": testbed,
-                "start_time": format!("2024-01-{day:02}T00:00:00Z"),
-                "end_time": format!("2024-01-{day:02}T00:01:00Z"),
-                "results": [json!({ "bench-one": measures, "bench-two": measures }).to_string()],
-            });
-            let (status, body) = f.send(server, Method::POST, "reports", Some(&report)).await;
             assert_eq!(status, StatusCode::CREATED, "{body}");
         }
         f
@@ -1857,4 +1859,103 @@ fn apply_migration(conn: &mut DbConnection) {
         .expect("Failed to apply the migrations");
     conn.batch_execute("PRAGMA foreign_keys = ON")
         .expect("Failed to enable foreign keys");
+}
+
+/// The version number and status of each changepoint on the project's `latency` line, oldest
+/// first, once one is on the version numbered `number`, waiting up to ten seconds.
+async fn scanned(server: &TestServer, number: i32) -> Vec<(i32, ChangepointState)> {
+    let rows = || {
+        schema::changepoint::table
+            .inner_join(schema::version::table)
+            .order(schema::changepoint::id)
+            .select((schema::version::number, schema::changepoint::status))
+            .load::<(i32, ChangepointState)>(&mut server.db_conn())
+            .expect("Failed to read the changepoints")
+    };
+    for _ in 0..200 {
+        let found = rows();
+        if found.iter().any(|(found, _)| *found == number) {
+            return found;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+    rows()
+}
+
+// Kills a report that hands the task none of its lines, or a line that is not the one it wrote.
+#[tokio::test]
+async fn a_report_hands_the_lines_a_changepoint_model_watches_to_the_scan() {
+    const NOISE: [f64; 4] = [0.4, -0.3, 0.1, -0.5];
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "scans@example.com").await;
+    let org = server.create_org(&user, "Scan Org").await;
+    let project = server.create_project(&user, &org, "Scan Project").await;
+    let path = |resource: &str| format!("/v0/projects/{}/{resource}", project.slug);
+    for (resource, body) in [
+        ("branches", json!({ "name": "main" })),
+        ("testbeds", json!({ "name": "localhost" })),
+        (
+            "measures",
+            json!({ "name": "latency", "units": "nanoseconds" }),
+        ),
+        (
+            "thresholds",
+            json!({
+                "branch": "main",
+                "testbed": "localhost",
+                "measure": "latency",
+                "test": "t_test",
+                "upper_boundary": 0.99,
+                "changepoint_model": {
+                    "test": "changepoint",
+                    "max_sample_size": 50,
+                    "upper_boundary": 0.05,
+                    "significance": 0.001,
+                },
+            }),
+        ),
+    ] {
+        let (status, body) = send(
+            &server,
+            &user.token,
+            Method::POST,
+            &path(resource),
+            Some(&body),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{resource}: {body}");
+    }
+
+    // A step from 100 to 110 at the report numbered 15, each report on a version of its own.
+    for number in 0..25 {
+        let level = if number < 15 { 100.0 } else { 110.0 };
+        let value = level + NOISE[number % NOISE.len()];
+        let report = json!({
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": seconds(i64::try_from(number).expect("a number") * 60),
+            "end_time": seconds(i64::try_from(number).expect("a number") * 60 + 30),
+            "results": [json!({ "bench": { "latency": { "value": value } } }).to_string()],
+        });
+        let (status, body) = send(
+            &server,
+            &user.token,
+            Method::POST,
+            &path("reports"),
+            Some(&report),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+    }
+
+    let found = scanned(&server, 15).await;
+    assert!(
+        found.iter().any(|(number, state)| *number == 15
+            && matches!(
+                state,
+                ChangepointState::Candidate | ChangepointState::Active
+            )),
+        "{found:?}"
+    );
+    server.close().await;
 }

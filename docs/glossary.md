@@ -14,6 +14,9 @@ Glossary of terms for Bencher concepts.
   A Series does not include a Branch.
 - **Line**:
   A Series plotted on one Branch.
+  For Changepoint detection, a Line is one Metric name of a Series on one Head under one Spec.
+  Each of its points is a version native to the Head (above its Start Point),
+  valued at the median of the Line's Metrics on that version and ordered by version number.
 - **Permutation**:
   A unique combination of Branch, Testbed, Benchmark, and Measure.
   A Permutation has a separate Line per Variant of its Benchmark.
@@ -80,6 +83,10 @@ Glossary of terms for Bencher concepts.
   An empty filter matches every Variant.
 - **Model**:
   The combination of a Test and its parameters for a Threshold.
+- **Changepoint Model**:
+  The second Model slot on a Threshold, beside its Model, holding a Model whose Test checks a Line.
+  A Model checks a Metric at ingest; a Changepoint Model checks a Line after the fact.
+  Which slot a Model belongs in follows from its Test, and the Threshold's key does not change.
 - **Test**:
   Used by a Threshold to detect performance regressions.
   For example, a z-score or t-test.
@@ -97,6 +104,15 @@ Glossary of terms for Bencher concepts.
   An Alert is generated when a new Metric is
   below a Lower Boundary Limit or above an Upper Boundary Limit.
   An Alert is not generated when the Benchmark is ignored.
+- **Changepoint**:
+  A version at which a Line stepped, found after the fact by Apache Otava's method
+  on a side that a Boundary of the Changepoint Model guards.
+  It is held as a candidate that no user sees until as many consecutive scans of its Line find it
+  as its Changepoint Model's `confirmations` sets, 5 unless it sets them.
+  Each scan up to then is kept with what it measured, and the confirming scan's numbers never change.
+  It is active, dismissed by a user, silenced when its Head is replaced,
+  or withdrawn when a later scan moves the step or no longer finds it.
+  It is built to find steps; a ramp is often flagged as one step inside it.
 
 ## Bare Metal
 
