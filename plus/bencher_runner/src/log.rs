@@ -20,6 +20,15 @@ impl Messages {
             .iter()
             .any(|kept| kept == msg)
     }
+
+    pub fn count(&self, msg: &str) -> usize {
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .iter()
+            .filter(|kept| *kept == msg)
+            .count()
+    }
 }
 
 impl slog::Drain for Messages {
