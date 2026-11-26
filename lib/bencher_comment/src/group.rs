@@ -1623,7 +1623,7 @@ mod tests {
         let (first, second) = html.split_once("<summary>Report 2: ").unwrap();
         let (_, first) = first.split_once("<summary>Report 1: ").unwrap();
         assert!(
-            first.ends_with("<details><summary>⚠️ Warnings (1)</summary><br /><table><thead><tr><th>Resource</th><th>Action</th><th>Count</th></tr></thead><tbody><tr><td>Variant</td><td>Skipped</td><td>1</td></tr></tbody></table></details></details><details>"),
+            first.ends_with("<details><summary>⚠️ Warnings (1)</summary><br /><table><thead><tr><th>Resource</th><th>Action</th><th>Count</th><th>Hint</th></tr></thead><tbody><tr><td>Variant</td><td>Skipped</td><td>1</td><td></td></tr></tbody></table></details></details><details>"),
             "{first}"
         );
         assert!(!second.contains("Warnings"), "{second}");

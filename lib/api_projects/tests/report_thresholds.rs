@@ -761,40 +761,39 @@ async fn a_list_at_version_0_is_a_bad_request() {
     );
 }
 
+// At version 1 a map is what plain threshold flags send, and they name no metric: the report
+// lands, and each entry is skipped with a warning rather than checking `value`, which a
+// version 1 harness never writes, so no threshold is created or given a new model.
 #[tokio::test]
-async fn a_map_at_version_1_is_a_bad_request() {
+async fn a_map_at_version_1_lands_and_skips_each_threshold() {
     let server = TestServer::new().await;
-    let fixture = fixture(&server, "mapv1").await;
+    let (fixture, project_id) = three_thresholds(&server, "mapv1").await;
+    let models = model_ids(&mut server.db_conn(), project_id);
 
-    let (status, body) = try_report(
+    let landed = report(
         &server,
         &fixture,
-        Post::new(1, vec![steady(0)])
-            .onto("refused-branch", "refused-testbed")
-            .thresholds(serde_json::json!({ "models": { "latency": model() } })),
+        Post::new(2, vec![steady(1)]).thresholds(serde_json::json!({
+            "models": { "latency": other_model(), "throughput": model() }
+        })),
     )
     .await;
     assert_eq!(
-        status,
-        StatusCode::BAD_REQUEST,
-        "a map at version 1: {body}"
-    );
-    let refusal = serde_json::from_str::<serde_json::Value>(&body).expect("the refusal is JSON");
-    assert_eq!(
-        refusal["message"],
-        "The report is read as BMF version 1, so `thresholds.models` must be a list of threshold entries, but a map was sent.",
-        "the refusal names the version: {body}"
+        landed.warnings,
+        Some(skipped_thresholds(2)),
+        "one skip per entry"
     );
 
-    let project_id = project_id(&server, &fixture);
     let mut conn = server.db_conn();
     assert_eq!(
-        (
-            branch_count(&mut conn, project_id, "refused-branch"),
-            testbed_count(&mut conn, project_id, "refused-testbed"),
-        ),
-        (0, 0),
-        "the shape is refused before the report's dimensions are created"
+        model_ids(&mut conn, project_id),
+        models,
+        "no threshold is created and none takes the new model"
+    );
+    assert_eq!(
+        measure_count(&mut conn, project_id, "throughput"),
+        0,
+        "a skipped entry creates no measure"
     );
 }
 
@@ -817,7 +816,7 @@ async fn an_undeclared_version_takes_the_shape_from_the_project() {
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::OK, "PATCH bmf_version");
 
-    let (status, body) = try_report(
+    let skipped = report(
         &server,
         &fixture,
         Post::new(1, vec![steady(0)])
@@ -825,12 +824,11 @@ async fn an_undeclared_version_takes_the_shape_from_the_project() {
             .thresholds(serde_json::json!({ "models": { "latency": model() } })),
     )
     .await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "a map: {body}");
-    let refusal = serde_json::from_str::<serde_json::Value>(&body).expect("the refusal is JSON");
-    assert_eq!(
-        refusal["message"],
-        "The report is read as BMF version 1, so `thresholds.models` must be a list of threshold entries, but a map was sent.",
-        "the refusal names the project's version: {body}"
+    assert_eq!(skipped.warnings, Some(skipped_thresholds(1)), "a map");
+    let project_id = project_id(&server, &fixture);
+    assert!(
+        thresholds(&mut server.db_conn(), project_id).is_empty(),
+        "a map at the project's version 1 creates no threshold"
     );
 
     report(
@@ -841,29 +839,80 @@ async fn an_undeclared_version_takes_the_shape_from_the_project() {
             .thresholds(entries()),
     )
     .await;
+    assert_eq!(
+        thresholds(&mut server.db_conn(), project_id).len(),
+        2,
+        "a list at the project's version 1 creates its thresholds"
+    );
 }
 
-// An empty map is still a map, so it is refused at version 1 for the same reason a
-// full one is.
+// An empty map at version 1 names no threshold, so it skips none.
 #[tokio::test]
-async fn an_empty_map_at_version_1_is_a_bad_request() {
+async fn an_empty_map_at_version_1_skips_nothing() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "emptymap").await;
 
-    let (status, body) = try_report(
+    let landed = report(
         &server,
         &fixture,
-        Post::new(1, vec![steady(0)])
-            .thresholds(serde_json::json!({ "models": {}, "reset": true })),
+        Post::new(1, vec![steady(0)]).thresholds(serde_json::json!({ "models": {} })),
     )
     .await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "an empty map: {body}");
-    let refusal = serde_json::from_str::<serde_json::Value>(&body).expect("the refusal is JSON");
+    assert_eq!(landed.warnings, None);
+}
+
+// `reset` with a skipped map resets as asked: the skipped entries name no threshold, so
+// every threshold on the branch and testbed loses its model.
+#[tokio::test]
+async fn v1_reset_with_a_skipped_map_strips_every_threshold() {
+    let server = TestServer::new().await;
+    let (fixture, project_id) = three_thresholds(&server, "mapreset").await;
+
+    let landed = report(
+        &server,
+        &fixture,
+        Post::new(2, vec![steady(1)]).thresholds(serde_json::json!({
+            "models": { "latency": model() },
+            "reset": true,
+        })),
+    )
+    .await;
+    assert_eq!(landed.warnings, Some(skipped_thresholds(1)));
+
     assert_eq!(
-        refusal["message"],
-        "The report is read as BMF version 1, so `thresholds.models` must be a list of threshold entries, but a map was sent.",
-        "the refusal names the version: {body}"
+        thresholds(&mut server.db_conn(), project_id),
+        vec![
+            ("*".to_owned(), "value".to_owned(), false),
+            ("*".to_owned(), "p99".to_owned(), false),
+            (r#"[{"size_mb":16}]"#.to_owned(), "value".to_owned(), false),
+        ],
+        "the bare threshold the map's measure would have addressed is reset too"
     );
+}
+
+/// A model unlike [`model`], so a threshold that took it would show a new model.
+fn other_model() -> serde_json::Value {
+    serde_json::json!({ "test": "percentage", "upper_boundary": 0.5 })
+}
+
+/// Every threshold's model in a project, in creation order.
+fn model_ids(conn: &mut DbConnection, project_id: ProjectId) -> Vec<Option<ModelId>> {
+    schema::threshold::table
+        .filter(schema::threshold::project_id.eq(project_id))
+        .order(schema::threshold::id.asc())
+        .select(schema::threshold::model_id)
+        .load::<Option<ModelId>>(conn)
+        .expect("Failed to load the threshold models")
+}
+
+/// How many measures of a project carry this name.
+fn measure_count(conn: &mut DbConnection, project_id: ProjectId, name: &str) -> i64 {
+    schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::name.eq(name))
+        .count()
+        .get_result(conn)
+        .expect("Failed to count the measures")
 }
 
 /// A project holding three thresholds: a bare one, a named one, and a filtered one,

@@ -237,14 +237,14 @@ enum Source {
 }
 
 /// A refusal under the contract names the parsed version, the expected one and
-/// where it came from, and only the fixes that work, and carries no adapter hint
-/// since the adapter is right and the version is wrong.
+/// where it came from, and every fix, and carries no adapter hint since the adapter is
+/// right and the version is wrong.
 fn assert_refusal(body: &str, parsed: u8, expected: u8, source: Source) {
-    let phrases = match source {
+    let mut phrases = match source {
         Source::Declared => vec![
             format!("the report declared `bmf_version` {expected}"),
             format!("Send BMF version {expected} results"),
-            format!("declare `bmf_version` {parsed}"),
+            format!("declare `bmf_version` {parsed}."),
         ],
         Source::Project => vec![
             format!(
@@ -252,14 +252,19 @@ fn assert_refusal(body: &str, parsed: u8, expected: u8, source: Source) {
             ),
             format!("Send BMF version {expected} results"),
             format!("declare `bmf_version` {parsed} through the API"),
-            if parsed == 1 {
-                "A user who can edit the project can also move it to BMF version 1".to_owned()
-            } else {
-                "A server admin can also move the project to BMF version 0".to_owned()
-            },
-            format!("`bencher project update --bmf-version {parsed}`"),
         ],
     };
+    phrases.extend([
+        if parsed == 1 {
+            "A user who can edit the project can also move it to BMF version 1".to_owned()
+        } else {
+            "A server admin can also move the project to BMF version 0".to_owned()
+        },
+        format!("`bencher project update --bmf-version {parsed}`"),
+        format!(
+            "With a current `bencher` CLI, pass `--adapter json_v{parsed}` (upgrade if it does not know the flag)."
+        ),
+    ]);
     for phrase in std::iter::once(format!("parsed as BMF version {parsed}")).chain(phrases) {
         assert!(
             body.contains(&phrase),
@@ -271,8 +276,8 @@ fn assert_refusal(body: &str, parsed: u8, expected: u8, source: Source) {
         "expected no adapter hint on a version refusal: {body}"
     );
     assert!(
-        !body.contains("json_v0") && !body.contains("upgrade"),
-        "expected no fix this server does not ship yet: {body}"
+        !body.contains(&format!("json_v{expected}")),
+        "expected no adapter that declares the version the results did not parse at: {body}"
     );
     assert!(
         !body.contains(mover(expected)),
@@ -529,7 +534,8 @@ const RUST_BENCH_JSON: &str = include_str!("../../bencher_adapter/tool_output/ru
 /// is at version 1, the same report lands.
 ///
 /// Kills: the generic adapter 400 for a version 1 only adapter, a refusal that names the
-/// project for a declared version, and a refusal that names a server admin for the move up.
+/// project for a declared version, a declared refusal without the editors' move, and a
+/// refusal that names a server admin for the move up.
 #[tokio::test]
 async fn report_version_1_only_adapter_refuses_version_0() {
     let server = TestServer::new().await;
@@ -555,6 +561,7 @@ async fn report_version_1_only_adapter_refuses_version_0() {
         "`rust_bench_json` reads results at BMF version 1 only",
         "the report declared `bmf_version` 0",
         "Declare `bmf_version` 1",
+        "A user who can edit the project can also move it to BMF version 1 with `bencher project update --bmf-version 1`.",
     ] {
         assert!(body.contains(phrase), "expected `{phrase}`: {body}");
     }
@@ -617,6 +624,11 @@ async fn report_fold_folds_v0_with_an_empty_iteration() {
         )
         .await;
         assert_eq!(iterations(&folded), 1, "{fold}");
+        assert_eq!(
+            folded.get("warnings"),
+            None,
+            "a fold at version 0: {folded}"
+        );
     }
 
     server.close().await;
@@ -624,6 +636,8 @@ async fn report_fold_folds_v0_with_an_empty_iteration() {
 
 /// A v1 payload refuses fold: the refusal is a warning and an unfolded ingest,
 /// never a rejection, because a harness upgrade must not turn a pipeline red.
+///
+/// Kills: a refused fold with no warning, and a warning counted per iteration.
 #[tokio::test]
 async fn report_fold_is_refused_for_a_v1_payload() {
     let server = TestServer::new().await;
@@ -646,6 +660,11 @@ async fn report_fold_is_refused_for_a_v1_payload() {
         iterations(&unfolded),
         2,
         "a refused fold ingests one iteration per result"
+    );
+    assert_eq!(
+        unfolded["warnings"],
+        serde_json::json!([{ "resource": "fold", "action": "ignore", "count": 1 }]),
+        "{unfolded}"
     );
 
     server.close().await;
@@ -674,6 +693,11 @@ async fn report_fold_is_refused_for_an_empty_v1_payload() {
         iterations(&unfolded),
         0,
         "an empty iteration writes no rows"
+    );
+    assert_eq!(
+        unfolded["warnings"],
+        serde_json::json!([{ "resource": "fold", "action": "ignore", "count": 1 }]),
+        "{unfolded}"
     );
 
     server.close().await;

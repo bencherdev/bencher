@@ -1177,28 +1177,29 @@ impl ActiveThresholds {
     }
 }
 
-/// Refuse a report whose thresholds are not in the shape its BMF version, declared
-/// or taken from the project, spells.
+/// Refuse a list of thresholds at version 0, and skip each entry of a map at version 1.
+///
+/// A map is what plain threshold flags send, and they name no metric a version 1 result holds,
+/// so each entry is a skipped threshold warning; a reset applies either way.
 pub fn check_report_thresholds_shape(
     bmf_version: BmfVersion,
-    json_thresholds: Option<&JsonReportThresholds>,
+    json_thresholds: Option<&mut JsonReportThresholds>,
+    warnings: &mut ReportWarnings,
 ) -> Result<(), HttpError> {
-    let Some(models) = json_thresholds.and_then(|thresholds| thresholds.models.as_ref()) else {
+    let Some(thresholds) = json_thresholds else {
         return Ok(());
     };
-    let (expected, sent) = match bmf_version {
-        BmfVersion::V0 => match models {
-            JsonReportThresholdModels::Map(_) => return Ok(()),
-            JsonReportThresholdModels::List(_) => ("a map of measure to threshold model", "a list"),
-        },
-        _ => match models {
-            JsonReportThresholdModels::Map(_) => ("a list of threshold entries", "a map"),
-            JsonReportThresholdModels::List(_) => return Ok(()),
-        },
-    };
-    Err(bad_request_error(format!(
-        "The report is read as BMF version {bmf_version}, so `thresholds.models` must be {expected}, but {sent} was sent."
-    )))
+    if bmf_version == BmfVersion::V0 {
+        if let Some(JsonReportThresholdModels::List(_)) = thresholds.models {
+            return Err(bad_request_error(format!(
+                "The report is read as BMF version {bmf_version}, so `thresholds.models` must be a map of measure to threshold model, but a list was sent."
+            )));
+        }
+    } else if let Some(JsonReportThresholdModels::Map(models)) = &thresholds.models {
+        warnings.skip_with_count(ReportWarningResource::Threshold, models.len());
+        thresholds.models = None;
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone, diesel::AsChangeset)]

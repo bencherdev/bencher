@@ -106,15 +106,29 @@ pub(crate) fn report_metric<'r>(
     Some((report_measure, report_metric))
 }
 
-/// `value`, `median`, and `mean` first, then name order.
+/// `value`, `median`, and `mean` first, then name order, with every interval bound last.
 fn preference(name: &MetricName) -> (u8, &MetricName) {
     let rank = match name.as_ref() {
         "value" => 0,
         "median" => 1,
         "mean" => 2,
-        _ => 3,
+        name => {
+            if is_interval(name) {
+                4
+            } else {
+                3
+            }
+        },
     };
     (rank, name)
+}
+
+/// A name with a `_ci` part, with or without a level: `typical_ci_lower`, `mean_ci95_upper`.
+fn is_interval(name: &str) -> bool {
+    name.split('_').skip(1).any(|part| {
+        part.strip_prefix("ci")
+            .is_some_and(|level| level.bytes().all(|byte| byte.is_ascii_digit()))
+    })
 }
 
 #[cfg(test)]
@@ -960,6 +974,74 @@ mod tests {
                 "- bench mode=fast size=64 (CPU Time",
                 "- bench mode=fast size=64 (Latency: median, mean",
                 "- bench (Latency: median, mean",
+            ],
+            "{human}"
+        );
+    }
+
+    // Kills an interval name that wins the default over a bare statistic (criterion's
+    // `--verbose` names, where `mean_ci_lower` comes first by name), a rule that misses an
+    // interval with a level, one that takes any `ci` in a name or a leading `ci` for an interval,
+    // a measure of interval names alone that loses its default, and checked interval names drawn
+    // first.
+    #[test]
+    fn an_interval_name_never_wins_the_default_over_a_bare_statistic() {
+        let metrics = |names: &[&str]| -> Vec<Value> {
+            names.iter().map(|name| metric(name, 1.0, &[])).collect()
+        };
+        let report = report(json!([[result(
+            0,
+            VARIANT_A,
+            &json!({}),
+            &[
+                report_measure(
+                    "latency",
+                    &metrics(&[
+                        "mean_ci_lower",
+                        "mean_ci_upper",
+                        "median_ci_lower",
+                        "median_ci_upper",
+                        "slope_ci_lower",
+                        "slope_ci_upper",
+                        "std_dev_ci_lower",
+                        "std_dev_ci_upper",
+                        "typical",
+                        "typical_ci_lower",
+                        "typical_ci_upper",
+                    ])
+                ),
+                report_measure("throughput", &metrics(&["mean_ci95_upper", "p99"])),
+                report_measure("cycles", &metrics(&["mean_ci99_9_margin", "zeta"])),
+                report_measure("memory", &metrics(&["b_cinema", "c"])),
+                report_measure(
+                    "allocated",
+                    &metrics(&["typical_ci_upper", "typical_ci_lower"])
+                ),
+                report_measure(
+                    "instructions",
+                    &[
+                        metric(
+                            "typical_ci_upper",
+                            2.0,
+                            &checked(THRESHOLD_1, "typical_ci_upper")
+                        ),
+                        metric("typical", 1.0, &checked(THRESHOLD_2, "typical")),
+                    ]
+                ),
+                report_measure("cpu-time", &metrics(&["ci95_upper", "d"])),
+            ]
+        )]]));
+        let human = report_comment_for(report).human();
+        assert_eq!(
+            result_lines(&human),
+            [
+                "- bench (Latency: typical",
+                "- bench (Throughput: p99",
+                "- bench (Cycles: zeta",
+                "- bench (Memory: b_cinema",
+                "- bench (Allocated: typical_ci_lower",
+                "- bench (Instructions: typical, typical_ci_upper",
+                "- bench (CPU Time: ci95_upper",
             ],
             "{human}"
         );

@@ -153,7 +153,7 @@ impl Backend {
                 bencher_client::Error<bencher_client::types::Error>,
             >,
         >,
-        T: Serialize,
+        T: Serialize + DeserializeOwned,
         E: std::error::Error + Send + Sync + 'static,
         bencher_client::JsonValue: TryFrom<T, Error = E>,
     {
@@ -179,12 +179,34 @@ impl Backend {
                 bencher_client::Error<bencher_client::types::Error>,
             >,
         >,
-        T: Serialize,
+        T: Serialize + DeserializeOwned,
+        Json: DeserializeOwned + Serialize + TryFrom<T, Error = E>,
+        E: std::error::Error + Send + Sync + 'static,
+    {
+        self.send_with_unread(sender)
+            .await
+            .map(|(json, _unread_warnings)| json)
+    }
+
+    /// As [`Self::send_with`], with the count of the report warnings this build cannot read.
+    pub async fn send_with_unread<F, R, T, Json, E>(
+        &self,
+        sender: F,
+    ) -> Result<(Json, u32), BackendError>
+    where
+        F: Fn(bencher_client::Client) -> R,
+        R: Future<
+            Output = Result<
+                progenitor_client::ResponseValue<T>,
+                bencher_client::Error<bencher_client::types::Error>,
+            >,
+        >,
+        T: Serialize + DeserializeOwned,
         Json: DeserializeOwned + Serialize + TryFrom<T, Error = E>,
         E: std::error::Error + Send + Sync + 'static,
     {
         let mismatch = self.check_version().await?;
-        self.client.send_with(sender).await.map_err(|err| {
+        self.client.send_with_unread(sender).await.map_err(|err| {
             if let Some(mismatch) = mismatch {
                 BackendError::ClientMismatch {
                     mismatch: Box::new(mismatch),
@@ -206,7 +228,7 @@ impl Backend {
                 bencher_client::Error<bencher_client::types::Error>,
             >,
         >,
-        T: Serialize,
+        T: Serialize + DeserializeOwned,
         Json: DeserializeOwned + Serialize + TryFrom<T, Error = E>,
         E: std::error::Error + Send + Sync + 'static,
     {
