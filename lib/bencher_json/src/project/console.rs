@@ -659,8 +659,14 @@ pub struct JsonConsoleAlertDetail {
     pub baseline: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lower_limit: Option<f64>,
+    /// The level the lower side was tested at, where its report's family corrected it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lower_level: Option<Boundary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub upper_limit: Option<f64>,
+    /// The level the upper side was tested at, where its report's family corrected it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upper_level: Option<Boundary>,
     /// The line the alert raised on over the window that ends at the report,
     /// following the threshold that raised the alert: its one line names the
     /// branch, testbed, benchmark, variant, measure, and the threshold's model.

@@ -15,3 +15,12 @@ Bei t-Test-Tests werden Vorhersageintervalle als dezimale kumulative Prozentsät
 - #### t-Test obere Grenze
   - Eine t-Test obere Grenze kann ein beliebiges positives Dezimal zwischen `0.5` und `1.0` sein. Dabei steht `0.5` für den Mittelwert und `1.0` für alle möglichen rechtsseitigen Werte (∞). Es wird verwendet, wenn ein größerer Wert auf eine Leistungsverschlechterung hinweist.
   - Wenn Sie beispielsweise einen t-Test mit einer oberen Grenze von `0.977` verwenden und `25` historische Metriken mit einem Mittelwert von `100` und einer Stichproben-Standardabweichung von `10` hätten, würde das obere Grenzwertlimit `121.46` betragen und jeder Wert über `121.46` würde eine Warnung generieren.
+- #### t-Test: Grenzen über einen ganzen Bericht
+  - Für ein Projekt mit BMF-Version 1 deckt eine Grenze des t-Tests den ganzen Bericht ab.
+Eine obere Grenze von `0.99` bedeutet, dass ein unveränderter Bericht höchstens 1 von 100 Malen einen Alarm an der oberen Grenze auslöst, egal wie viele Linien er hat.
+Bencher teilt diese Wahrscheinlichkeit gleichmäßig auf jede Prüfung auf dieser Seite des Berichts auf: jeder Threshold, auf jeder Linie, die er prüft, in jeder Iteration.
+Eine Linie mit zu wenigen historischen Metriken für eine Prüfung erhält trotzdem ihren Anteil.
+  - Zum Beispiel prüft ein Bericht mit `200` Linien und einer oberen Grenze von `0.99` jede Linie bei `0.99995`.
+Bei einer Normalverteilung verschiebt das den oberen Grenzwert jeder Linie von etwa `2.33` auf etwa `3.89` Standardabweichungen über dem Mittelwert.
+  - Für ein Projekt mit BMF-Version 0 deckt eine Grenze des t-Tests jede Linie für sich ab.
+Ein Bericht mit `200` Linien und einer oberen Grenze von `0.99` löst etwa `2` falsche Alarme an der oberen Grenze aus.

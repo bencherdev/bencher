@@ -37,7 +37,9 @@ diesel::table! {
         model_id -> Integer,
         baseline -> Nullable<Double>,
         lower_limit -> Nullable<Double>,
+        lower_level -> Nullable<Double>,
         upper_limit -> Nullable<Double>,
+        upper_level -> Nullable<Double>,
     }
 }
 

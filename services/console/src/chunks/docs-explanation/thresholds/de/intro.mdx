@@ -18,6 +18,11 @@ Jede Grenze wird verwendet, um ein Grenzwert zu berechnen.
 Dann wird jede neue [Metrik][metric] gegen jede Grenze überprüft.
 Ein Alarm wird ausgelöst, wenn eine neue Metrik unterhalb eines unteren Grenzwertes oder oberhalb eines oberen Grenzwertes liegt.
 
+Für ein Projekt mit BMF-Version 1 deckt eine Grenze eines t-Tests, eines z-scores oder einer Lognormalverteilung eine ganze Familie von Prüfungen ab:
+jede Prüfung, die ihr Modell auf einer Seite eines Berichts macht, auf jeder Linie, in jeder Iteration.
+Ein Bericht mit vielen Linien löst daher nicht mehr falsche Alarme aus als ein Bericht mit einer.
+Eine Prozent-, IQR-, Delta-IQR- oder statische Grenze ist eine Größe, keine Wahrscheinlichkeit, und deckt jede Linie für sich ab.
+
 Bei der [kontinuierlichen Benchmarking], also dem Benchmarking in CI, sollten Sie Thresholds erstellen.
 Mit dem <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Subkommando
 geben Sie bereits mit [der `--branch` Option][branch option] einen Branch

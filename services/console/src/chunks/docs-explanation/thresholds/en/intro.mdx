@@ -18,6 +18,11 @@ Each Boundary is used to calculate a Boundary Limit.
 Then every new [Metric][metric] is checked against each Boundary Limit.
 An Alert is generated when a new Metric is below a Lower Boundary Limit or above an Upper Boundary Limit.
 
+For a Project at BMF version 1, a t-test, z-score, or Log Normal Boundary covers a whole family of checks:
+every check that its Model makes on one side of a Report, on each Line, in each iteration.
+So a Report with many Lines generates no more false Alerts than a Report with one.
+A Percentage, IQR, Delta IQR, or Static Boundary is a size, not a chance, and it covers each Line on its own.
+
 When [Continuous Benchmarking], that is benchmarking in CI you will want to create Thresholds.
 Using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
 you already specify a Branch with [the `--branch` option][branch option]

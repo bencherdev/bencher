@@ -1,4 +1,4 @@
-use bencher_json::{BoundaryUuid, DateTime, project::boundary::BoundaryLimit};
+use bencher_json::{Boundary, BoundaryUuid, DateTime, project::boundary::BoundaryLimit};
 use diesel::RunQueryDsl as _;
 
 use crate::macros::sql::last_insert_rowid;
@@ -27,7 +27,9 @@ pub struct PreparedDetection {
     pub boundary_uuid: BoundaryUuid,
     pub baseline: Option<f64>,
     pub lower_limit: Option<f64>,
+    pub lower_level: Option<Boundary>,
     pub upper_limit: Option<f64>,
+    pub upper_level: Option<Boundary>,
     pub outlier: Option<BoundaryLimit>,
     pub ignore_benchmark: bool,
 }
@@ -49,7 +51,9 @@ impl PreparedDetection {
             boundary_uuid,
             baseline,
             lower_limit,
+            lower_level,
             upper_limit,
+            upper_level,
             outlier,
             ignore_benchmark,
         } = self;
@@ -61,7 +65,9 @@ impl PreparedDetection {
             metric_id,
             baseline,
             lower_limit,
+            lower_level,
             upper_limit,
+            upper_level,
         };
 
         diesel::insert_into(schema::boundary::table)
@@ -211,7 +217,9 @@ mod tests {
             boundary_uuid: BoundaryUuid::new(),
             baseline: Some(50.0),
             lower_limit: Some(10.0),
+            lower_level: None,
             upper_limit: Some(90.0),
+            upper_level: None,
             outlier: None,
             ignore_benchmark: false,
         };
@@ -252,7 +260,9 @@ mod tests {
             boundary_uuid: BoundaryUuid::new(),
             baseline: Some(50.0),
             lower_limit: Some(10.0),
+            lower_level: None,
             upper_limit: Some(90.0),
+            upper_level: None,
             outlier: Some(BoundaryLimit::Upper),
             ignore_benchmark: false,
         };
@@ -291,7 +301,9 @@ mod tests {
             boundary_uuid: BoundaryUuid::new(),
             baseline: Some(50.0),
             lower_limit: Some(10.0),
+            lower_level: None,
             upper_limit: Some(90.0),
+            upper_level: None,
             outlier: Some(BoundaryLimit::Upper),
             ignore_benchmark: true,
         };

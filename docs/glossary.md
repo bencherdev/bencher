@@ -93,6 +93,10 @@ Glossary of terms for Bencher concepts.
 - **Boundary Limit**:
   Each Boundary is used to calculate a Boundary Limit
   for each new Metric that a Threshold checks.
+- **Family**:
+  The tests a corrected threshold model makes in one report, on one side:
+  each matching threshold, on each line, in each iteration.
+  At BMF version 1, a t-test, z-score, or log-normal boundary covers the whole family.
 - **Alert**:
   An Alert is generated when a new Metric is
   below a Lower Boundary Limit or above an Upper Boundary Limit.

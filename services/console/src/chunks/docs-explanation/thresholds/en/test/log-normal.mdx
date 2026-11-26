@@ -29,3 +29,14 @@ It is used when a greater value would indicate a performance regression.
 and you had `25` historical Metrics centered around `100` and one previous outlier at `200`,
 the Upper Boundary Limit would be `134.18` and
 any value greater than `134.18` would generate an Alert.
+- #### Log Normal Boundaries across a Report
+  - For a Project at BMF version 1, a Log Normal Boundary covers the whole Report.
+An Upper Boundary of `0.99` means that an unchanged Report generates an Upper Boundary Alert at most 1 time in 100, however many Lines it has.
+Bencher divides that chance equally across every check on that side of the Report: each Threshold, on each Line it checks, in each iteration.
+A Line with too few historical Metrics to check still takes its share.
+  - For example, a Report with `200` Lines and an Upper Boundary of `0.99` checks each Line at `0.99995`.
+For a normal distribution, that moves each Line's Upper Boundary Limit from about `2.33` to about `3.89` standard deviations above the mean.
+  - For a Project at BMF version 0, a Log Normal Boundary covers each Line on its own.
+A Report with `200` Lines and an Upper Boundary of `0.99` generates about `2` false Upper Boundary Alerts.
+  - With a short history, a Log Normal Test understates the spread of your historical Metrics,
+so its real chance of a false Alert is higher than stated, for one Line or for a whole Report.

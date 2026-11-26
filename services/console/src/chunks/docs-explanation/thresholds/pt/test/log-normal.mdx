@@ -28,3 +28,14 @@ Onde `0.5` representa a localização central e `1.0` representa todos os possí
 e tive `25` Métricas históricas centradas em torno de `100` e um outlier anterior em `200`,
 o Limite Superior seria `134.18` e
 qualquer valor superior a `134.18` geraria um Alerta.
+- #### Limites Log Normal em todo um Relatório
+  - Para um Projeto na versão 1 do BMF, um Limite Log Normal cobre todo o Relatório.
+Um Limite Superior de `0.99` significa que um Relatório sem mudanças gera um Alerta de Limite Superior no máximo 1 vez em 100, não importa quantas Linhas ele tenha.
+O Bencher divide essa probabilidade igualmente entre cada verificação desse lado do Relatório: cada Limiar, em cada Linha que verifica, em cada iteração.
+Uma Linha com poucas Métricas históricas demais para ser verificada também recebe a sua parte.
+  - Por exemplo, um Relatório com `200` Linhas e um Limite Superior de `0.99` verifica cada Linha a `0.99995`.
+Para uma distribuição normal, isso move o Limite Superior de cada Linha de cerca de `2.33` para cerca de `3.89` desvios padrão acima da média.
+  - Para um Projeto na versão 0 do BMF, um Limite Log Normal cobre cada Linha separadamente.
+Um Relatório com `200` Linhas e um Limite Superior de `0.99` gera cerca de `2` Alertas falsos de Limite Superior.
+  - Com um histórico curto, um Teste Log Normal subestima a dispersão das suas Métricas históricas,
+então a sua probabilidade real de um Alerta falso é maior do que a indicada, para uma Linha ou para todo um Relatório.

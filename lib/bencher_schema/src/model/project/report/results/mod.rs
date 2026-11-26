@@ -34,7 +34,7 @@ use crate::{
         ProjectId,
         benchmark::{BenchmarkId, QueryBenchmark},
         branch::{BranchId, head::HeadId},
-        measure::{MeasureId, QueryMeasure},
+        measure::{MeasureId, MeasureIdentity, QueryMeasure},
         metric::InsertMetric,
         report::report_benchmark::{InsertReportBenchmark, ReportBenchmarkId},
         testbed::TestbedId,
@@ -45,7 +45,7 @@ use crate::{
 
 pub mod detector;
 
-use detector::{Detector, PreparedDetection, Threshold};
+use detector::{Detector, Family, PreparedDetection, Threshold};
 
 use super::{QueryReport, ReportId, warning::ReportWarnings};
 
@@ -68,6 +68,8 @@ pub struct ReportResults {
     pub variant_cache: HashMap<(BenchmarkId, ParameterSet), Option<VariantId>>,
     pub measure_cache: HashMap<MeasureNameId, Option<MeasureId>>,
     pub threshold_cache: HashMap<MeasureId, Vec<Threshold>>,
+    /// The family of a BMF version 1 report, counted once [`Self::process`] has parsed it.
+    pub family: Option<Family>,
     /// How the results parsed, once [`Self::process`] has parsed them.
     pub parse: Option<ParseRecord>,
 }
@@ -92,6 +94,7 @@ impl ReportResults {
             variant_cache: HashMap::new(),
             measure_cache: HashMap::new(),
             threshold_cache: HashMap::new(),
+            family: None,
             parse: None,
         }
     }
@@ -197,6 +200,11 @@ impl ReportResults {
         } else {
             results_array.inner
         };
+
+        // The whole report is parsed, so its family is counted before the first verdict.
+        if bmf_version == BmfVersion::V1 {
+            self.family = Some(self.count_family(context, &results_array).await?);
+        }
 
         for (iteration, results) in results_array.into_iter().enumerate() {
             self.results(
@@ -421,6 +429,7 @@ impl ReportResults {
                     spec_id: self.spec_id,
                     measure_id,
                     threshold: threshold.clone(),
+                    family: self.family,
                 };
                 let detection = detector.prepare_detection(
                     log,
@@ -444,6 +453,63 @@ impl ReportResults {
             insert_report_benchmark,
             measures: prepared_measures,
         }))
+    }
+
+    /// Count each check a threshold will make in the report into its family, whether or not
+    /// the line has the history to test. A measure the project does not hold yet has no
+    /// threshold, so it is looked up and never created.
+    async fn count_family(
+        &self,
+        context: &ApiContext,
+        results_array: &[AdapterResults],
+    ) -> Result<Family, HttpError> {
+        let mut family = Family::default();
+        if self.threshold_cache.is_empty() {
+            return Ok(family);
+        }
+        let conn = auth_conn!(context);
+        let mut measure_ids: HashMap<&MeasureNameId, Option<MeasureId>> = HashMap::new();
+        for results in results_array {
+            for (parameters, metrics) in results.inner.values().flatten() {
+                for (measure, metric) in &metrics.inner {
+                    let measure_id = if let Some(measure_id) = measure_ids.get(measure) {
+                        *measure_id
+                    } else {
+                        let identity = QueryMeasure::identity(conn, self.project_id, measure)
+                            .map_err(|e| {
+                                issue_error(
+                                    "Failed to count the report family",
+                                    &format!(
+                                        "Failed to resolve a measure to count the family of report ({}):",
+                                        self.report_id
+                                    ),
+                                    e,
+                                )
+                            })?;
+                        let measure_id =
+                            if let Some(MeasureIdentity::Existing(measure_id)) = identity {
+                                Some(measure_id)
+                            } else {
+                                None
+                            };
+                        measure_ids.insert(measure, measure_id);
+                        measure_id
+                    };
+                    let thresholds = measure_id
+                        .and_then(|measure_id| self.threshold_cache.get(&measure_id))
+                        .into_iter()
+                        .flatten();
+                    for threshold in thresholds {
+                        if threshold.checks(parameters)
+                            && metric.inner.contains_key(&threshold.metric)
+                        {
+                            family.count(&threshold.model);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(family)
     }
 
     /// Drop every measure the report does not keep, before anything is stored.

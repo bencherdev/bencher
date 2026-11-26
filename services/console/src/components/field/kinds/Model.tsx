@@ -70,14 +70,14 @@ const STATISTIC_FIELDS = {
 		type: "input",
 		placeholder: "0.98",
 		icon: "fas fa-arrow-down",
-		help: "Must be between 0.50 and 1.00 (lower is stricter; higher is looser)",
+		help: "Must be between 0.50 and 1.00 (lower is stricter; higher is looser), and covers the whole report at BMF version 1",
 		validate: validCdfBoundary,
 	},
 	cdf_upper_boundary: {
 		type: "input",
 		placeholder: "0.98",
 		icon: "fas fa-arrow-up",
-		help: "Must be between 0.50 and 1.00 (lower is stricter; higher is looser)",
+		help: "Must be between 0.50 and 1.00 (lower is stricter; higher is looser), and covers the whole report at BMF version 1",
 		validate: validCdfBoundary,
 	},
 	iqr_lower_boundary: {

@@ -898,16 +898,7 @@ fn report_results_query(
                 schema::model::created,
                 schema::model::replaced,
             ),
-            (
-                schema::boundary::id,
-                schema::boundary::uuid,
-                schema::boundary::metric_id,
-                schema::boundary::threshold_id,
-                schema::boundary::model_id,
-                schema::boundary::baseline,
-                schema::boundary::lower_limit,
-                schema::boundary::upper_limit,
-            ),
+            schema::boundary::all_columns,
         ).nullable(),
     ))
 }

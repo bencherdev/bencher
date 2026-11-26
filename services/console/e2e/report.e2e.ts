@@ -98,7 +98,8 @@ test("the alerting line leads its group with its value, delta, and limit", async
 	const cells = row.getByRole("cell");
 	await expect(cells.nth(5)).toHaveText("20.60 ns");
 	await expect(cells.nth(6)).toHaveText("↑ +6.2% worse");
-	await expect(cells.nth(7)).toHaveText("19.54 ns");
+	// The limit its report's family of 18 latency lines tested it at.
+	await expect(cells.nth(7)).toHaveText("19.61 ns");
 });
 
 // Kills a grouping or sort that never reaches the API, lives outside the URL,

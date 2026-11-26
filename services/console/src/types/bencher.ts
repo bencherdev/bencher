@@ -966,7 +966,11 @@ export interface JsonConsoleAlertDetail {
 	value: number;
 	baseline?: number;
 	lower_limit?: number;
+	/** The level the lower side was tested at, where its report's family corrected it. */
+	lower_level?: Boundary;
 	upper_limit?: number;
+	/** The level the upper side was tested at, where its report's family corrected it. */
+	upper_level?: Boundary;
 	/**
 	 * The line the alert raised on over the window that ends at the report,
 	 * following the threshold that raised the alert: its one line names the
