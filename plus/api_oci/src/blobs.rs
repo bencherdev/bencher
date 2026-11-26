@@ -41,7 +41,7 @@ use crate::auth::{
     check_oci_bandwidth, record_oci_bandwidth, require_push_access, resolve_project,
     validate_pull_access, validate_push_access,
 };
-use crate::error::storage_error;
+use crate::error::{RegistryError, protocol_response, storage_error};
 use crate::response::{
     APPLICATION_OCTET_STREAM, DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers,
 };
@@ -82,7 +82,7 @@ pub struct MonolithicUploadQuery {
 pub async fn oci_blob_options(
     _rqctx: RequestContext<ApiContext>,
     _path: Path<BlobPath>,
-) -> Result<CorsResponse, HttpError> {
+) -> Result<CorsResponse, RegistryError> {
     Ok(Endpoint::cors(&[
         Get.into(),
         Delete.into(),
@@ -98,6 +98,14 @@ pub async fn oci_blob_options(
     tags = ["oci"],
 }]
 pub async fn oci_blob_exists(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<BlobPath>,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_blob_exists_inner(rqctx, path).await)
+}
+
+async fn oci_blob_exists_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
 ) -> Result<Response<Body>, HttpError> {
@@ -154,6 +162,14 @@ pub async fn oci_blob_exists(
     tags = ["oci"],
 }]
 pub async fn oci_blob_get(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<BlobPath>,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_blob_get_inner(rqctx, path).await)
+}
+
+async fn oci_blob_get_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
 ) -> Result<Response<Body>, HttpError> {
@@ -217,6 +233,14 @@ pub async fn oci_blob_get(
     tags = ["oci"],
 }]
 pub async fn oci_blob_delete(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<BlobPath>,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_blob_delete_inner(rqctx, path).await)
+}
+
+async fn oci_blob_delete_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
 ) -> Result<Response<Body>, HttpError> {
@@ -285,6 +309,15 @@ pub async fn oci_blob_delete(
     tags = ["oci"],
 }]
 pub async fn oci_upload_start(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<BlobPath>,
+    query: Query<UploadStartQuery>,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(&log, oci_upload_start_inner(rqctx, path, query).await)
+}
+
+async fn oci_upload_start_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
     query: Query<UploadStartQuery>,
@@ -405,6 +438,19 @@ pub async fn oci_upload_start(
     request_body_max_bytes = crate::OCI_REQUEST_BODY_MAX_BYTES,
 }]
 pub async fn oci_upload_monolithic(
+    rqctx: RequestContext<ApiContext>,
+    path: Path<BlobPath>,
+    query: Query<MonolithicUploadQuery>,
+    body: StreamingBody,
+) -> Result<Response<Body>, RegistryError> {
+    let log = rqctx.log.clone();
+    protocol_response(
+        &log,
+        oci_upload_monolithic_inner(rqctx, path, query, body).await,
+    )
+}
+
+async fn oci_upload_monolithic_inner(
     rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
     query: Query<MonolithicUploadQuery>,

@@ -183,3 +183,55 @@ impl TestServer {
         digest
     }
 }
+
+/// The `(code, message)` of each error in a registry error response,
+/// after checking that the OCI error body is at the top level of a JSON response with a request ID.
+#[expect(clippy::expect_used, reason = "test helper reading an OCI error body")]
+pub async fn oci_errors(resp: reqwest::Response) -> Vec<(String, String)> {
+    assert!(
+        resp.headers().contains_key("x-request-id"),
+        "Missing request ID header"
+    );
+    assert_eq!(
+        resp.headers()
+            .get(http::header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok()),
+        Some("application/json"),
+        "Error body should be JSON"
+    );
+    let body = resp.text().await.expect("Failed to read body");
+    let json: serde_json::Value = serde_json::from_str(&body).expect("Error body should be JSON");
+    let object = json.as_object().expect("Error body should be an object");
+    assert_eq!(
+        object.keys().collect::<Vec<_>>(),
+        ["errors"],
+        "Error body should hold only the OCI errors array: {body}"
+    );
+    let errors = object
+        .get("errors")
+        .and_then(serde_json::Value::as_array)
+        .expect("errors should be an array");
+    assert!(!errors.is_empty(), "errors should not be empty: {body}");
+    errors
+        .iter()
+        .map(|error| {
+            let field = |name| {
+                error
+                    .get(name)
+                    .and_then(serde_json::Value::as_str)
+                    .expect("Error code and message should be strings")
+                    .to_owned()
+            };
+            (field("code"), field("message"))
+        })
+        .collect()
+}
+
+/// The code of each error in a registry error response, after the checks of [`oci_errors`].
+pub async fn oci_error_codes(resp: reqwest::Response) -> Vec<String> {
+    oci_errors(resp)
+        .await
+        .into_iter()
+        .map(|(code, _message)| code)
+        .collect()
+}

@@ -8,8 +8,8 @@
 //! - Rate limiting for OCI requests
 
 use bencher_json::oci::{
-    OCI_ERROR_DENIED, OCI_ERROR_NAME_UNKNOWN, OCI_ERROR_UNAUTHORIZED, OCI_ERROR_UNSUPPORTED,
-    oci_error_body,
+    OCI_ERROR_DENIED, OCI_ERROR_NAME_INVALID, OCI_ERROR_NAME_UNKNOWN, OCI_ERROR_UNAUTHORIZED,
+    OCI_ERROR_UNSUPPORTED,
 };
 use bencher_json::{Jwt, OrganizationUuid, ProjectResourceId, ResourceName};
 use bencher_rbac::project::Permission;
@@ -51,36 +51,33 @@ pub fn extract_oci_bearer_token(rqctx: &RequestContext<ApiContext>) -> Result<Jw
 
     let auth_header = headers.get(bencher_json::AUTHORIZATION).ok_or_else(|| {
         HttpError::for_client_error(
-            None,
+            Some(OCI_ERROR_UNAUTHORIZED.to_owned()),
             ClientErrorStatusCode::UNAUTHORIZED,
-            oci_error_body(OCI_ERROR_UNAUTHORIZED, "Missing Authorization header"),
+            "Missing Authorization header".to_owned(),
         )
     })?;
 
     let auth_str = auth_header.to_str().map_err(|_err| {
         HttpError::for_client_error(
-            None,
+            Some(OCI_ERROR_UNSUPPORTED.to_owned()),
             ClientErrorStatusCode::BAD_REQUEST,
-            oci_error_body(
-                OCI_ERROR_UNSUPPORTED,
-                "Invalid Authorization header encoding",
-            ),
+            "Invalid Authorization header encoding".to_owned(),
         )
     })?;
 
     let Some(token) = bencher_json::strip_bearer_token(auth_str) else {
         return Err(HttpError::for_client_error(
-            None,
+            Some(OCI_ERROR_UNAUTHORIZED.to_owned()),
             ClientErrorStatusCode::UNAUTHORIZED,
-            oci_error_body(OCI_ERROR_UNAUTHORIZED, "Expected Bearer authentication"),
+            "Expected Bearer authentication".to_owned(),
         ));
     };
 
     token.parse().map_err(|_err| {
         HttpError::for_client_error(
-            None,
+            Some(OCI_ERROR_UNSUPPORTED.to_owned()),
             ClientErrorStatusCode::BAD_REQUEST,
-            oci_error_body(OCI_ERROR_UNSUPPORTED, "Invalid token format"),
+            "Invalid token format".to_owned(),
         )
     })
 }
@@ -98,24 +95,18 @@ fn validate_oci_scope(
         && token_repo != repository
     {
         return Err(HttpError::for_client_error(
-            None,
+            Some(OCI_ERROR_DENIED.to_owned()),
             ClientErrorStatusCode::FORBIDDEN,
-            oci_error_body(
-                OCI_ERROR_DENIED,
-                &format!("Token not valid for repository: {repository}"),
-            ),
+            format!("Token not valid for repository: {repository}"),
         ));
     }
 
     // Check action is allowed
     if !oci.actions.contains(required_action) {
         return Err(HttpError::for_client_error(
-            None,
+            Some(OCI_ERROR_DENIED.to_owned()),
             ClientErrorStatusCode::FORBIDDEN,
-            oci_error_body(
-                OCI_ERROR_DENIED,
-                &format!("Token does not permit {required_action:?} action"),
-            ),
+            format!("Token does not permit {required_action:?} action"),
         ));
     }
 
@@ -158,9 +149,9 @@ fn validate_pull_identity(
     }
 
     Err(HttpError::for_client_error(
-        None,
+        Some(OCI_ERROR_UNAUTHORIZED.to_owned()),
         ClientErrorStatusCode::UNAUTHORIZED,
-        oci_error_body(OCI_ERROR_UNAUTHORIZED, "Invalid or expired token"),
+        "Invalid or expired token".to_owned(),
     ))
 }
 
@@ -245,9 +236,9 @@ pub async fn require_push_access(
             })
             .map_err(|_err| {
                 HttpError::for_client_error(
-                    None,
+                    Some(OCI_ERROR_DENIED.to_owned()),
                     ClientErrorStatusCode::FORBIDDEN,
-                    oci_error_body(OCI_ERROR_DENIED, "Invalid repository for project token"),
+                    "Invalid repository for project token".to_owned(),
                 )
             })?;
         let project = resolve_project(context, &repo_rid).await?;
@@ -432,9 +423,9 @@ fn handle_claimed_project(
         })
         .map_err(|_err| {
             HttpError::for_client_error(
-                None,
+                Some(OCI_ERROR_DENIED.to_owned()),
                 ClientErrorStatusCode::FORBIDDEN,
-                oci_error_body(OCI_ERROR_DENIED, "Insufficient permissions"),
+                "Insufficient permissions".to_owned(),
             )
         })?;
 
@@ -495,12 +486,9 @@ async fn handle_nonexistent_project(
         ProjectResourceId::Uuid(uuid) => {
             slog::debug!(log, "OCI push to non-existent project by UUID"; "uuid" => %uuid);
             Err(HttpError::for_client_error(
-                None,
+                Some(OCI_ERROR_NAME_UNKNOWN.to_owned()),
                 ClientErrorStatusCode::NOT_FOUND,
-                oci_error_body(
-                    OCI_ERROR_NAME_UNKNOWN,
-                    &format!("Repository not found: {uuid}"),
-                ),
+                format!("Repository not found: {uuid}"),
             ))
         },
         ProjectResourceId::Slug(slug) => {
@@ -514,7 +502,7 @@ async fn handle_nonexistent_project(
             let slug_str: &str = slug.as_ref();
             let project_name: ResourceName = slug_str.parse().map_err(|e| {
                 HttpError::for_client_error(
-                    None,
+                    Some(OCI_ERROR_NAME_INVALID.to_owned()),
                     ClientErrorStatusCode::BAD_REQUEST,
                     format!("Invalid project name: {e}"),
                 )
@@ -569,9 +557,9 @@ pub(crate) async fn apply_user_rate_limit(
     let query_user =
         QueryUser::get_with_email(public_conn!(context), claims.email()).map_err(|_err| {
             HttpError::for_client_error(
-                None,
+                Some(OCI_ERROR_UNAUTHORIZED.to_owned()),
                 ClientErrorStatusCode::UNAUTHORIZED,
-                oci_error_body(OCI_ERROR_UNAUTHORIZED, "Invalid or expired token"),
+                "Invalid or expired token".to_owned(),
             )
         })?;
     slog::debug!(log, "Applying OCI request rate limit"; "user_uuid" => %query_user.uuid);
@@ -603,12 +591,9 @@ fn verify_project_token(
         return Ok(());
     }
     Err(HttpError::for_client_error(
-        None,
+        Some(OCI_ERROR_DENIED.to_owned()),
         ClientErrorStatusCode::FORBIDDEN,
-        oci_error_body(
-            OCI_ERROR_DENIED,
-            "Project token not authorized for this repository",
-        ),
+        "Project token not authorized for this repository".to_owned(),
     ))
 }
 
@@ -624,12 +609,9 @@ pub async fn resolve_project(
     let conn = public_conn!(context);
     QueryProject::from_resource_id(conn, resource_id).map_err(|_e| {
         HttpError::for_client_error(
-            None,
+            Some(OCI_ERROR_NAME_UNKNOWN.to_owned()),
             ClientErrorStatusCode::NOT_FOUND,
-            oci_error_body(
-                OCI_ERROR_NAME_UNKNOWN,
-                &format!("Repository not found: {resource_id}"),
-            ),
+            format!("Repository not found: {resource_id}"),
         )
     })
 }
@@ -653,16 +635,16 @@ async fn build_public_user(
         let conn = public_conn!(context);
         let query_user = QueryUser::get_with_email(conn, &email).map_err(|_err| {
             HttpError::for_client_error(
-                None,
+                Some(OCI_ERROR_UNAUTHORIZED.to_owned()),
                 ClientErrorStatusCode::UNAUTHORIZED,
-                oci_error_body(OCI_ERROR_UNAUTHORIZED, "Invalid token"),
+                "Invalid token".to_owned(),
             )
         })?;
         let auth_user = AuthUser::load(conn, query_user).map_err(|_err| {
             HttpError::for_client_error(
-                None,
+                Some(OCI_ERROR_UNAUTHORIZED.to_owned()),
                 ClientErrorStatusCode::UNAUTHORIZED,
-                oci_error_body(OCI_ERROR_UNAUTHORIZED, "Invalid token"),
+                "Invalid token".to_owned(),
             )
         })?;
         slog::debug!(
@@ -684,9 +666,9 @@ async fn build_public_user(
     // Token provided but invalid as both auth and public
     slog::warn!(log, "OCI push with invalid token");
     Err(HttpError::for_client_error(
-        None,
+        Some(OCI_ERROR_UNAUTHORIZED.to_owned()),
         ClientErrorStatusCode::UNAUTHORIZED,
-        oci_error_body(OCI_ERROR_UNAUTHORIZED, "Invalid or expired token"),
+        "Invalid or expired token".to_owned(),
     ))
 }
 

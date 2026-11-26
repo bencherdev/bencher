@@ -7,6 +7,7 @@
 //! Integration tests for the OCI token endpoint (GET and POST /v0/auth/oci/token).
 
 use bencher_api_tests::TestServer;
+use bencher_api_tests::oci::oci_error_codes;
 use bencher_json::{JsonUserKeyCreated, ProjectKey, UserKey};
 use http::StatusCode;
 use serde_json::Value;
@@ -669,4 +670,172 @@ async fn oci_token_user_key_malformed() {
 
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     assert!(resp.headers().contains_key("www-authenticate"));
+}
+
+// --- Error bodies -------------------------------------------------------------
+
+// GET with wrong credentials: 401 with the OCI error body at the top level
+#[tokio::test]
+async fn oci_token_error_unauthorized() {
+    let server = TestServer::new().await;
+    let user = server.signup("ErrBody User", "errbody@example.com").await;
+    let bad_api_key = server
+        .token_key()
+        .new_api_key("wrong@example.com".parse().unwrap(), u32::MAX)
+        .expect("Failed to create API key");
+
+    let resp = server
+        .client
+        .get(server.api_url("/v0/auth/oci/token?scope=repository:test:push"))
+        .basic_auth(user.email.as_ref(), Some(bad_api_key.as_ref()))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    assert!(resp.headers().contains_key("www-authenticate"));
+    assert_eq!(oci_error_codes(resp).await, ["UNAUTHORIZED"]);
+}
+
+// GET with a scope that is not `type:name:actions`: 400 UNSUPPORTED
+#[tokio::test]
+async fn oci_token_error_scope_format() {
+    let server = TestServer::new().await;
+
+    let resp = server
+        .client
+        .get(server.api_url("/v0/auth/oci/token?scope=repository:test"))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(oci_error_codes(resp).await, ["UNSUPPORTED"]);
+}
+
+// GET with a scope type other than `repository`: 400 UNSUPPORTED
+#[tokio::test]
+async fn oci_token_error_scope_type() {
+    let server = TestServer::new().await;
+
+    let resp = server
+        .client
+        .get(server.api_url("/v0/auth/oci/token?scope=registry:catalog:*"))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(oci_error_codes(resp).await, ["UNSUPPORTED"]);
+}
+
+// GET with an action other than pull or push: 400 UNSUPPORTED
+#[tokio::test]
+async fn oci_token_error_scope_action() {
+    let server = TestServer::new().await;
+
+    let resp = server
+        .client
+        .get(server.api_url("/v0/auth/oci/token?scope=repository:test:delete"))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(oci_error_codes(resp).await, ["UNSUPPORTED"]);
+}
+
+// POST with a body that is not a form: 400 with the OAuth 2.0 error body at the top level
+#[tokio::test]
+async fn oci_token_post_error_invalid_form() {
+    let server = TestServer::new().await;
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/auth/oci/token"))
+        .body("grant_type=password&grant_type=password")
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(oauth_error(resp).await, "invalid_request");
+}
+
+// POST with grant_type=refresh_token: 400 unsupported_grant_type
+#[tokio::test]
+async fn oci_token_post_error_refresh_token() {
+    let server = TestServer::new().await;
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/auth/oci/token"))
+        .form(&[
+            ("grant_type", "refresh_token"),
+            ("refresh_token", "some-token"),
+        ])
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(oauth_error(resp).await, "unsupported_grant_type");
+}
+
+// POST with a grant type other than password: 400 unsupported_grant_type
+#[tokio::test]
+async fn oci_token_post_error_grant_type() {
+    let server = TestServer::new().await;
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/auth/oci/token"))
+        .form(&[("grant_type", "client_credentials")])
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(oauth_error(resp).await, "unsupported_grant_type");
+}
+
+// POST with grant_type=password but no credentials: 400 invalid_request
+#[tokio::test]
+async fn oci_token_post_error_no_credentials() {
+    let server = TestServer::new().await;
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/auth/oci/token"))
+        .form(&[("grant_type", "password")])
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(oauth_error(resp).await, "invalid_request");
+}
+
+/// The `error` of an OAuth 2.0 error response, after checking its body is at the top level.
+#[expect(clippy::expect_used, reason = "test helper outside #[test] fns")]
+async fn oauth_error(resp: reqwest::Response) -> String {
+    let body = resp.text().await.expect("Failed to read body");
+    let json: Value = serde_json::from_str(&body).expect("Error body should be JSON");
+    let object = json.as_object().expect("Error body should be an object");
+    assert_eq!(
+        object.keys().collect::<Vec<_>>(),
+        ["error", "error_description"],
+        "{body}"
+    );
+    assert!(
+        object
+            .get("error_description")
+            .is_some_and(Value::is_string),
+        "{body}"
+    );
+    object
+        .get("error")
+        .and_then(Value::as_str)
+        .expect("error")
+        .to_owned()
 }

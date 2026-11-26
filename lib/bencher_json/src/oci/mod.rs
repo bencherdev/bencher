@@ -24,16 +24,23 @@ pub const OCI_ERROR_UNAUTHORIZED: &str = "UNAUTHORIZED";
 pub const OCI_ERROR_UNKNOWN: &str = "UNKNOWN";
 pub const OCI_ERROR_UNSUPPORTED: &str = "UNSUPPORTED";
 
-/// Formats an OCI-compliant JSON error body
-///
-/// Per the OCI Distribution Spec, if the response body is JSON it MUST follow:
-/// `{"errors": [{"code": "<CODE>", "message": "<msg>"}]}`
-pub fn oci_error_body(code: &str, message: &str) -> String {
-    serde_json::json!({
-        "errors": [{
-            "code": code,
-            "message": message
-        }]
-    })
-    .to_string()
-}
+/// Every error code above: the OCI Distribution Spec's codes, plus `TAG_INVALID` and `UNKNOWN`
+/// from the error codes of the `distribution` project
+pub const OCI_ERROR_CODES: [&str; 16] = [
+    OCI_ERROR_BLOB_UNKNOWN,
+    OCI_ERROR_BLOB_UPLOAD_INVALID,
+    OCI_ERROR_BLOB_UPLOAD_UNKNOWN,
+    OCI_ERROR_DENIED,
+    OCI_ERROR_DIGEST_INVALID,
+    OCI_ERROR_MANIFEST_BLOB_UNKNOWN,
+    OCI_ERROR_MANIFEST_INVALID,
+    OCI_ERROR_MANIFEST_UNKNOWN,
+    OCI_ERROR_NAME_INVALID,
+    OCI_ERROR_NAME_UNKNOWN,
+    OCI_ERROR_SIZE_INVALID,
+    OCI_ERROR_TAG_INVALID,
+    OCI_ERROR_TOO_MANY_REQUESTS,
+    OCI_ERROR_UNAUTHORIZED,
+    OCI_ERROR_UNKNOWN,
+    OCI_ERROR_UNSUPPORTED,
+];
