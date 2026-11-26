@@ -9,6 +9,8 @@ pub enum CliError {
     #[error("{0}")]
     Archive(#[from] crate::bencher::sub::ArchiveError),
     #[error("{0}")]
+    Plot(#[from] crate::bencher::sub::PlotError),
+    #[error("{0}")]
     Threshold(#[from] crate::bencher::sub::ThresholdError),
     #[error("{0}")]
     Thresholds(#[from] crate::bencher::sub::ThresholdsError),

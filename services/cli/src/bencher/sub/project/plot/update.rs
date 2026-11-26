@@ -1,14 +1,21 @@
-use bencher_client::types::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot};
+use bencher_client::types::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, ParameterFilter};
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, Index, MeasureUuid, PlotUuid, ProjectResourceId, ResourceName,
-    TestbedUuid, Window,
+    BenchmarkUuid, BranchUuid, Index, MeasureUuid, MetricName, PlotUuid, ProjectResourceId,
+    ResourceName, TestbedUuid, Window,
     project::plot::{XAxis, YAxis},
 };
 
+use super::{PlotError, metric_filter};
 use crate::{
     CliError,
-    bencher::{backend::AuthBackend, sub::SubCmd},
-    parser::project::plot::{CliPlotUpdate, CliXAxis, CliYAxis},
+    bencher::{
+        backend::AuthBackend,
+        sub::{SubCmd, project::parameter_filter},
+    },
+    parser::{
+        ElidedOption,
+        project::plot::{CliPlotUpdate, CliXAxis, CliYAxis},
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -31,7 +38,9 @@ pub struct Update {
     pub branches: Option<Vec<BranchUuid>>,
     pub testbeds: Option<Vec<TestbedUuid>>,
     pub benchmarks: Option<Vec<BenchmarkUuid>>,
+    pub parameters: Option<ParameterFilter>,
     pub measures: Option<Vec<MeasureUuid>>,
+    pub metrics: Option<Vec<MetricName>>,
     pub backend: AuthBackend,
 }
 
@@ -54,9 +63,16 @@ impl TryFrom<CliPlotUpdate> for Update {
             branches,
             testbeds,
             benchmarks,
+            parameters,
             measures,
+            metric,
             backend,
         } = update;
+        let parameters = parameters
+            .map(parameter_filter)
+            .transpose()
+            .map_err(PlotError::BadParameters)?;
+        let metrics = metric.map(metrics_or_every).transpose()?;
         Ok(Self {
             project,
             plot,
@@ -79,7 +95,9 @@ impl TryFrom<CliPlotUpdate> for Update {
             branches,
             testbeds,
             benchmarks,
+            parameters,
             measures,
+            metrics,
             backend: backend.try_into()?,
         })
     }
@@ -100,7 +118,9 @@ impl From<Update> for JsonUpdatePlot {
             branches,
             testbeds,
             benchmarks,
+            parameters,
             measures,
+            metrics,
             ..
         } = update;
         let index = index.map(Into::into);
@@ -119,6 +139,7 @@ impl From<Update> for JsonUpdatePlot {
         let benchmarks =
             benchmarks.map(|benchmarks| benchmarks.into_iter().map(Into::into).collect());
         let measures = measures.map(|measures| measures.into_iter().map(Into::into).collect());
+        let metrics = metrics.map(metric_filter);
         let patch = JsonPlotPatch {
             index,
             title: None,
@@ -133,9 +154,9 @@ impl From<Update> for JsonUpdatePlot {
             branches,
             testbeds,
             benchmarks,
-            parameters: None,
+            parameters,
             measures,
-            metrics: None,
+            metrics,
             hidden: None,
             focus: None,
         };
@@ -156,6 +177,20 @@ impl From<Update> for JsonUpdatePlot {
                 subtype_1: None,
             },
         }
+    }
+}
+
+/// A lone underscore is the empty set, which draws every metric.
+fn metrics_or_every(metrics: Vec<ElidedOption<MetricName>>) -> Result<Vec<MetricName>, PlotError> {
+    let given = metrics.len();
+    let names = metrics
+        .into_iter()
+        .filter_map(Option::from)
+        .collect::<Vec<MetricName>>();
+    if names.is_empty() || names.len() == given {
+        Ok(names)
+    } else {
+        Err(PlotError::MetricBesideUnderscore)
     }
 }
 
@@ -217,5 +252,109 @@ impl SubCmd for Update {
             })
             .await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_client::types::JsonUpdatePlot;
+    use clap::Parser as _;
+
+    use super::{PlotError, Update};
+    use crate::{CliError, parser::project::plot::CliPlotUpdate};
+
+    const PLOT: [&str; 4] = [
+        "update",
+        "my-project",
+        "4b6eae4c-b05f-4ecf-9d7b-5f60718293a4",
+        "--key=bencher_run_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh",
+    ];
+
+    /// Kills: a repeated `--metric` or `--parameters` the update drops, on the patch with a new
+    /// title and on the patch that removes the title, which carry the fields separately.
+    #[test]
+    fn plot_update_replaces_the_metrics_and_parameters() {
+        for title in ["new title", "_"] {
+            let body = body(&[
+                "--title",
+                title,
+                "--metric",
+                "p99",
+                "--metric",
+                "mean",
+                "--parameters",
+                r#"{"size": 64}"#,
+                "--parameters",
+                r#"{"size": 128}"#,
+            ]);
+            assert_eq!(
+                body["metrics"],
+                serde_json::json!(["p99", "mean"]),
+                "{body}"
+            );
+            assert_eq!(
+                body["parameters"],
+                serde_json::json!([{ "size": 128.0 }, { "size": 64.0 }]),
+                "{body}"
+            );
+        }
+    }
+
+    /// Kills: an update with neither flag that sends `null` or an empty list, which the API reads
+    /// as clearing the plot's metrics or parameters instead of keeping them.
+    #[test]
+    fn plot_update_without_the_flags_keeps_them() {
+        for title in [None, Some("new title"), Some("_")] {
+            let flags = title.map(|title| ["--title", title]);
+            let body = body(flags.as_ref().map_or(&[], |flags| flags.as_slice()));
+            assert_eq!(body.get("metrics"), None, "{body}");
+            assert_eq!(body.get("parameters"), None, "{body}");
+        }
+    }
+
+    /// Kills: an empty parameters filter the update drops as if no flag were given, which keeps
+    /// the plot's filter when the user asked to include every variant again.
+    #[test]
+    fn plot_update_with_empty_parameters_clears_them() {
+        let body = body(&["--parameters", "{}"]);
+        assert_eq!(body["parameters"], serde_json::json!([]), "{body}");
+    }
+
+    /// Kills: an underscore read as no flag given, which keeps the plot's metrics, or sent as a
+    /// metric named `_`, on each of the patches that carry the field.
+    #[test]
+    fn plot_update_with_an_underscore_clears_the_metrics() {
+        for title in [None, Some("new title"), Some("_")] {
+            let mut flags = vec!["--metric", "_"];
+            flags.extend(title.map(|title| ["--title", title]).into_iter().flatten());
+            let body = body(&flags);
+            assert_eq!(body["metrics"], serde_json::json!([]), "{body}");
+        }
+    }
+
+    /// Kills: an underscore beside metric names that is dropped or wins, so the update sends a
+    /// set the user did not write instead of refusing it.
+    #[test]
+    fn plot_update_refuses_an_underscore_beside_metric_names() {
+        for flags in [["_", "p99"], ["p99", "_"]] {
+            let cli = CliPlotUpdate::try_parse_from(
+                PLOT.iter()
+                    .copied()
+                    .chain(flags.into_iter().flat_map(|metric| ["--metric", metric])),
+            )
+            .unwrap();
+            assert!(
+                matches!(
+                    Update::try_from(cli),
+                    Err(CliError::Plot(PlotError::MetricBesideUnderscore))
+                ),
+                "{flags:?}"
+            );
+        }
+    }
+
+    fn body(flags: &[&str]) -> serde_json::Value {
+        let cli = CliPlotUpdate::try_parse_from(PLOT.iter().chain(flags)).unwrap();
+        serde_json::to_value(JsonUpdatePlot::from(Update::try_from(cli).unwrap())).unwrap()
     }
 }

@@ -20,6 +20,8 @@ pub enum Threshold {
 pub enum ThresholdError {
     #[error("Invalid threshold model: {0}")]
     BadModel(bencher_json::ValidError),
+    #[error("Failed to send the threshold parameters: {0}")]
+    BadParameters(serde_json::Error),
 }
 
 impl TryFrom<CliThreshold> for Threshold {
