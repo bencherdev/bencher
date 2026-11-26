@@ -20,10 +20,12 @@ Hay dos `scheme`s de almacenamiento:
     - `region`: (Opcional) Región del bucket. Requerido para AWS. Por defecto `auto`, que es lo que esperan los almacenamientos compatibles con S3.
     - `access_key_id`: Clave de acceso S3
     - `secret_access_key`: Clave secreta de acceso S3
-    - `chunk_size`: (Opcional) Tamaño mínimo de fragmento en bytes para almacenar en búfer los datos de carga antes de guardarlos. Predeterminado: 5 MB.
-      Los cuerpos de solicitud HTTP llegan como pequeños frames de red (típicamente 8 a 64 KB). Sin almacenamiento en búfer, cada frame se convierte en un objeto separado, creando miles de objetos por capa. Este valor también coincide con el tamaño mínimo de parte de carga multiparte de S3.
+    - `chunk_size`: (Opcional) Tamaño de parte en bytes para las cargas de blobs, de 5 MiB a 5 GiB. Predeterminado: 16 MiB (16.777.216 bytes).
+      Una carga se transmite a una carga multiparte en partes de este tamaño, y una sesión de carga conserva el tamaño de parte con el que comenzó.
 
-Establezca una regla de ciclo de vida del bucket que aborte las cargas multiparte incompletas. Un fallo a mitad de la finalización de una carga de blob deja una, y el servidor no la aborta.
+Las cargas de blobs necesitan tres cosas de un almacenamiento compatible con S3: el ETag de cada parte cargada es el MD5 de esa parte, una carga multiparte completada tiene el ETag multiparte estándar, y un `UploadPartCopy` prefirmado funciona. Cloudflare R2 cumple las tres.
+
+El servidor aborta una carga multiparte cuando falla la solicitud que la abrió, y las cargas multiparte que guardó una sesión de carga abandonada cuando limpia las cargas obsoletas. Además, establezca una regla de ciclo de vida del bucket que aborte las cargas multiparte incompletas: un fallo del servidor todavía puede dejar una carga que solo esta regla elimina.
 
 Si anteriormente configuró un `path` que comenzaba o terminaba con una barra, mueva los objetos existentes al prefijo normalizado antes de actualizar. Un `path` de `registry/` almacenaba claves bajo `registry//<project>/...` y ahora las almacena bajo `registry/<project>/...`. Cada segmento de `path` también se codifica en porcentaje en la clave almacenada cuando contiene un carácter de control ASCII, un carácter no ASCII o uno de `\` `{` `^` `}` `%` `` ` `` `]` `"` `>` `[` `~` `<` `#` `|` `*` `?`, y un segmento que sea exactamente `.` o `..` se almacena como `%2E` o `%2E%2E`. Cualquier otro carácter, incluidos los espacios, `+`, `=`, `@` y `:`, se almacena tal cual, por lo que `team#1` se convierte en `team%231` mientras que `team+1` sigue siendo `team+1`. Los datos almacenados bajo un prefijo que ahora se codifica necesitan el mismo traslado. Antes de mover cualquier dato, liste las claves realmente almacenadas en el bucket y compárelas con el nuevo prefijo.
 
@@ -34,3 +36,4 @@ Si anteriormente configuró un `path` que comenzaba o terminaba con una barra, m
 | storage.scheme |                 "s3"                   |      ---       |    Sí     | Especifica el `scheme` de almacenamiento. Para todas las demás claves de `storage`, vea la lista anterior. |
 | upload_timeout |                  3600                  |      3600      |    No     | Tiempo de espera de sesión de carga en segundos. Las cargas obsoletas se limpian al iniciar nuevas cargas. |
 | max_body_size  |               1073741824               |   1073741824   |    No     | Tamaño máximo del cuerpo en bytes para cargas de blobs y manifiestos. Las solicitudes que excedan este límite son rechazadas con 413 Payload Too Large. Predeterminado: 1 GiB. |
+| max_upload_memory |               536870912                |  536870912   |    No     | Memoria en bytes para los búferes de partes de las cargas, compartida por todas las solicitudes. Una carga que no encuentra un búfer libre espera uno. Un valor menor que una parte se eleva a una parte. Una solicitud cuya parte no se llena en los 5 minutos siguientes a tomar su búfer falla, y su cliente la vuelve a enviar. Predeterminado: 512 MiB. |

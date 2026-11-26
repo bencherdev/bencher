@@ -315,7 +315,7 @@ impl ApiCounter {
             Self::OciBandwidthMax(_) => "{bandwidth}",
             Self::OciStorageError(_, _) => "{error}",
             Self::OciFinalize(_) => "{upload}",
-            Self::OciUploadSweep(_) => "{session}",
+            Self::OciUploadSweep(_) => "{action}",
 
             Self::RunnerCreate | Self::RunnerUpdate => "{runner}",
             Self::RunnerJobClaim | Self::RunnerJobUpdate(_) => "{job}",
@@ -587,7 +587,7 @@ impl ApiCounter {
             Self::OciStorageError(_, _) => "Counts the number of failed registry storage calls",
             Self::OciFinalize(_) => "Counts the number of OCI blob upload finalizes, by outcome",
             Self::OciUploadSweep(_) => {
-                "Counts the number of stale OCI upload sessions the sweep acted on"
+                "Counts the stale OCI upload sessions the sweep deleted, and the multipart uploads it aborted"
             },
 
             Self::RunnerRequestMax(_) => "Counts the number of runner request maximums reached",

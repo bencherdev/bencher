@@ -198,6 +198,8 @@ impl From<OciPhaseOutcome> for KeyValue {
 pub enum OciFinalizeOutcome {
     Ok,
     DigestMismatch,
+    Resumed,
+    EtagMismatch,
     Error,
 }
 
@@ -206,6 +208,8 @@ impl fmt::Display for OciFinalizeOutcome {
         match self {
             Self::Ok => write!(f, "ok"),
             Self::DigestMismatch => write!(f, "digest_mismatch"),
+            Self::Resumed => write!(f, "resumed"),
+            Self::EtagMismatch => write!(f, "etag_mismatch"),
             Self::Error => write!(f, "error"),
         }
     }
@@ -219,12 +223,14 @@ impl From<OciFinalizeOutcome> for KeyValue {
 
 #[derive(Debug, Clone, Copy)]
 pub enum OciSweepAction {
+    Aborted,
     Deleted,
 }
 
 impl fmt::Display for OciSweepAction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Aborted => write!(f, "aborted"),
             Self::Deleted => write!(f, "deleted"),
         }
     }

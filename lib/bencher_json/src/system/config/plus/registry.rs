@@ -11,24 +11,22 @@ pub const DEFAULT_UPLOAD_TIMEOUT_SECS: u64 = 3600;
 /// Default maximum body size: 1 GiB (1,073,741,824 bytes)
 pub const DEFAULT_MAX_BODY_SIZE: u64 = 0x4000_0000;
 
-/// Default chunk size for upload buffering: 5 MB (5,242,880 bytes).
+/// Default part size for blob uploads: 16 MiB (16,777,216 bytes).
 ///
-/// HTTP request bodies arrive as small network frames (typically 8-64 KB).
-/// Without batching, each frame would be stored as a separate object,
-/// creating thousands of objects per layer and making both upload
-/// and completion extremely slow. This value controls the minimum batch
-/// size before flushing to the object store.
-///
-/// 5 MB also matches the S3 multipart upload minimum part size,
-/// so chunks stored at this size can be efficiently assembled during
-/// upload completion.
-pub const DEFAULT_CHUNK_SIZE: u64 = 5 * 1024 * 1024;
+/// An upload streams into a multipart upload in parts of this size, each held
+/// in memory until it is stored. A session keeps the part size it started with.
+pub const DEFAULT_CHUNK_SIZE: u64 = 16 * 1024 * 1024;
 
-/// Maximum chunk size for upload buffering: 5 GB (5,368,709,120 bytes).
-///
-/// The S3 multipart upload maximum part size is 5 GiB.
-/// We use 5 GB as a practical upper bound.
+/// Minimum part size for blob uploads: 5 MiB (5,242,880 bytes), the smallest
+/// part an S3 multipart upload allows.
+pub const MIN_CHUNK_SIZE: u64 = 5 * 1024 * 1024;
+
+/// Maximum part size for blob uploads: 5 GiB (5,368,709,120 bytes), the largest
+/// part an S3 multipart upload allows.
 pub const MAX_CHUNK_SIZE: u64 = 5 * 1024 * 1024 * 1024;
+
+/// Default memory for upload part buffers across all requests: 512 MiB (536,870,912 bytes).
+pub const DEFAULT_MAX_UPLOAD_MEMORY: u64 = 512 * 1024 * 1024;
 
 /// Container registry configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,6 +48,14 @@ pub struct JsonRegistry {
     /// Defaults to 1 GiB (1,073,741,824 bytes).
     #[serde(default = "default_max_body_size")]
     pub max_body_size: u64,
+    /// Memory in bytes for upload part buffers, shared by all requests.
+    /// An upload that finds no free buffer waits for one.
+    /// A value below one part is raised to one part.
+    /// A request whose part does not fill within 5 minutes of taking its buffer fails,
+    /// and its client resends it.
+    /// Defaults to 512 MiB (536,870,912 bytes). See [`DEFAULT_MAX_UPLOAD_MEMORY`].
+    #[serde(default = "default_max_upload_memory")]
+    pub max_upload_memory: u64,
 }
 
 fn default_upload_timeout() -> u64 {
@@ -58,6 +64,10 @@ fn default_upload_timeout() -> u64 {
 
 fn default_max_body_size() -> u64 {
     DEFAULT_MAX_BODY_SIZE
+}
+
+fn default_max_upload_memory() -> u64 {
+    DEFAULT_MAX_UPLOAD_MEMORY
 }
 
 impl Sanitize for JsonRegistry {
@@ -94,9 +104,9 @@ pub enum RegistryStorage {
         access_key_id: String,
         /// Secret Access Key with permissions to read/write the specified bucket
         secret_access_key: Secret,
-        /// Minimum chunk size in bytes for buffering upload data before storing.
-        /// Valid range: 5 MB to 5 GB. Defaults to 5 MB (5,242,880 bytes).
-        /// See [`DEFAULT_CHUNK_SIZE`] and [`MAX_CHUNK_SIZE`].
+        /// Part size in bytes for blob uploads, which stream into multipart uploads.
+        /// Valid range: 5 MiB to 5 GiB. Defaults to 16 MiB (16,777,216 bytes).
+        /// See [`DEFAULT_CHUNK_SIZE`], [`MIN_CHUNK_SIZE`], and [`MAX_CHUNK_SIZE`].
         #[serde(skip_serializing_if = "Option::is_none")]
         chunk_size: Option<u64>,
     },

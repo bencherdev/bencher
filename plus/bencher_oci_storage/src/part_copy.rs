@@ -23,6 +23,7 @@ use object_store::{ClientOptions, MultipartId, ObjectStoreExt as _, path::Path};
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use serde::Deserialize;
 use slog::Logger;
+use thiserror::Error;
 
 use crate::metrics::{self, StorageErrorCode, StorageOperation, StorageOutcome};
 use crate::s3_error::{self, Answer, S3Error};
@@ -64,20 +65,30 @@ pub(crate) struct PartCopy {
     log: Logger,
 }
 
+/// Why a copy of parts failed.
+#[derive(Debug, Error)]
+pub(crate) enum CopyError {
+    /// The destination upload is gone: completed, or aborted.
+    #[error("The upload the parts copy into is gone")]
+    UploadGone,
+    #[error(transparent)]
+    Storage(#[from] OciStorageError),
+}
+
+impl From<CopyError> for OciStorageError {
+    fn from(error: CopyError) -> Self {
+        match error {
+            CopyError::UploadGone => Self::Storage(error.to_string()),
+            CopyError::Storage(error) => error,
+        }
+    }
+}
+
 /// How a completion ended.
 #[derive(Debug)]
 pub(crate) enum Completion {
     /// This call completed the upload, and the object's `ETag` matches its parts.
-    Completed {
-        #[cfg_attr(
-            not(test),
-            expect(
-                dead_code,
-                reason = "returned for a caller to compare with another ETag"
-            )
-        )]
-        e_tag: String,
-    },
+    Completed { e_tag: String },
     /// The upload was already complete, as after a lost answer or a retry, and the
     /// destination holds an object of the source's size.
     Found,
@@ -115,6 +126,7 @@ impl PartCopy {
     ///
     /// Once a part fails its last attempt, no new part starts, and the copies in
     /// flight finish before the failure returns, so each records its answer.
+    /// A destination upload that S3 no longer knows fails as [`CopyError::UploadGone`].
     pub(crate) async fn copy_parts(
         &self,
         source: &Path,
@@ -122,7 +134,7 @@ impl PartCopy {
         upload_id: &MultipartId,
         size: u64,
         part_size: NonZeroU64,
-    ) -> Result<Vec<PartId>, OciStorageError> {
+    ) -> Result<Vec<PartId>, CopyError> {
         let copy_source = self.copy_source(source)?;
         let mut ranges = (1..).zip(copy_ranges(size, part_size));
         let mut in_flight = FuturesUnordered::new();
@@ -228,7 +240,7 @@ impl PartCopy {
         upload_id: &MultipartId,
         number: usize,
         range: Range<u64>,
-    ) -> Result<(usize, PartId), OciStorageError> {
+    ) -> Result<(usize, PartId), CopyError> {
         let mut headers = HeaderMap::new();
         headers.insert(COPY_SOURCE.clone(), copy_source.clone());
         headers.insert(COPY_SOURCE_RANGE.clone(), copy_range(&range)?);
@@ -251,10 +263,14 @@ impl PartCopy {
                 "attempt" => attempt,
                 "error" => %failure,
             );
+            if failure.is_no_such_upload() {
+                return Err(CopyError::UploadGone);
+            }
             if attempt >= MAX_ATTEMPTS || !failure.retries() {
                 return Err(OciStorageError::Storage(format!(
                     "Part copy of part {number} failed on attempt {attempt}: {failure}"
-                )));
+                ))
+                .into());
             }
             tokio::time::sleep(backoff(attempt)).await;
             attempt += 1;
@@ -367,6 +383,15 @@ impl Failure {
         }
     }
 
+    /// Whether S3 answered as it does for an upload it no longer knows: 404 `NoSuchUpload`.
+    fn is_no_such_upload(&self) -> bool {
+        let Self::Answer { status, error } = self else {
+            return false;
+        };
+        *status == StatusCode::NOT_FOUND
+            && error.as_ref().and_then(S3Error::code) == Some("NoSuchUpload")
+    }
+
     fn code(&self) -> StorageErrorCode {
         match self {
             Self::Sign(_) | Self::NoETag => StorageErrorCode::Other,
@@ -439,7 +464,7 @@ fn backoff(attempt: u32) -> Duration {
 
 /// The `ETag` S3 gives a multipart object: the MD5 of its parts' binary MD5s, then
 /// `-` and the number of parts.
-fn multipart_e_tag(parts: &[PartId]) -> Option<String> {
+pub(crate) fn multipart_e_tag(parts: &[PartId]) -> Option<String> {
     let mut md5 = Md5::new();
     for part in parts {
         let digest = hex::decode(part.content_id.trim_matches('"')).ok()?;
@@ -452,16 +477,27 @@ fn multipart_e_tag(parts: &[PartId]) -> Option<String> {
 }
 
 /// Whether a completion failed as S3 fails one it already completed: 404 `NoSuchUpload`.
-fn is_no_such_upload(error: &object_store::Error) -> bool {
+pub(crate) fn is_no_such_upload(error: &object_store::Error) -> bool {
+    answered_with(error, StatusCode::NOT_FOUND, "NoSuchUpload")
+}
+
+/// Whether a completion failed as S3 fails one that lists a part other than the
+/// newest of its number: 400 `InvalidPart`.
+pub(crate) fn is_invalid_part(error: &object_store::Error) -> bool {
+    answered_with(error, StatusCode::BAD_REQUEST, "InvalidPart")
+}
+
+/// Whether S3 answered the call with `status` and the S3 `code`.
+fn answered_with(error: &object_store::Error, status: StatusCode, code: &str) -> bool {
     let error: &(dyn std::error::Error + 'static) = error;
     std::iter::successors(Some(error), |error| error.source()).any(|error| {
         let message = error.to_string();
         Answer::of_message(&message).is_some_and(|answer| {
-            answer.status == Some(StatusCode::NOT_FOUND)
+            answer.status == Some(status)
                 && S3Error::parse(answer.body.as_bytes())
                     .as_ref()
                     .and_then(S3Error::code)
-                    == Some("NoSuchUpload")
+                    == Some(code)
         })
     })
 }

@@ -91,15 +91,17 @@ impl Plus {
         };
 
         // Initialize registry storage - uses S3 if configured, otherwise local filesystem
-        let (registry_url, registry_storage, upload_timeout, max_body_size) =
-            plus.registry.map_or((None, None, None, None), |registry| {
-                (
-                    registry.url,
-                    registry.storage,
-                    Some(registry.upload_timeout),
-                    Some(registry.max_body_size),
-                )
-            });
+        let (registry_url, registry_storage, upload_timeout, max_body_size, max_upload_memory) =
+            plus.registry
+                .map_or((None, None, None, None, None), |registry| {
+                    (
+                        registry.url,
+                        registry.storage,
+                        Some(registry.upload_timeout),
+                        Some(registry.max_body_size),
+                        Some(registry.max_upload_memory),
+                    )
+                });
         let registry_url = registry_url
             .map(|url| url.try_into().map_err(PlusError::RegistryUrl))
             .transpose()?
@@ -110,12 +112,13 @@ impl Plus {
             },
             Some(RegistryStorage::S3 { .. }) => info!(log, "Using S3 registry storage"),
         }
-        let oci_storage = OciStorage::try_from_config(
+        let oci_storage = OciStorage::try_from_config_with_upload_memory(
             log.clone(),
             registry_storage,
             database_path,
             upload_timeout,
             max_body_size,
+            max_upload_memory,
             None,
         )
         .map_err(PlusError::OciStorage)?;

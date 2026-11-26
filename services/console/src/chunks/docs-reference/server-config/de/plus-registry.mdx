@@ -20,10 +20,12 @@ Es gibt zwei Speicher-`scheme`s:
     - `region`: (Optional) Bucket-Region. Erforderlich für AWS. Standardmäßig `auto`, was S3-kompatible Speicher erwarten.
     - `access_key_id`: S3-Zugangsschlüssel
     - `secret_access_key`: S3-Geheimzugangsschlüssel
-    - `chunk_size`: (Optional) Minimale Chunk-Größe in Bytes für die Pufferung von Upload-Daten vor dem Speichern. Standard: 5 MB.
-      HTTP-Anfragekörper kommen als kleine Netzwerk-Frames an (typischerweise 8 bis 64 KB). Ohne Pufferung wird jeder Frame als separates Objekt gespeichert, was Tausende von Objekten pro Layer erzeugt. Dieser Wert entspricht auch der minimalen S3-Multipart-Upload-Teilgröße.
+    - `chunk_size`: (Optional) Teilgröße in Bytes für Blob-Uploads, von 5 MiB bis 5 GiB. Standard: 16 MiB (16.777.216 Bytes).
+      Ein Upload wird in Teilen dieser Größe in einen Multipart-Upload gestreamt, und eine Upload-Sitzung behält die Teilgröße, mit der sie begonnen hat.
 
-Legen Sie eine Bucket-Lebenszyklusregel fest, die unvollständige Multipart-Uploads abbricht. Ein Absturz während des Abschlusses eines Blob-Uploads hinterlässt einen solchen, und der Server bricht ihn nicht ab.
+Blob-Uploads benötigen drei Dinge von einem S3-kompatiblen Speicher: Der ETag jedes hochgeladenen Teils ist der MD5-Hash dieses Teils, ein abgeschlossener Multipart-Upload hat den standardmäßigen Multipart-ETag, und ein vorsigniertes `UploadPartCopy` funktioniert. Cloudflare R2 erfüllt alle drei.
+
+Der Server bricht einen Multipart-Upload ab, wenn die Anfrage, die ihn geöffnet hat, fehlschlägt, und die Multipart-Uploads, die eine aufgegebene Upload-Sitzung gespeichert hat, wenn er veraltete Uploads bereinigt. Legen Sie zusätzlich eine Bucket-Lebenszyklusregel fest, die unvollständige Multipart-Uploads abbricht: Ein Absturz kann weiterhin einen Upload hinterlassen, den nur diese Regel entfernt.
 
 Wenn Sie zuvor einen `path` konfiguriert haben, der mit einem Schrägstrich begann oder endete, verschieben Sie die vorhandenen Objekte vor dem Upgrade auf das normalisierte Präfix. Ein `path` von `registry/` speicherte Schlüssel unter `registry//<project>/...` und speichert sie jetzt unter `registry/<project>/...`. Jedes Segment von `path` wird im gespeicherten Schlüssel außerdem prozentcodiert, wo es ein ASCII-Steuerzeichen, ein Nicht-ASCII-Zeichen oder eines von `\` `{` `^` `}` `%` `` ` `` `]` `"` `>` `[` `~` `<` `#` `|` `*` `?` enthält, und ein Segment, das genau `.` oder `..` ist, wird als `%2E` oder `%2E%2E` gespeichert. Alle anderen Zeichen, einschließlich Leerzeichen, `+`, `=`, `@` und `:`, werden unverändert gespeichert, sodass `team#1` zu `team%231` wird, während `team+1` als `team+1` bleibt. Daten unter einem Präfix, das jetzt codiert wird, benötigen dieselbe Verschiebung. Listen Sie vor dem Verschieben von Daten die tatsächlich im Bucket gespeicherten Schlüssel auf und vergleichen Sie sie mit dem neuen Präfix.
 
@@ -34,3 +36,4 @@ Wenn Sie zuvor einen `path` konfiguriert haben, der mit einem Schrägstrich bega
 | storage.scheme |                 "s3"                   |     ---      |      Ja      | Gibt das Speicher-`scheme` an. Für alle anderen `storage`-Schlüssel siehe die Liste oben. |
 | upload_timeout |                  3600                  |     3600     |     Nein     | Upload-Sitzungs-Timeout in Sekunden. Veraltete Uploads werden bei neuen Uploads bereinigt. |
 | max_body_size  |               1073741824               |  1073741824  |     Nein     | Maximale Body-Größe in Bytes für Blob- und Manifest-Uploads. Anfragen, die dieses Limit überschreiten, werden mit 413 Payload Too Large abgelehnt. Standard: 1 GiB. |
+| max_upload_memory |               536870912                |  536870912   |    Nein     | Speicher in Bytes für die Teilpuffer von Uploads, den sich alle Anfragen teilen. Ein Upload, der keinen freien Puffer findet, wartet auf einen. Ein Wert unter einem Teil wird auf einen Teil angehoben. Eine Anfrage, deren Teil sich nicht innerhalb von 5 Minuten nach der Übernahme seines Puffers füllt, schlägt fehl, und ihr Client sendet sie erneut. Standard: 512 MiB. |

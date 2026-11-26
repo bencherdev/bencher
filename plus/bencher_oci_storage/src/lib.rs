@@ -12,7 +12,10 @@
 #[cfg(test)]
 use reqwest as _;
 
+mod buffers;
+mod e_tag;
 mod error;
+mod file_multipart;
 mod job_output;
 mod metrics;
 #[cfg(test)]
@@ -30,6 +33,7 @@ pub use error::OciError;
 pub use job_output::JobOutput;
 pub use metrics::{PhaseOutcome, PullTimer, UploadPhase, UploadPhaseTimer};
 pub use storage::{
-    BlobBody, ListTagsResult, MAX_CONCURRENCY, OciStorage, OciStorageError, UploadSweep,
+    Appended, BlobBody, Completed, ListTagsResult, MAX_CONCURRENCY, OciStorage, OciStorageError,
+    UploadSession, UploadSweep, UploadWriteError,
 };
 pub use types::{Digest, DigestError, Reference, Tag, UploadId};

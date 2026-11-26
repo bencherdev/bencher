@@ -5,7 +5,9 @@ use std::time::{Duration, Instant};
 use http::StatusCode;
 use object_store::client::{HttpError, HttpErrorKind};
 
-pub(crate) use meter::{blob_upload, finalize, time_stream, upload_sweep};
+pub(crate) use meter::{
+    blob_upload, buffer_released, buffer_taken, finalize, time_stream, upload_sweep,
+};
 
 use crate::s3_error::{Answer, S3Error};
 
@@ -271,12 +273,18 @@ pub enum PhaseOutcome {
 pub(crate) enum FinalizeOutcome {
     Ok,
     DigestMismatch,
+    /// A session that an earlier request left past its digest check finished.
+    Resumed,
+    /// A completed object's `ETag` was not the one its parts give.
+    EtagMismatch,
     /// Any other failure
     Error,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum SweepAction {
+    /// A stale session's multipart upload was aborted.
+    Aborted,
     /// A stale session's objects were all deleted.
     Deleted,
 }
@@ -295,7 +303,7 @@ mod meter {
     use std::task::{Context, Poll};
     use std::time::{Duration, Instant};
 
-    use bencher_otel::{ApiCounter, ApiHistogram, ApiMeter};
+    use bencher_otel::{ApiCounter, ApiGauge, ApiHistogram, ApiMeter};
     use futures::stream::{BoxStream, Stream, StreamExt as _};
 
     use super::{
@@ -361,6 +369,16 @@ mod meter {
 
     pub(crate) fn upload_sweep(action: SweepAction) {
         ApiMeter::increment(ApiCounter::OciUploadSweep(action.into()));
+    }
+
+    /// A part buffer was taken after a wait of `waited`.
+    pub(crate) fn buffer_taken(waited: Duration) {
+        ApiMeter::record(ApiHistogram::OciUploadBufferWait, waited.as_secs_f64());
+        ApiMeter::up(ApiGauge::OciUploadBuffers);
+    }
+
+    pub(crate) fn buffer_released() {
+        ApiMeter::down(ApiGauge::OciUploadBuffers);
     }
 
     /// A stream from a storage call, which records the call once, at the stream's end or drop.
@@ -484,6 +502,8 @@ mod meter {
             match outcome {
                 FinalizeOutcome::Ok => Self::Ok,
                 FinalizeOutcome::DigestMismatch => Self::DigestMismatch,
+                FinalizeOutcome::Resumed => Self::Resumed,
+                FinalizeOutcome::EtagMismatch => Self::EtagMismatch,
                 FinalizeOutcome::Error => Self::Error,
             }
         }
@@ -492,6 +512,7 @@ mod meter {
     impl From<SweepAction> for bencher_otel::OciSweepAction {
         fn from(action: SweepAction) -> Self {
             match action {
+                SweepAction::Aborted => Self::Aborted,
                 SweepAction::Deleted => Self::Deleted,
             }
         }
@@ -542,4 +563,8 @@ mod meter {
     pub(crate) fn finalize(_outcome: FinalizeOutcome) {}
 
     pub(crate) fn upload_sweep(_action: SweepAction) {}
+
+    pub(crate) fn buffer_taken(_waited: Duration) {}
+
+    pub(crate) fn buffer_released() {}
 }

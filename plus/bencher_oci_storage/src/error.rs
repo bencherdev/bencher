@@ -76,12 +76,15 @@ impl OciError {
                 OciStorageError::DigestMismatch { .. } => OCI_ERROR_DIGEST_INVALID,
                 OciStorageError::UploadNotFound(_) => OCI_ERROR_BLOB_UPLOAD_UNKNOWN,
                 OciStorageError::InvalidContent(_) => OCI_ERROR_MANIFEST_INVALID,
-                OciStorageError::BlobUploadInvalidContent(_) => OCI_ERROR_BLOB_UPLOAD_INVALID,
+                OciStorageError::BlobUploadInvalidContent(_) | OciStorageError::PartStalled(_) => {
+                    OCI_ERROR_BLOB_UPLOAD_INVALID
+                },
                 OciStorageError::BlobNotFound(_) => OCI_ERROR_BLOB_UNKNOWN,
                 OciStorageError::SizeExceeded { .. } => OCI_ERROR_SIZE_INVALID,
                 OciStorageError::Storage(_)
                 | OciStorageError::Config(_)
-                | OciStorageError::Json(_) => OCI_ERROR_UNKNOWN,
+                | OciStorageError::Json(_)
+                | OciStorageError::EtagMismatch(_) => OCI_ERROR_UNKNOWN,
             },
             Self::BlobUploadInvalid { .. } | Self::RangeNotSatisfiable(_) => {
                 OCI_ERROR_BLOB_UPLOAD_INVALID

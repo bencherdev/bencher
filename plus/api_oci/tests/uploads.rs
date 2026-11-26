@@ -10,7 +10,7 @@
 //! Integration tests for OCI upload session endpoints.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::time::Duration;
 
 use bencher_api_tests::TestServer;
@@ -451,6 +451,129 @@ async fn upload_complete_with_final_chunk() {
     assert_eq!(resp.status(), StatusCode::CREATED);
 }
 
+// PUT whose body stalls: it answers 408 and keeps the session, so the client's
+// resend of the same PUT, with the whole body, finishes the upload
+#[tokio::test]
+async fn upload_complete_resent_after_a_stalled_body() {
+    use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _, BufReader};
+
+    const HALF: usize = 512 * 1024;
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Stalled User", "uploadstalled@example.com")
+        .await;
+    let org = server.create_org(&user, "Stalled Org").await;
+    let project = server.create_project(&user, &org, "Stalled Project").await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
+        .send()
+        .await
+        .expect("Start upload failed");
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header");
+    let session_id = extract_session_id(location).expect("Invalid location format");
+
+    let blob: Vec<u8> = (0..=250u8).cycle().take(2 * HALF).collect();
+    let digest = compute_digest(&blob);
+    let put_path = format!(
+        "/v2/{}/blobs/uploads/{}?digest={}",
+        project_slug, session_id, digest
+    );
+
+    // The PUT sends half its body, then stalls past the fill deadline on paused time
+    let address = server
+        .url
+        .strip_prefix("http://")
+        .expect("The test server speaks HTTP");
+    let (first_half, _) = blob.split_at(HALF);
+    tokio::time::pause();
+    let answered = AtomicBool::new(false);
+    let stalled = async {
+        let mut socket = tokio::net::TcpStream::connect(address)
+            .await
+            .expect("Failed to connect");
+        socket
+            .write_all(
+                format!(
+                    "PUT {} HTTP/1.1\r\nHost: {}\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n",
+                    put_path,
+                    address,
+                    blob.len()
+                )
+                .as_bytes(),
+            )
+            .await
+            .expect("Failed to send");
+        socket.write_all(first_half).await.expect("Failed to send");
+        let mut status_line = String::new();
+        BufReader::new(socket)
+            .read_line(&mut status_line)
+            .await
+            .expect("Failed to read the response");
+        answered.store(true, Ordering::SeqCst);
+        status_line
+    };
+    let (status_line, ()) = tokio::time::timeout(Duration::from_hours(1), async {
+        tokio::join!(stalled, tick_until(&answered))
+    })
+    .await
+    .expect("The stalled PUT answers");
+    tokio::time::resume();
+    assert!(
+        status_line.starts_with("HTTP/1.1 408 "),
+        "a stalled body answers 408, not {status_line}"
+    );
+
+    // The client resends the same PUT, with the whole body, on a new connection
+    let client = reqwest::Client::new();
+    let resp = client
+        .put(server.api_url(&put_path))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob.clone())
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // The digest holds the blob's bytes
+    let pull_token = server.oci_pull_token(&user, &project);
+    let resp = client
+        .get(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = resp.bytes().await.expect("Failed to read body");
+    assert_eq!(body.as_ref(), blob.as_slice());
+}
+
+/// Sleeps in steps of 1 second until `done`, so that paused time never jumps
+/// past hyper's 30-second header-read timeout while a request is on its way.
+async fn tick_until(done: &AtomicBool) {
+    while !done.load(Ordering::SeqCst) {
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+}
+
 // PUT with wrong digest (should fail)
 #[tokio::test]
 async fn upload_complete_wrong_digest() {
@@ -513,6 +636,84 @@ async fn upload_complete_wrong_digest() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+// PUT whose body breaks: it answers 400 and cancels the session
+#[tokio::test]
+async fn upload_complete_with_a_broken_body_cancels_the_session() {
+    use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _, BufReader};
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("BrokenPut User", "uploadbrokenput@example.com")
+        .await;
+    let org = server.create_org(&user, "BrokenPut Org").await;
+    let project = server
+        .create_project(&user, &org, "BrokenPut Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
+        .send()
+        .await
+        .expect("Start upload failed");
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header");
+    let session_id = extract_session_id(location).expect("Invalid location format");
+
+    // One good chunk, then a chunk size line that is not hex
+    let digest = compute_digest(b"0123456789abcdef");
+    let address = server
+        .url
+        .strip_prefix("http://")
+        .expect("The test server speaks HTTP");
+    let mut socket = tokio::net::TcpStream::connect(address)
+        .await
+        .expect("Failed to connect");
+    socket
+        .write_all(
+            format!(
+                "PUT /v2/{}/blobs/uploads/{}?digest={} HTTP/1.1\r\nHost: {}\r\nContent-Type: application/octet-stream\r\nTransfer-Encoding: chunked\r\n\r\n10\r\n0123456789abcdef\r\nnot a chunk size\r\n",
+                project_slug, session_id, digest, address
+            )
+            .as_bytes(),
+        )
+        .await
+        .expect("Failed to send");
+    let mut status_line = String::new();
+    BufReader::new(socket)
+        .read_line(&mut status_line)
+        .await
+        .expect("Failed to read the response");
+    assert!(
+        status_line.starts_with("HTTP/1.1 400 "),
+        "a broken body answers 400, not {status_line}"
+    );
+
+    // The session is gone
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
 // DELETE /v2/{name}/blobs/uploads/{session_id} - Cancel upload
@@ -1232,6 +1433,83 @@ async fn chunked_upload_exceeds_max_body_size() {
         "Second chunk exceeding max body size should be rejected, got {}",
         resp2.status()
     );
+}
+
+// Session PUT whose body takes the upload past max body size: it answers 413
+// and cancels the session
+#[tokio::test]
+async fn upload_complete_past_max_body_size_cancels_the_session() {
+    // max_body_size = 100 bytes
+    let server = TestServer::new_with_limits(3600, 100).await;
+    let user = server.signup("PutLimit User", "putlimit@example.com").await;
+    let org = server.create_org(&user, "PutLimit Org").await;
+    let project = server.create_project(&user, &org, "PutLimit Project").await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
+        .send()
+        .await
+        .expect("Start upload failed");
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header")
+        .to_owned();
+    let session_id = extract_session_id(&location).expect("Invalid location format");
+
+    // First chunk: 60 bytes (within limit)
+    let chunk1 = vec![0xAA; 60];
+    let resp1 = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .body(chunk1.clone())
+        .send()
+        .await
+        .expect("Chunk 1 failed");
+    assert_eq!(resp1.status(), StatusCode::ACCEPTED);
+
+    // The PUT's 60 bytes take the upload to 120 bytes, past 100
+    let chunk2 = vec![0xBB; 60];
+    let digest = compute_digest(&[chunk1, chunk2.clone()].concat());
+    let resp2 = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}?digest={}",
+            project_slug, session_id, digest
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .body(chunk2)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp2.status(), StatusCode::PAYLOAD_TOO_LARGE);
+
+    // The session is gone
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
 // =============================================================================

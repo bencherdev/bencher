@@ -4,6 +4,7 @@ use core::fmt;
 pub enum ApiGauge {
     RunnerState(RunnerStateKind),
     CallbackPending,
+    OciUploadBuffers,
 }
 
 impl ApiGauge {
@@ -11,6 +12,7 @@ impl ApiGauge {
         match self {
             Self::RunnerState(_) => "runner.state",
             Self::CallbackPending => "callback.pending",
+            Self::OciUploadBuffers => "oci.upload.buffers",
         }
     }
 
@@ -18,6 +20,7 @@ impl ApiGauge {
         match self {
             Self::RunnerState(_) => "Current number of runners in each state",
             Self::CallbackPending => "Current number of callbacks waiting to be delivered",
+            Self::OciUploadBuffers => "Current number of upload part buffers in use",
         }
     }
 
@@ -25,13 +28,14 @@ impl ApiGauge {
         match self {
             Self::RunnerState(_) => "{runner}",
             Self::CallbackPending => "{callback}",
+            Self::OciUploadBuffers => "{buffer}",
         }
     }
 
     pub(crate) fn attributes(self) -> Vec<opentelemetry::KeyValue> {
         match self {
             Self::RunnerState(state) => vec![state.into()],
-            Self::CallbackPending => Vec::new(),
+            Self::CallbackPending | Self::OciUploadBuffers => Vec::new(),
         }
     }
 }

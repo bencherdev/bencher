@@ -49,6 +49,11 @@ pub fn into_http_error(error: OciError) -> HttpError {
             ClientErrorStatusCode::RANGE_NOT_SATISFIABLE,
             external_message,
         ),
+        http::StatusCode::REQUEST_TIMEOUT => HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::REQUEST_TIMEOUT,
+            external_message,
+        ),
         http::StatusCode::NOT_IMPLEMENTED => HttpError {
             status_code: ErrorStatusCode::NOT_IMPLEMENTED,
             error_code: None,
