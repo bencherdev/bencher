@@ -2,17 +2,18 @@ use super::common::{
     WsStream, assert_ws_closed, associate_runner_spec, claim_via_channel,
     connect_channel_ws as connect_channel, create_runner, create_test_report, get_project_id,
     get_runner_id, insert_test_job, insert_test_job_with_optional_fields,
-    insert_test_job_with_timeout, insert_test_spec, plan_project, post_metrics,
-    recv_server_msg as recv_msg, runner_metadata, send_runner_msg as send_msg, set_job_runner_id,
-    set_job_status, ws_url,
+    insert_test_job_with_project, insert_test_job_with_timeout, insert_test_spec, plan_project,
+    post_metrics, recv_server_msg as recv_msg, runner_metadata, send_runner_msg as send_msg,
+    set_job_runner_id, set_job_status, ws_url,
 };
 use super::report_parse;
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::{LogCapture, TestProject, TestServer, TestUser};
 use bencher_json::{
-    BmfVersion, BranchName, JobStatus, JobUuid, JsonNewMetric, JsonRunnerKey, PlanLevel,
+    BmfVersion, BranchName, JobStatus, JobUuid, JsonJob, JsonNewMetric, JsonRunnerKey, PlanLevel,
     PollTimeout, RunnerUuid,
     project::{
+        Visibility,
         measure::built_in::{
             BuiltInMeasure as _,
             json::{BuildTime, FileSize},
@@ -1355,6 +1356,206 @@ async fn channel_completed_result_processing_failure() {
 
     // Connection stays open. Close from client side.
     ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// A job's reader learns why it failed: results refused with a 400 record that 400's text as the
+/// job's error, a job that succeeds records none, and a failed run keeps its runner's error.
+///
+/// Kills: a channel that marks a job `Failed` for its results without recording why, which a
+/// remote run reports as an unknown error.
+#[tokio::test]
+async fn channel_job_error_reaches_its_reader() {
+    const V0: &str = r#"{ "bench_a": { "latency": { "value": 42.0 } } }"#;
+    const V1: &str = r#"{ "bench_a": [{ "measures": { "latency": { "value": 42.0 } } }] }"#;
+    const REFUSAL: &str =
+        "Results parsed as BMF version 1, but the remote job was accepted at BMF version 0.";
+    let completed = |stdout: &'static str| {
+        move |job| RunnerMessage::Completed {
+            job,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: Some(stdout.to_owned()),
+                stderr: None,
+                output: None,
+            }],
+        }
+    };
+    let refused = finished_job(&TestServer::new().await, "refused", completed(V1)).await;
+    assert_eq!(refused.status, JobStatus::Failed);
+    let error = refused.output.and_then(|output| output.error);
+    assert!(
+        error
+            .as_deref()
+            .is_some_and(|error| error.starts_with(REFUSAL)),
+        "{error:?}"
+    );
+
+    let processed = finished_job(&TestServer::new().await, "processed", completed(V0)).await;
+    assert_eq!(processed.status, JobStatus::Processed);
+    let output = processed
+        .output
+        .expect("expected the processed job's output");
+    assert_eq!(output.error, None);
+
+    let failed = finished_job(&TestServer::new().await, "exited", |job| {
+        RunnerMessage::Failed {
+            job,
+            results: vec![JsonIterationOutput {
+                exit_code: 1,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
+            error: "Benchmark exited with code 1".to_owned(),
+        }
+    })
+    .await;
+    assert_eq!(failed.status, JobStatus::Failed);
+    assert_eq!(
+        failed.output.and_then(|output| output.error).as_deref(),
+        Some("Benchmark exited with code 1")
+    );
+}
+
+/// A job whose results its organization's plan or daily limit refuses records the text a report
+/// request of the project is refused with as its error, which an anonymous reader does not see.
+///
+/// Kills: recording only a 400, which leaves a plan refusal or a daily limit an unknown error.
+#[tokio::test]
+async fn channel_job_plan_refusal_reaches_its_reader() {
+    let completed = |job| RunnerMessage::Completed {
+        job,
+        results: vec![JsonIterationOutput {
+            exit_code: 0,
+            stdout: Some(r#"{ "bench_a": { "latency": { "value": 42.0 } } }"#.to_owned()),
+            stderr: None,
+            output: None,
+        }],
+    };
+    let branch: BranchName = "metrics".parse().expect("Invalid branch name");
+
+    let server = TestServer::new_with_creation_limits(u32::MAX, 4).await;
+    let (admin, project) = plan_project(&server, "job-limit", None).await;
+    let (status, body) = post_metrics(&server, &admin, &project, &branch, 4).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let (status, body) = post_metrics(&server, &admin, &project, &branch, 1).await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS, "{body}");
+    let limited = project_finished_job(&server, &admin, &project, completed).await;
+    assert_eq!(limited.status, JobStatus::Failed);
+    assert_eq!(
+        limited.output.and_then(|output| output.error),
+        Some(error_message(&body))
+    );
+    let project_slug: &str = project.slug.as_ref();
+    let anonymous: JsonJob = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{project_slug}/jobs/{}",
+            limited.uuid
+        )))
+        .send()
+        .await
+        .expect("Request failed")
+        .json()
+        .await
+        .expect("Failed to parse the job");
+    assert!(
+        anonymous.output.is_none(),
+        "an anonymous reader sees no error"
+    );
+
+    let server = TestServer::new().await;
+    let (admin, project) = plan_project(&server, "job-private", None).await;
+    diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
+        .set(schema::project::visibility.eq(Visibility::Private))
+        .execute(&mut server.db_conn())
+        .expect("Failed to make the project private");
+    let (status, body) = post_metrics(&server, &admin, &project, &branch, 1).await;
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED, "{body}");
+    let refused = project_finished_job(&server, &admin, &project, completed).await;
+    assert_eq!(refused.status, JobStatus::Failed);
+    assert_eq!(
+        refused.output.and_then(|output| output.error),
+        Some(error_message(&body))
+    );
+}
+
+/// The message of an error response's body.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn error_message(body: &str) -> String {
+    let body: serde_json::Value = serde_json::from_str(body).expect("Failed to parse the error");
+    body.get("message")
+        .and_then(serde_json::Value::as_str)
+        .expect("Expected the error's message")
+        .to_owned()
+}
+
+/// Run a version 0 job of a new project through to `finish`, and read the job as its project's
+/// admin does.
+async fn finished_job<F>(server: &TestServer, suffix: &str, finish: F) -> JsonJob
+where
+    F: FnOnce(JobUuid) -> RunnerMessage,
+{
+    let admin = server
+        .signup("Admin", &format!("ws-finished-{suffix}@example.com"))
+        .await;
+    let org = server
+        .create_org(&admin, &format!("Ws Finished {suffix}"))
+        .await;
+    let project = server
+        .create_project(&admin, &org, &format!("Ws finished {suffix} proj"))
+        .await;
+    project_finished_job(server, &admin, &project, finish).await
+}
+
+/// Run a version 0 job of `project` through to `finish`, and read the job as `admin` does.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn project_finished_job<F>(
+    server: &TestServer,
+    admin: &TestUser,
+    project: &TestProject,
+    finish: F,
+) -> JsonJob
+where
+    F: FnOnce(JobUuid) -> RunnerMessage,
+{
+    let runner = create_runner(server, &admin.token, "Runner").await;
+    let runner_key = runner.key.to_string();
+
+    let project_id = get_project_id(server, project.slug.as_ref());
+    let report_id = create_test_report(server, project_id);
+    let (_, spec_id) = insert_test_spec(server);
+    let job_uuid = insert_test_job_with_project(server, report_id, project.uuid, spec_id);
+    associate_runner_spec(server, get_runner_id(server, runner.uuid), spec_id);
+
+    let mut ws = connect_channel(server, runner.uuid, &runner_key).await;
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
+    for message in [ready, RunnerMessage::Running, finish(job_uuid)] {
+        send_msg(&mut ws, &message).await;
+        let response = recv_msg(&mut ws).await;
+        assert!(
+            matches!(response, ServerMessage::Job(_) | ServerMessage::Ack { .. }),
+            "Expected Job or Ack, got: {response:?}"
+        );
+    }
+    ws.close(None).await.expect("Failed to close WebSocket");
+
+    let project_slug: &str = project.slug.as_ref();
+    let response = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(response.status(), StatusCode::OK, "Failed to read the job");
+    response.json().await.expect("Failed to parse the job")
 }
 
 // =============================================================================

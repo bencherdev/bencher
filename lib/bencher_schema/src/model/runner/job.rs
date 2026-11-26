@@ -8,13 +8,15 @@ use bencher_json::{
         github::LinkedRepositoryStatus,
         report::{Adapter, JsonReportSettings},
     },
-    runner::{GitHubDispatch, JsonIterationOutput, JsonNewCallback, job::JsonNewRunJob},
+    runner::{
+        GitHubDispatch, JsonIterationOutput, JsonJobOutput, JsonNewCallback, job::JsonNewRunJob,
+    },
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
     result::QueryResult,
 };
-use dropshot::HttpError;
+use dropshot::{ClientErrorStatusCode, HttpError};
 use tokio::sync::Mutex;
 
 use slog::Logger;
@@ -125,7 +127,7 @@ impl QueryJob {
         &self,
         log: &Logger,
         context: &ApiContext,
-        results: Vec<JsonIterationOutput>,
+        results: &[JsonIterationOutput],
         now: DateTime,
     ) -> Result<(), HttpError> {
         // Look up the report
@@ -153,23 +155,22 @@ impl QueryJob {
         // each file's contents = one result string for the adapter.
         // Otherwise fall back to stdout (mirrors CLI Command mode).
         //
-        // All iterations are flattened into a single Vec<String>, matching
+        // All iterations are flattened into a single array, matching
         // the CLI's local behavior (services/cli/src/bencher/sub/run/mod.rs).
         // Without fold: each string becomes a separate enumerated iteration.
         // With fold: all strings are combined via the fold operation.
-        let results_strings: Vec<String> = results
-            .into_iter()
+        let results_array: Vec<&str> = results
+            .iter()
             .flat_map(|r| {
-                if let Some(output) = r.output {
-                    output.into_values().collect::<Vec<_>>()
-                } else if let Some(stdout) = r.stdout {
-                    vec![stdout]
+                if let Some(output) = &r.output {
+                    output.values().map(String::as_str).collect::<Vec<_>>()
+                } else if let Some(stdout) = &r.stdout {
+                    vec![stdout.as_str()]
                 } else {
                     Vec::new()
                 }
             })
             .collect();
-        let results_array: Vec<&str> = results_strings.iter().map(AsRef::as_ref).collect();
 
         let settings = self.report_settings(query_report.adapter);
 
@@ -670,6 +671,9 @@ mod tests {
 
     use super::*;
     use crate::{
+        error::{
+            BencherResource, payment_required_error, resource_not_found_error, too_many_requests,
+        },
         macros::sql::last_insert_rowid,
         model::organization::plan::{LicenseUsage, MeteredPlan},
         test_util::{
@@ -693,6 +697,43 @@ mod tests {
             usage: 0,
             level,
         })
+    }
+
+    // --- results_error tests ---
+
+    /// Kills: recording only a 400, which leaves a plan refusal or a daily limit an unknown error;
+    /// and recording every error, which for a 500 names its internal error and for a 404 a row ID.
+    #[test]
+    fn a_jobs_results_error_is_only_a_client_refusals_message() {
+        let refusals = [
+            bad_request_error(
+                "Results parsed as BMF version 1, but the remote job was accepted at BMF version 0.",
+            ),
+            payment_required_error(
+                "No plan (subscription or license) found for organization with private project",
+            ),
+            too_many_requests(
+                "Unclaimed organization has exceeded the daily rate limit (4). Please, reduce your daily usage.",
+            ),
+        ];
+        for error in refusals {
+            assert_eq!(
+                results_error(&error).as_deref(),
+                Some(error.external_message.as_str()),
+                "{error}"
+            );
+        }
+        for error in [
+            issue_error(
+                "Failed to load report thresholds",
+                "Failed to load the thresholds for a report:",
+                "database is locked",
+            ),
+            resource_not_found_error(BencherResource::Report, 7, "Record not found"),
+            conflict_error("Report already exists"),
+        ] {
+            assert_eq!(results_error(&error), None, "{error}");
+        }
     }
 
     // --- resolve_timeout tests ---
@@ -1938,8 +1979,12 @@ async fn reprocess_single_completed_job(log: &Logger, context: &ApiContext, job:
     };
 
     let now = context.clock.now();
-    if let Err(e) = job.process_results(log, context, output.results, now).await {
+    if let Err(e) = job
+        .process_results(log, context, &output.results, now)
+        .await
+    {
         slog::warn!(log, "Failed to reprocess job results, marking as Failed"; "job_id" => ?job.id, "error" => %e);
+        record_results_error(log, context, job, output, &e).await;
         let failed_update = UpdateJob::set_status(JobStatus::Failed, now);
         let result =
             failed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed);
@@ -1981,4 +2026,44 @@ async fn reprocess_single_completed_job(log: &Logger, context: &ApiContext, job:
             slog::error!(log, "Failed to mark reprocessed job as processed"; "job_id" => ?job.id, "error" => %e);
         },
     }
+}
+
+/// Store a job's output with the error its results failed on, before the job is marked `Failed`,
+/// so whoever reads the finished job sees why.
+pub async fn record_results_error(
+    log: &Logger,
+    context: &ApiContext,
+    job: &QueryJob,
+    output: JsonJobOutput,
+    error: &HttpError,
+) {
+    let Some(error) = results_error(error) else {
+        return;
+    };
+    let JsonJobOutput { results, error: _ } = output;
+    let output = JsonJobOutput {
+        results,
+        error: Some(error),
+    };
+    if let Err(e) = context
+        .oci_storage()
+        .job_output()
+        .put(job.config.project, job.uuid, &output)
+        .await
+    {
+        slog::error!(log, "Failed to record the job's results error"; "job_id" => ?job.id, "error" => %e);
+    }
+}
+
+/// Only a refusal a report sent with the same results shows its sender is recorded, while other
+/// errors can carry internal detail.
+fn results_error(error: &HttpError) -> Option<String> {
+    [
+        ClientErrorStatusCode::BAD_REQUEST,
+        ClientErrorStatusCode::PAYMENT_REQUIRED,
+        ClientErrorStatusCode::TOO_MANY_REQUESTS,
+    ]
+    .iter()
+    .any(|status_code| error.status_code == *status_code)
+    .then(|| error.external_message.clone())
 }
