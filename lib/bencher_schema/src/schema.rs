@@ -129,6 +129,26 @@ diesel::table! {
 }
 
 diesel::table! {
+    job_github (job_id) {
+        job_id -> Integer,
+        repository_id -> BigInt,
+        head_sha -> Text,
+        number -> Nullable<BigInt>,
+        ci_id -> Nullable<Text>,
+        ci_only_thresholds -> Bool,
+        ci_only_on_alert -> Bool,
+        check_run_id -> Nullable<BigInt>,
+        state -> Integer,
+        attempts -> Integer,
+        status -> Nullable<Integer>,
+        failure -> Nullable<Integer>,
+        approval_url -> Nullable<Text>,
+        created -> BigInt,
+        modified -> BigInt,
+    }
+}
+
+diesel::table! {
     linked_repository (project_id) {
         project_id -> Integer,
         installation_id -> BigInt,
@@ -612,6 +632,7 @@ diesel::joinable!(job -> runner (runner_id));
 diesel::joinable!(job -> spec (spec_id));
 diesel::joinable!(job_callback -> job (job_id));
 diesel::joinable!(job_duration_by_report -> report (report_id));
+diesel::joinable!(job_github -> job (job_id));
 diesel::joinable!(linked_repository -> project (project_id));
 diesel::joinable!(linked_repository -> user (user_id));
 diesel::joinable!(measure -> project (project_id));
@@ -683,6 +704,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     job,
     job_callback,
     job_duration_by_report,
+    job_github,
     linked_repository,
     measure,
     metric,

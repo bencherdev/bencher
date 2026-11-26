@@ -13,7 +13,7 @@ use bencher_schema::{
     error::{resource_not_found_err, with_auth_hint},
     model::{
         project::QueryProject,
-        runner::{JobId, QueryJob, QueryJobCallbackView},
+        runner::{JobId, QueryJob, QueryJobCallbackView, QueryJobGitHubView},
         user::actor::ApiActor,
     },
     schema,
@@ -130,13 +130,20 @@ pub async fn get_ls_inner(
         let mut jobs = schema::job::table
             .inner_join(schema::report::table)
             .left_join(schema::job_callback::table)
+            .left_join(schema::job_github::table)
             .filter(schema::job::id.eq_any(&page))
             .select((
                 QueryJob::as_select(),
                 schema::report::uuid,
                 Option::<QueryJobCallbackView>::as_select(),
+                Option::<QueryJobGitHubView>::as_select(),
             ))
-            .load::<(QueryJob, ReportUuid, Option<QueryJobCallbackView>)>(conn)
+            .load::<(
+                QueryJob,
+                ReportUuid,
+                Option<QueryJobCallbackView>,
+                Option<QueryJobGitHubView>,
+            )>(conn)
             .map_err(resource_not_found_err!(
                 Job,
                 (&query_project, &pagination_params, &query_params)
@@ -146,7 +153,9 @@ pub async fn get_ls_inner(
             .collect::<HashMap<_, _>>();
         page.iter()
             .filter_map(|job_id| jobs.remove(job_id))
-            .map(|(job, report_uuid, callback)| job.into_json(conn, report_uuid, callback))
+            .map(|(job, report_uuid, callback, github)| {
+                job.into_json_with_github(conn, report_uuid, callback, github)
+            })
             .collect::<Result<Vec<_>, _>>()?
     });
 
@@ -269,22 +278,33 @@ pub async fn get_one_inner(
 
     let job_uuid = path_params.job;
 
-    let (query_job, report_uuid, callback): (QueryJob, ReportUuid, Option<QueryJobCallbackView>) =
-        schema::job::table
-            .inner_join(schema::report::table)
-            .left_join(schema::job_callback::table)
-            .filter(schema::job::project_id.eq(query_project.id))
-            .filter(schema::job::uuid.eq(job_uuid))
-            .select((
-                QueryJob::as_select(),
-                schema::report::uuid,
-                Option::<QueryJobCallbackView>::as_select(),
-            ))
-            .first(actor_conn!(context, api_actor))
-            .map_err(resource_not_found_err!(Job, (&query_project, job_uuid)))?;
+    let (query_job, report_uuid, callback, github): (
+        QueryJob,
+        ReportUuid,
+        Option<QueryJobCallbackView>,
+        Option<QueryJobGitHubView>,
+    ) = schema::job::table
+        .inner_join(schema::report::table)
+        .left_join(schema::job_callback::table)
+        .left_join(schema::job_github::table)
+        .filter(schema::job::project_id.eq(query_project.id))
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select((
+            QueryJob::as_select(),
+            schema::report::uuid,
+            Option::<QueryJobCallbackView>::as_select(),
+            Option::<QueryJobGitHubView>::as_select(),
+        ))
+        .first(actor_conn!(context, api_actor))
+        .map_err(resource_not_found_err!(Job, (&query_project, job_uuid)))?;
 
     let has_run = query_job.status.has_run();
-    let mut job = query_job.into_json(actor_conn!(context, api_actor), report_uuid, callback)?;
+    let mut job = query_job.into_json_with_github(
+        actor_conn!(context, api_actor),
+        report_uuid,
+        callback,
+        github,
+    )?;
 
     // Fetch output from blob storage for terminal jobs only when authenticated
     if has_run && api_actor.is_auth() {

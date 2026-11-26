@@ -43,7 +43,7 @@ const RATE_LIMIT_HEADERS: [&str; 3] = ["retry-after", "x-ratelimit-remaining", "
 /// The GitHub REST API, one request per call. It follows no redirect but one, to the API's own
 /// origin, so a credential only ever goes to the API.
 #[derive(Debug, Clone)]
-pub(crate) struct GitHubApi {
+pub struct GitHubApi {
     http: reqwest::Client,
     base: Url,
 }
@@ -175,7 +175,24 @@ impl GitHubApi {
         answer(response).await
     }
 
-    pub(crate) async fn post<B, T>(
+    /// GET `path` with `query`, following no redirect.
+    pub async fn get<T>(
+        &self,
+        path: &[&str],
+        query: &[(&str, &str)],
+        bearer: &str,
+    ) -> Result<T, GitHubApiError>
+    where
+        T: DeserializeOwned,
+    {
+        let mut url = self.url(path);
+        if !query.is_empty() {
+            url.query_pairs_mut().extend_pairs(query);
+        }
+        send(self.http.get(url).bearer_auth(bearer)).await
+    }
+
+    pub async fn post<B, T>(
         &self,
         path: &[&str],
         bearer: &str,
@@ -188,6 +205,25 @@ impl GitHubApi {
         send(
             self.http
                 .post(self.url(path))
+                .bearer_auth(bearer)
+                .json(body),
+        )
+        .await
+    }
+
+    pub async fn patch<B, T>(
+        &self,
+        path: &[&str],
+        bearer: &str,
+        body: &B,
+    ) -> Result<T, GitHubApiError>
+    where
+        B: Serialize,
+        T: DeserializeOwned,
+    {
+        send(
+            self.http
+                .patch(self.url(path))
                 .bearer_auth(bearer)
                 .json(body),
         )

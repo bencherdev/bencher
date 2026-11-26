@@ -8,13 +8,15 @@ use bencher_callback::{
 };
 use bencher_github_client::{GitHubApiError, GitHubApp, GitHubAppError, GitHubInstallationToken};
 use bencher_json::{
-    BENCHER_API_VERSION, CallbackContext, Clock, JobStatus, JobUuid, JsonNewCallback, JsonReport,
+    BENCHER_API_VERSION, BENCHER_URL, CallbackContext, Clock, GitHubInstallationId,
+    GitHubIssueNumber, GitHubRepositoryId, JobStatus, JobUuid, JsonNewCallback, JsonReport,
     OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName,
     project::github::LinkedRepositoryReason,
     runner::{CALLBACK_JOB_STATUSES, GitHubDispatch, JobCallbackState},
 };
+use dashmap::DashMap;
 #[cfg(feature = "sentry")]
-use dashmap::{DashMap, Entry};
+use dashmap::Entry;
 use diesel::{
     ExpressionMethods as _, NullableExpressionMethods as _, OptionalExtension as _, QueryDsl as _,
     RunQueryDsl as _, SelectableHelper as _,
@@ -25,14 +27,18 @@ use http::HeaderMap;
 use http::StatusCode;
 use slog::Logger;
 use tokio::{
-    sync::{Mutex, Semaphore},
+    sync::{Mutex, OwnedMutexGuard, Semaphore},
     time::Instant,
 };
 use tokio_util::sync::CancellationToken;
+use url::Url;
 
 #[cfg(feature = "sentry")]
 use super::governor::Signal;
-use super::governor::{Governor, rate_limit};
+use super::{
+    GitHubPosts,
+    governor::{Governor, rate_limit},
+};
 use crate::{
     context::DbConnection,
     model::{
@@ -46,6 +52,10 @@ use crate::{
     },
     schema,
 };
+
+mod post;
+
+pub(super) use post::advance;
 
 const MAX_ATTEMPTS: i32 = 3;
 /// A report builds synchronously on a worker thread, so a burst of builds could take every worker.
@@ -62,12 +72,20 @@ pub(super) struct Delivery {
     sender: Arc<dyn CallbackSender>,
     shutdown: CancellationToken,
     clock: Clock,
-    /// Mints the token of a dispatch that goes out without its own.
+    /// Mints the token of a dispatch that goes out without its own, and of every post.
     github_app: Option<Arc<GitHubApp>>,
+    /// Where a post's comment links to.
+    console_url: Url,
     report_builds: Semaphore,
     governor: Governor,
+    /// A job's start and its post, one at a time.
+    jobs: Locks<JobId>,
+    /// The comment writes for a pull request, one at a time.
+    pull_requests: Locks<(GitHubRepositoryId, GitHubIssueNumber)>,
     #[cfg(feature = "sentry")]
-    alarms: Alarms,
+    alarms: Alarms<CallbackHost>,
+    #[cfg(feature = "sentry")]
+    post_alarms: Alarms<OrganizationUuid>,
 }
 
 /// A pending callback and the values its log lines name.
@@ -88,8 +106,11 @@ enum Unprepared {
     Open,
     #[display("parse")]
     Parse,
+    /// The report could not be read from the database.
     #[display("report")]
     Report,
+    #[display("render")]
+    Render,
     /// A dispatch without a token, on a server that has no GitHub App to mint one.
     #[display("app")]
     NoApp,
@@ -122,7 +143,7 @@ impl Unprepared {
     fn failure(self) -> Option<CallbackFailure> {
         match self {
             Self::Open => Some(CallbackFailure::Open),
-            Self::Parse | Self::Report => Some(CallbackFailure::Render),
+            Self::Parse | Self::Report | Self::Render => Some(CallbackFailure::Render),
             Self::NoApp | Self::NoLink => Some(CallbackFailure::Unminted),
             Self::Shutdown => None,
         }
@@ -137,8 +158,12 @@ impl Delivery {
         sender: Arc<dyn CallbackSender>,
         shutdown: CancellationToken,
         clock: Clock,
-        github_app: Option<Arc<GitHubApp>>,
+        github: Option<GitHubPosts>,
     ) -> Self {
+        let (github_app, console_url) = github.map_or_else(
+            || (None, BENCHER_URL.clone()),
+            |GitHubPosts { app, console_url }| (Some(app), console_url),
+        );
         Self {
             connection,
             reader,
@@ -147,10 +172,15 @@ impl Delivery {
             shutdown,
             clock,
             github_app,
+            console_url,
             report_builds: Semaphore::new(REPORT_BUILDS),
             governor: Governor::default(),
+            jobs: Locks::default(),
+            pull_requests: Locks::default(),
             #[cfg(feature = "sentry")]
             alarms: Alarms::default(),
+            #[cfg(feature = "sentry")]
+            post_alarms: Alarms::default(),
         }
     }
 
@@ -296,7 +326,7 @@ impl Delivery {
         };
         // Of everything in the body, only the report can fail to serialize.
         let Ok(body) = callback.render(context, report.as_ref()) else {
-            return Err(Unprepared::Report);
+            return Err(Unprepared::Render);
         };
         Ok(match route {
             Route::Stored(headers) => Outgoing::Stored(CallbackRequest {
@@ -331,10 +361,12 @@ impl Delivery {
             return Err(Unprepared::Shutdown);
         };
         let github = GitHubLinking::new(self.github_app.as_deref());
-        let Ok(report) = report.into_json(log, &mut conn, ReportMode::Full, github) else {
-            return Err(Unprepared::Report);
-        };
-        Ok(report)
+        report
+            .into_json(log, &mut conn, ReportMode::Full, github)
+            .map_err(|e| {
+                slog::error!(log, "Failed to read a job's report"; "job" => %job_uuid, "error" => %e);
+                Unprepared::Report
+            })
     }
 
     /// A read connection, however long the pool stays busy: giving up would leave the callback
@@ -386,7 +418,7 @@ impl Delivery {
             let target = match &outgoing {
                 Outgoing::Stored(request) => Target::Stored(request),
                 Outgoing::Minted { app, body } => {
-                    let Some(link) = self.connected_link(log, &claim).await else {
+                    let Ok(Some(link)) = self.connected_link(log, &claim).await else {
                         self.unsent(log, &claim, Unprepared::NoLink).await;
                         return;
                     };
@@ -448,14 +480,17 @@ impl Delivery {
 
     /// The project's connected link as it stands now, without which a dispatch with no token of
     /// its own never goes out.
-    async fn connected_link(&self, log: &Logger, claim: &Claim) -> Option<QueryLinkedRepository> {
+    async fn connected_link(
+        &self,
+        log: &Logger,
+        claim: &Claim,
+    ) -> QueryResult<Option<QueryLinkedRepository>> {
         let link = QueryLinkedRepository::get_connected(
             &mut *self.connection.lock().await,
             claim.project_id,
         );
-        link.unwrap_or_else(|e| {
+        link.inspect_err(|e| {
             slog::error!(log, "Failed to read a linked repository"; "job" => %claim.job_uuid, "error" => %e);
-            None
         })
     }
 
@@ -482,9 +517,9 @@ impl Delivery {
         body: &str,
     ) -> (CallbackAttempt, Stage) {
         let (link, GitHubInstallationToken { token, full_name }) =
-            match self.mint(log, claim, app, link).await {
+            match self.mint(log, claim, app, link, Mint::Dispatch).await {
                 Ok(minted) => minted,
-                Err(unminted) => return unminted,
+                Err(NoToken { attempt, stage, .. }) => return (attempt, stage),
             };
         let Ok(headers) = GitHubDispatch::minted_headers(BENCHER_API_VERSION, &token) else {
             return (CallbackAttempt::Unminted, Stage::Mint);
@@ -513,25 +548,23 @@ impl Delivery {
         claim: &Claim,
         app: &GitHubApp,
         link: QueryLinkedRepository,
-    ) -> Result<(QueryLinkedRepository, GitHubInstallationToken), (CallbackAttempt, Stage)> {
+        mint: Mint,
+    ) -> Result<(QueryLinkedRepository, GitHubInstallationToken), NoToken> {
         let now = self.clock.now();
-        let refusal = match app
-            .mint(now, link.installation_id, link.repository_id)
-            .await
-        {
+        let refusal = match mint.send(app, now, &link).await {
             Ok(token) => return Ok((link, token)),
             Err(refusal) => refusal,
         };
         let Some(reason) = gone(&refusal) else {
-            return Err((refused(refusal), Stage::Mint));
+            return Err(NoToken::refused(refusal, link.installation_id));
         };
         let installation = match app.repository_installation(now, &link.full_name).await {
             Ok(Some(installation)) => installation,
             Ok(None) => {
                 self.disconnect(log, claim, &link, reason).await;
-                return Err((refused(refusal), Stage::Mint));
+                return Err(NoToken::disconnected(refusal));
             },
-            Err(lookup) => return Err((refused(lookup), Stage::Lookup)),
+            Err(lookup) => return Err(NoToken::new(refused(lookup), Stage::Lookup)),
         };
         let moved = link.move_to(&mut *self.connection.lock().await, installation);
         let link = match moved {
@@ -540,22 +573,20 @@ impl Delivery {
                 moved
             },
             // Replaced since, so it is no longer this link to mint for.
-            Ok(None) => return Err((refused(refusal), Stage::Mint)),
+            Ok(None) => return Err(NoToken::new(refused(refusal), Stage::Mint)),
             Err(e) => {
                 slog::error!(log, "Failed to move a linked repository"; "job" => %claim.job_uuid, "error" => %e);
-                return Err((refused(refusal), Stage::Mint));
+                return Err(NoToken::new(refused(refusal), Stage::Mint));
             },
         };
-        match app
-            .mint(now, link.installation_id, link.repository_id)
-            .await
-        {
+        match mint.send(app, now, &link).await {
             Ok(token) => Ok((link, token)),
             Err(refusal) => {
                 if let Some(reason) = gone(&refusal) {
                     self.disconnect(log, claim, &link, reason).await;
+                    return Err(NoToken::disconnected(refusal));
                 }
-                Err((refused(refusal), Stage::Mint))
+                Err(NoToken::refused(refusal, link.installation_id))
             },
         }
     }
@@ -649,6 +680,14 @@ enum Stage {
     Mint,
     #[display("lookup")]
     Lookup,
+    #[display("check")]
+    Check,
+    #[display("head")]
+    Head,
+    #[display("comments")]
+    Comments,
+    #[display("comment")]
+    Comment,
 }
 
 impl Target<'_> {
@@ -672,6 +711,83 @@ impl Target<'_> {
     }
 }
 
+/// What a mint's token can write.
+#[derive(Debug, Clone, Copy)]
+enum Mint {
+    /// The contents, for a dispatch.
+    Dispatch,
+    /// The checks and the pull requests, for a post.
+    Post,
+}
+
+/// A mint that gave no token: the attempt it counts as, and where it ended.
+struct NoToken {
+    attempt: CallbackAttempt,
+    stage: Stage,
+    cause: NoTokenCause,
+}
+
+/// What a mint that gave no token says of the post.
+#[derive(Debug, Clone, Copy)]
+enum NoTokenCause {
+    /// The installation has not approved the permissions the mint asked for.
+    Approval(GitHubInstallationId),
+    /// The link was disconnected, since no installation holds its repository.
+    Disconnected,
+    Other,
+}
+
+impl Mint {
+    async fn send(
+        self,
+        app: &GitHubApp,
+        now: bencher_json::DateTime,
+        link: &QueryLinkedRepository,
+    ) -> Result<GitHubInstallationToken, GitHubAppError> {
+        match self {
+            Self::Dispatch => {
+                app.mint(now, link.installation_id, link.repository_id)
+                    .await
+            },
+            Self::Post => {
+                app.mint_post(now, link.installation_id, link.repository_id)
+                    .await
+            },
+        }
+    }
+}
+
+impl NoToken {
+    fn new(attempt: CallbackAttempt, stage: Stage) -> Self {
+        Self {
+            attempt,
+            stage,
+            cause: NoTokenCause::Other,
+        }
+    }
+
+    fn refused(refusal: GitHubAppError, installation: GitHubInstallationId) -> Self {
+        let cause = if let GitHubAppError::Mint(GitHubApiError::PermissionsNotGranted) = refusal {
+            NoTokenCause::Approval(installation)
+        } else {
+            NoTokenCause::Other
+        };
+        Self {
+            attempt: refused(refusal),
+            stage: Stage::Mint,
+            cause,
+        }
+    }
+
+    fn disconnected(refusal: GitHubAppError) -> Self {
+        Self {
+            attempt: refused(refusal),
+            stage: Stage::Mint,
+            cause: NoTokenCause::Disconnected,
+        }
+    }
+}
+
 /// Why a refused mint says the repository left the installation, if it says so.
 fn gone(refusal: &GitHubAppError) -> Option<LinkedRepositoryReason> {
     if let GitHubAppError::Mint(GitHubApiError::NotFound) = refusal {
@@ -686,9 +802,18 @@ fn gone(refusal: &GitHubAppError) -> Option<LinkedRepositoryReason> {
 /// A failed mint or lookup as an attempt: GitHub's answer, as a refused send's would be, with its
 /// rate limit. No refusal holds the token, and a request error goes on without its URL.
 fn refused(failure: GitHubAppError) -> CallbackAttempt {
-    let (GitHubAppError::Mint(failure) | GitHubAppError::Installation(failure)) = failure else {
+    let (GitHubAppError::Mint(failure)
+    | GitHubAppError::Installation(failure)
+    | GitHubAppError::InstallationPage(failure)) = failure
+    else {
         return CallbackAttempt::Unminted;
     };
+    answered(failure)
+}
+
+/// A refused GitHub request as an attempt, with its rate limit. A request error goes on without
+/// its URL.
+fn answered(failure: GitHubApiError) -> CallbackAttempt {
     match failure {
         GitHubApiError::NotFound => {
             CallbackAttempt::Refused(StatusCode::NOT_FOUND, RateLimit::default())
@@ -729,23 +854,60 @@ struct RateLimited {
     project: ProjectUuid,
 }
 
-/// When Sentry last heard of each host's rate limit, within the hour.
+/// When Sentry last heard of each key, within the hour.
 #[cfg(feature = "sentry")]
-#[derive(Default)]
-struct Alarms(DashMap<CallbackHost, Instant>);
+struct Alarms<K>(DashMap<K, Instant>);
 
 #[cfg(feature = "sentry")]
-impl Alarms {
-    /// Whether Sentry has not heard of the host within the hour, marking it heard if so.
-    fn due(&self, host: &CallbackHost) -> bool {
+impl<K> Default for Alarms<K>
+where
+    K: Eq + std::hash::Hash,
+{
+    fn default() -> Self {
+        Self(DashMap::new())
+    }
+}
+
+#[cfg(feature = "sentry")]
+impl<K> Alarms<K>
+where
+    K: Eq + std::hash::Hash + Clone,
+{
+    /// Whether Sentry has not heard of the key within the hour, marking it heard if so.
+    fn due(&self, key: &K) -> bool {
         self.0.retain(|_, at| at.elapsed() < ALARM_INTERVAL);
-        match self.0.entry(host.clone()) {
+        match self.0.entry(key.clone()) {
             Entry::Occupied(_) => false,
             Entry::Vacant(entry) => {
                 entry.insert(Instant::now());
                 true
             },
         }
+    }
+}
+
+/// One lock for each key, kept only while something holds it or waits for it.
+struct Locks<K>(DashMap<K, Arc<Mutex<()>>>);
+
+impl<K> Default for Locks<K>
+where
+    K: Eq + std::hash::Hash,
+{
+    fn default() -> Self {
+        Self(DashMap::new())
+    }
+}
+
+impl<K> Locks<K>
+where
+    K: Eq + std::hash::Hash + Clone,
+{
+    async fn lock(&self, key: K) -> OwnedMutexGuard<()> {
+        // `retain` and `entry` both hold the shard's lock, so an entry goes only while the map holds
+        // its sole `Arc`.
+        self.0.retain(|_, lock| Arc::strong_count(lock) > 1);
+        let lock = Arc::clone(self.0.entry(key).or_default().value());
+        lock.lock_owned().await
     }
 }
 

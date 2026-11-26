@@ -61,4 +61,6 @@
 "GracePeriod" = "number"
 "HeartbeatTimeout" = "number"
 "GitHubInstallationId" = "number"
+"GitHubIssueNumber" = "number"
+"GitHubRepositoryId" = "number"
 "GitHubRepositoryName" = "string"

@@ -29,7 +29,8 @@ diesel.workspace = true
 diesel_migrations.workspace = true
 http.workspace = true
 serde_json.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tokio = { workspace = true, features = ["io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
+url.workspace = true
 uuid = { workspace = true, features = ["v4"] }
 
 [lints]

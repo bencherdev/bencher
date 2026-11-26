@@ -18,10 +18,10 @@ mod graphql;
 pub mod test_server;
 mod webhook;
 
+use api::GITHUB_API_URL;
 #[cfg(any(test, feature = "test-base-url"))]
 use api::join_path;
-use api::{GITHUB_API_URL, GitHubApi};
-pub use api::{GitHubApiError, GitHubRepository};
+pub use api::{GitHubApi, GitHubApiError, GitHubRepository};
 pub use app::{GitHubApp, GitHubAppError, GitHubInstallationToken, GitHubReadToken};
 pub use bencher_valid::GitHubInstallationPermission;
 pub use graphql::GitHubCommitsError;

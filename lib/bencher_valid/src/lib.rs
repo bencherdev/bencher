@@ -64,14 +64,15 @@ pub use non_empty::NonEmpty;
 pub use parameter::{ParameterKey, ParameterValue};
 #[cfg(feature = "plus")]
 pub use plus::{
-    Architecture, CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth,
-    ExpirationYear, GitHubAppSlug, GitHubInstallationId, GitHubInstallationPermission,
-    GitHubRepositoryId, GitHubRepositoryName, GracePeriod, HeartbeatTimeout, ImageReference,
-    LastFour, LicensedPlanId, Memory, MeteredPlanId, OAuthAccessToken, OAuthClientId, OAuthCode,
-    OAuthCodeChallenge, OAuthCodeHash, OAuthCodeVerifier, OAuthIssuer, OAuthMaxAge, OAuthNonce,
-    OAuthRedirectUri, OAuthRefreshToken, OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes,
-    OAuthTokenHash, OperatingSystem, PlanLevel, PlanStatus, PollTimeout, RecaptchaAction,
-    RecaptchaScore, RunnerKey, RunnerKeyHash, Sandbox, Sha256, Timeout, UpdateChannel,
+    Architecture, CardBrand, CardCvc, CardNumber, CiId, Cpu, Disk, Entitlements, ExpirationMonth,
+    ExpirationYear, GitHubAppSlug, GitHubCheckRunId, GitHubInstallationId,
+    GitHubInstallationPermission, GitHubIssueNumber, GitHubRepositoryId, GitHubRepositoryName,
+    GracePeriod, HeartbeatTimeout, ImageReference, LastFour, LicensedPlanId, Memory, MeteredPlanId,
+    OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeChallenge, OAuthCodeHash,
+    OAuthCodeVerifier, OAuthIssuer, OAuthMaxAge, OAuthNonce, OAuthRedirectUri, OAuthRefreshToken,
+    OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash, OperatingSystem,
+    PlanLevel, PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash,
+    Sandbox, Sha256, Timeout, UpdateChannel,
 };
 pub use resource_id::{IntoResourceId, ResourceId};
 pub use resource_name::ResourceName;

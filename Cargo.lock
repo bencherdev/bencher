@@ -304,6 +304,7 @@ dependencies = [
  "serde_json",
  "slog",
  "tokio",
+ "url",
  "uuid",
 ]
 
@@ -1023,6 +1024,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_github_post"
+version = "0.6.17"
+dependencies = [
+ "bencher_comment",
+ "bencher_github_client",
+ "bencher_json",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "bencher_google_client"
 version = "0.6.17"
 dependencies = [
@@ -1314,8 +1327,10 @@ dependencies = [
  "bencher_boundary",
  "bencher_callback",
  "bencher_cimd",
+ "bencher_comment",
  "bencher_egress",
  "bencher_github_client",
+ "bencher_github_post",
  "bencher_google_client",
  "bencher_google_index",
  "bencher_json",
