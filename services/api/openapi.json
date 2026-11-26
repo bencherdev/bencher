@@ -15492,7 +15492,7 @@
             ]
           },
           "results": {
-            "description": "An array of benchmarks results in Bencher Metric Format (BMF).",
+            "description": "Benchmark harness output, or BMF for the `json` adapters, read at the report's BMF version.",
             "type": "array",
             "items": {
               "type": "string"
@@ -15625,7 +15625,7 @@
             ]
           },
           "results": {
-            "description": "An array of benchmarks results in Bencher Metric Format (BMF).",
+            "description": "Benchmark harness output, or BMF for the `json` adapters, read at the report's BMF version.",
             "type": "array",
             "items": {
               "type": "string"
@@ -17673,7 +17673,12 @@
         "type": "object",
         "properties": {
           "bmf_version": {
-            "$ref": "#/components/schemas/BmfVersion"
+            "description": "The project's default BMF version: a report that declares no `bmf_version` is read at it.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BmfVersion"
+              }
+            ]
           },
           "claimed": {
             "nullable": true,
@@ -18604,7 +18609,7 @@
           },
           "fold": {
             "nullable": true,
-            "description": "Fold multiple results into a single result using the selected operation. This can be useful for taking the min, max, mean, or median of the benchmark results.",
+            "description": "Fold multiple results into a single result using the selected operation. This can be useful for taking the min, max, mean, or median of the benchmark results. BMF version 0 only; it is ignored with a warning at version 1.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonFold"

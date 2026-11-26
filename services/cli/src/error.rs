@@ -13,6 +13,8 @@ pub enum CliError {
     #[error("{0}")]
     Thresholds(#[from] crate::bencher::sub::ThresholdsError),
     #[error("{0}")]
+    BmfVersion(#[from] crate::bencher::sub::BmfVersionError),
+    #[error("{0}")]
     Mock(#[from] crate::bencher::sub::MockError),
     #[error("{0}")]
     Noise(#[from] crate::bencher::sub::NoiseError),

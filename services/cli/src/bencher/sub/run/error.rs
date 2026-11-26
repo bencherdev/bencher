@@ -36,6 +36,8 @@ pub enum RunError {
     Branch(#[from] super::branch::BranchError),
     #[error("{0}")]
     Thresholds(#[from] crate::bencher::sub::ThresholdsError),
+    #[error("{0}")]
+    BmfVersion(crate::bencher::sub::BmfVersionError),
 
     #[error(
         "The `--build-time` flag requires either a benchmark command or `--image` for remote execution."

@@ -49,10 +49,14 @@ pub struct CliRun {
     pub spec_reset: bool,
 
     /// Benchmark harness adapter
+    ///
+    /// Results are read at the project's BMF version. `json_v0` and `json_v1` read JSON at their own BMF version on any project.
     #[clap(value_enum, long, env = "BENCHER_ADAPTER", default_value = "magic")]
     pub adapter: CliReportAdapter,
 
     /// Benchmark harness suggested central tendency (ie average)
+    ///
+    /// Ignored with a warning at BMF version 1, where every average is its own metric.
     #[clap(value_enum, long)]
     pub average: Option<CliReportAverage>,
 
@@ -61,6 +65,8 @@ pub struct CliRun {
     pub iter: Iteration,
 
     /// Fold multiple results into a single result using an aggregate function
+    ///
+    /// BMF version 0 only; ignored at version 1 with a warning.
     #[clap(value_enum, long, requires = "iter", value_name = "AGGREGATE_FUNCTION")]
     pub fold: Option<CliReportFold>,
 

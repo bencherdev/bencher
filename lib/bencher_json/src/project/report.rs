@@ -52,7 +52,7 @@ pub struct JsonNewReport {
     pub start_time: DateTime,
     /// End time for the report. Must be an ISO 8601 formatted string.
     pub end_time: DateTime,
-    /// An array of benchmarks results in Bencher Metric Format (BMF).
+    /// Benchmark harness output, or BMF for the `json` adapters, read at the report's BMF version.
     pub results: Vec<String>,
     /// The Bencher Metric Format (BMF) version this report is written in.
     /// The accepted versions are 0 or 1.
@@ -238,6 +238,7 @@ pub struct JsonReportSettings {
     pub average: Option<JsonAverage>,
     /// Fold multiple results into a single result using the selected operation.
     /// This can be useful for taking the min, max, mean, or median of the benchmark results.
+    /// BMF version 0 only; it is ignored with a warning at version 1.
     pub fold: Option<JsonFold>,
     /// The measures to keep from the results, by UUID, slug, or name.
     /// Every other measure is dropped before anything is stored.
