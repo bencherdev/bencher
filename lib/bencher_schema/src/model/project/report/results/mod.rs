@@ -96,7 +96,8 @@ impl ReportResults {
         }
     }
 
-    /// Process report results by iterating over each result set sequentially.
+    /// Process report results by iterating over each iteration sequentially, where each
+    /// iteration holds the payloads it returned, in order.
     ///
     /// The sequential per-iteration processing is load-bearing:
     /// each iteration performs a Phase 1 read (querying historical metrics via `metrics_data()`)
@@ -111,7 +112,7 @@ impl ReportResults {
         &mut self,
         log: &Logger,
         context: &ApiContext,
-        results_array: &[&str],
+        iterations: &[Vec<&str>],
         adapter: Adapter,
         settings: JsonReportSettings,
         report_version: ReportBmfVersion,
@@ -132,7 +133,10 @@ impl ReportResults {
             })?;
 
         let adapter_settings = adapter_settings_at(settings.average, bmf_version, warnings);
-        let mut results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)
+        // Each payload parses on its own, so the parse the report records is the same
+        // whether an iteration returned one payload or several.
+        let payloads: Vec<&str> = iterations.iter().flatten().copied().collect();
+        let results_array = AdapterResultsArray::new(&payloads, adapter, adapter_settings)
             .inspect_err(|_| self.parse = Some(ParseRecord::FAILED))
             .map_err(|e| match e {
                 // The adapter is right and the version is wrong, so no adapter hint.
@@ -145,6 +149,9 @@ impl ReportResults {
                 },
             })?;
         self.parse = Some(ParseRecord::parsed(&results_array, warnings));
+        let (mut results_array, replaced) =
+            results_array.merge_iterations(iterations.iter().map(Vec::len));
+        warnings.ignore_with_count(ReportWarningResource::Metric, replaced);
 
         if let Some(measures) = &settings.measures {
             self.keep_measures(context, measures, &mut results_array)
@@ -179,30 +186,38 @@ impl ReportResults {
         warnings.skip_with_count(ReportWarningResource::Measure, measures);
         warnings.skip_with_count(ReportWarningResource::Metric, metrics);
 
+        // An iteration keeps its number even after one that returned nothing,
+        // so the same iteration of 2 reports holds the same number.
+        let numbers: Vec<Iteration> = iterations
+            .iter()
+            .enumerate()
+            .filter(|(_, payloads)| !payloads.is_empty())
+            .map(|(number, _)| number.into())
+            .collect();
         // Fold is a BMF v0 operation and nothing else: the mean of per iteration
         // `p99` values is not the `p99` of the pooled sample. A v1 payload with fold
         // requested warns and ingests unfolded, one `report_benchmark` row per
         // iteration, because a harness upgrade must never turn a pipeline red.
-        let results_array = if let Some(fold) = settings.fold {
+        let results_array: Vec<(Iteration, AdapterResults)> = if let Some(fold) = settings.fold {
             match results_array.foldable() {
-                Ok(foldable) => vec![foldable.fold(fold).into()],
+                Ok(foldable) => vec![(Iteration::default(), foldable.fold(fold).into())],
                 Err(unfoldable) => {
                     slog::warn!(
                         log,
                         "Ignoring the requested fold ({fold:?}) for report ({report_id}): fold is not supported for benchmark parameters or named metric values"
                     );
-                    unfoldable.inner
+                    numbers.into_iter().zip(unfoldable.inner).collect()
                 },
             }
         } else {
-            results_array.inner
+            numbers.into_iter().zip(results_array.inner).collect()
         };
 
-        for (iteration, results) in results_array.into_iter().enumerate() {
+        for (iteration, results) in results_array {
             self.results(
                 log,
                 context,
-                iteration.into(),
+                iteration,
                 results,
                 warnings,
                 #[cfg(feature = "plus")]

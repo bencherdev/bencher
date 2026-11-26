@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 use bencher_callback::{CallbackKey, SealedRequest};
 use bencher_json::{
@@ -10,6 +10,7 @@ use bencher_json::{
     },
     runner::{GitHubDispatch, JsonIterationOutput, JsonNewCallback, job::JsonNewRunJob},
 };
+use camino::Utf8PathBuf;
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
     result::QueryResult,
@@ -148,38 +149,34 @@ impl QueryJob {
         let api_actor = ApiActor::Public(PublicUser::Public(None));
         let plan_kind = PlanKind::new_for_job_results(context, &query_project, &api_actor).await?;
 
-        // Build results array from per-iteration output.
-        // File output takes precedence (mirrors CLI CommandToFile mode):
-        // each file's contents = one result string for the adapter.
-        // Otherwise fall back to stdout (mirrors CLI Command mode).
-        //
-        // All iterations are flattened into a single Vec<String>, matching
-        // the CLI's local behavior (services/cli/src/bencher/sub/run/mod.rs).
-        // Without fold: each string becomes a separate enumerated iteration.
-        // With fold: all strings are combined via the fold operation.
-        let results_strings: Vec<String> = results
+        // Each runner iteration is one report iteration, holding its files in the job's
+        // file order, or else its stdout. Each file parses on its own and merges into its
+        // iteration, so with fold, the iterations fold and not the files.
+        let file_paths = self.config.file_paths.as_deref().unwrap_or_default();
+        let iterations: Vec<Vec<String>> = results
             .into_iter()
-            .flat_map(|r| {
+            .map(|r| {
                 if let Some(output) = r.output {
-                    output.into_values().collect::<Vec<_>>()
-                } else if let Some(stdout) = r.stdout {
-                    vec![stdout]
+                    in_file_order(output, file_paths)
                 } else {
-                    Vec::new()
+                    r.stdout.into_iter().collect()
                 }
             })
             .collect();
-        let results_array: Vec<&str> = results_strings.iter().map(AsRef::as_ref).collect();
+        let iterations: Vec<Vec<&str>> = iterations
+            .iter()
+            .map(|files| files.iter().map(String::as_str).collect())
+            .collect();
 
         let settings = self.report_settings(query_report.adapter);
 
         // Process results (adapter parsing, metrics, alerts, usage)
         query_report
-            .process_results(
+            .process_iteration_results(
                 log,
                 context,
                 branch_id,
-                &results_array,
+                &iterations,
                 query_report.adapter,
                 settings,
                 ReportBmfVersion::job(query_report.bmf_version, self.config.bmf_version),
@@ -290,6 +287,20 @@ impl QueryJob {
             output: None,
         })
     }
+}
+
+/// The contents of a runner iteration's files, in the job's file order, then any file the
+/// job did not list, in path order.
+fn in_file_order(
+    mut output: BTreeMap<Utf8PathBuf, String>,
+    file_paths: &[Utf8PathBuf],
+) -> Vec<String> {
+    let mut files: Vec<String> = file_paths
+        .iter()
+        .filter_map(|path| output.remove(path))
+        .collect();
+    files.extend(output.into_values());
+    files
 }
 
 #[derive(Debug, diesel::Insertable)]

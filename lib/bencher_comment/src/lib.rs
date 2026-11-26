@@ -146,11 +146,13 @@ impl ReportComment {
         }
         text.push_str("\n\nView results:");
         for (i, iteration) in self.results().iter().enumerate() {
-            if self.multiple_iterations {
+            if self.multiple_iterations
+                && let Some(result) = iteration.first()
+            {
                 if i != 0 {
                     text.push('\n');
                 }
-                text.push_str(&format!("\nIteration {i}:"));
+                text.push_str(&format!("\nIteration {}:", result.iteration));
             }
 
             for result in iteration {
@@ -2338,6 +2340,30 @@ mod tests {
             "{human}"
         );
         assert_run_output_plots(&human, "/console/projects/my-project/explore");
+    }
+
+    // Kills an iteration labeled by its place in the results, which names stored iteration 2
+    // "Iteration 1" after an iteration that stored nothing, while its alert says 2.
+    #[test]
+    fn run_output_labels_each_iteration_by_its_number() {
+        let mut report = with_alerts(named_alert_report(), BoundaryLimit::Upper, 3);
+        report.results.as_mut().unwrap().remove(1);
+        report.alerts.as_mut().unwrap().remove(1);
+        let human = report_comment_for(report).human();
+        let (_, results) = human.split_once("View results:").expect(&human);
+        let (results, alerts) = results.split_once("View alerts:").expect(&human);
+
+        let labels = results
+            .lines()
+            .filter(|line| line.starts_with("Iteration "))
+            .collect::<Vec<_>>();
+        assert_eq!(labels, ["Iteration 0:", "Iteration 2:"], "{human}");
+        let alert_labels = alerts
+            .lines()
+            .filter_map(|line| line.split_once(" (Iteration ").map(|(_, rest)| rest))
+            .filter_map(|rest| rest.split_once(')').map(|(number, _)| number))
+            .collect::<Vec<_>>();
+        assert_eq!(alert_labels, ["0", "2"], "{human}");
     }
 
     fn assert_run_output_plots(human: &str, path: &str) {
