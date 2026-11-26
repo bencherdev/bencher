@@ -9,7 +9,7 @@ The following measurements are performed:
 - **Cache Jitter**: Measures memory cache access consistency by performing sequential reads across a buffer sized to the L3 cache.
 - **I/O Jitter**: Measures filesystem I/O consistency by writing and reading temporary files and tracking timing variation.
 - **CPU Steal**: On virtualized platforms, detects how much CPU time is being taken by the hypervisor.
-- **Noise Score**: A composite score (0–100 dB) combining all measurements into a single indicator of environment noise level.
+- **Noise Score**: A composite score (0 to 100 dB) combining all measurements into a single indicator of environment noise level.
 
 ### `bencher noise` Usage
 
@@ -23,7 +23,7 @@ bencher noise [OPTIONS]
 
 Total measurement duration in seconds.
 
-Default: `60`
+Default: `30`
 
 #### `--format <FORMAT>`
 
@@ -31,8 +31,27 @@ Output format for the noise report.
 
 - `human`: Human-readable terminal output with visual noise bars and advice.
 - `json`: BMF (Bencher Metric Format) JSON output, suitable for piping to `bencher run`.
+  Its version is set with [the `--bmf-version` option](#--bmf-version-bmf_version).
 
 Default: `human`
+
+#### `--bmf-version <BMF_VERSION>`
+
+The [BMF version][bmf versions] of the `json` output format, either `0` or `1`.
+`bencher noise` does not read your Project's version, so a version 0 Project needs `--bmf-version 0`.
+
+At version 1, the output has these [Benchmarks][benchmark]:
+
+- `bencher::noise::compute_jitter`, `bencher::noise::cache_jitter`, and `bencher::noise::io_jitter`, each with two [Measures][measure]:
+  - Its jitter Measure (`compute-jitter`, `cache-jitter`, or `io-jitter`) with the `cov` [Metric][metric], the coefficient of variation as a percentage
+  - The `latency` Measure with the `mean`, `std_dev`, and `p99` Metrics of the same samples, in nanoseconds
+- `bencher::noise::cpu_steal`, when the platform reports CPU steal, with the `cpu-steal` Measure and its `value` Metric
+- `bencher::noise::composite` with the `noise-score` Measure and its `value` Metric
+
+At version 0, every Measure has only a `value`, which is the coefficient of variation for each jitter Measure, and there is no `latency` Measure.
+A Project that moves from version 0 to version 1 starts a new history for each jitter Measure, since its Metric is now `cov`.
+
+Default: `1`
 
 #### `--quiet`
 
@@ -42,3 +61,8 @@ Useful for scripting and CI environments.
 #### `--help`
 
 Print help.
+
+[bmf versions]: /docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /docs/explanation/benchmarking/#benchmark
+[measure]: /docs/explanation/benchmarking/#measure
+[metric]: /docs/explanation/benchmarking/#metric

@@ -23,8 +23,12 @@ If the user is not authenticated, the Project will be created under a new `uncla
 This Organization can then be `claimed` from the `Claim this project` link in the `bencher run` output
 or by using the Project slug while authenticated in a subsequent invocation of `bencher run`.
 
+A new Project starts at [Bencher Metric Format (BMF) version 1][bmf versions].
+An existing Project keeps its BMF version, and `bencher run` reads it before every run.
+
 > 🐰 IMPORTANT: If the `CI` environment variable is set to `true`,
 > then you either need to specify the Project
 > or set [the `--ci-on-the-fly` flag][ci on the fly].
 
 [ci on the fly]: #--ci-on-the-fly
+[bmf versions]: /docs/reference/bencher-metric-format/#bmf-versions

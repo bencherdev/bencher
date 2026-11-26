@@ -1,7 +1,13 @@
-Los adaptadores de bancos de pruebas integrados convierten la salida de las pruebas de rendimiento al formato JSON de Métricas de Bencher (BMF, por sus siglas en inglés).
+Los [adaptadores de bancos de pruebas integrados][adapters] convierten la salida de las pruebas de rendimiento al formato JSON de Métricas de Bencher (BMF, por sus siglas en inglés).
 Los bancos de pruebas personalizados deberían emitir sus resultados como JSON BMF
 y usar [el adaptador `json`][json adapter].
 Consulte [cómo realizar seguimiento de pruebas de rendimiento personalizadas][custom benchmarks] para obtener una visión general completa.
+Para generar datos JSON BMF simulados, use el subcomando de la CLI <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+
+BMF tiene dos versiones, y cada Proyecto tiene una de ellas.
+La versión 1 es el formato con el que empieza un Proyecto nuevo, y es el formato que describe esta página.
+La versión 0 es la versión anterior, que los Proyectos de versión 0 todavía usan.
+Consulte [las versiones de BMF](#bmf-versions) para saber cómo se elige la versión de un Informe y para la versión 0.
 
 [adapters]: /es/docs/explanation/adapters/
 [json adapter]: /es/docs/explanation/adapters/#-json

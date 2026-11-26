@@ -5,7 +5,16 @@ import MultipleThresholdsCode from "../multiple-thresholds-code.mdx";
 可以在同一次<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>调用中创建多个阈值。
 指定多个阈值时，必须为每个阈值使用相同的选项。
 要忽略特定阈值的某个选项，请使用下划线 (`_`)。
+`--threshold-metric` 是个例外：每个阈值都需要自己的指标，因此不能用下划线跳过它。
 
-例如，如果您只想使用两个阈值，一个用于延迟度量，一个用于吞吐量度量，那么您可能想为延迟度量设置上限，为吞吐量度量设置下限。因此，您将为延迟度量使用 `--threshold-lower-boundary _`，为吞吐量度量使用 `--threshold-upper-boundary _`。您可以这样写：
+例如，如果您只想使用两个阈值，一个用于 Latency 度量，一个用于 Throughput 度量，那么您可能想为 Latency 度量设置上限，为 Throughput 度量设置下限。因此，您将为 Latency 度量使用 `--threshold-lower-boundary _`，为 Throughput 度量使用 `--threshold-upper-boundary _`。您可以这样写：
 
 <MultipleThresholdsCode />
+
+同一个度量也可以有多个阈值，它们的指标或参数过滤器不同，
+例如为 Latency 度量的 `median` 设置一个阈值，为其 `p99` 设置另一个阈值。
+每个与某个变体匹配的阈值都会检查该变体，
+因此同一指标的一个无过滤器阈值和一个带过滤器阈值都会检查与过滤器匹配的变体，
+并且都会为同一次回归生成警报。
+在同一次调用中指定两次的阈值是同一个阈值，
+其模型取自最后一次出现的指定。

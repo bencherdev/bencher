@@ -1,0 +1,23 @@
+import ThresholdsPayloadCode from "../thresholds-payload-code.mdx";
+
+## `--threshold-parameters <PARAMETERS>`
+
+<br />
+
+Utilisez le filtre de paramètres spécifié pour un Seuil, sous la forme d'un objet JSON (ex : `--threshold-parameters '{"size": 512}'`).
+Le Seuil vérifie chaque [Variante][variant] dont les Paramètres contiennent chaque clé de l'objet avec la même valeur,
+donc `{"size": 512}` correspond à la fois à `{"op": "read", "size": 512}` et à `{"op": "write", "size": 512}`.
+La valeur est du JSON, pas la forme `size=512` qu'affichent le commentaire de pull request et la Console.
+S'il n'est pas défini, ou s'il est défini à `{}`, le Seuil vérifie chaque Variante.
+Pour ignorer cette option pour un Seuil spécifique, utilisez un tiret bas (`_`).
+Un Seuil avec un filtre de paramètres a aussi besoin de [l'option `--threshold-metric`](#--threshold-metric-metric).
+En version 0 de BMF, `--threshold-parameters` arrête `bencher run` avec une erreur avant tout envoi.
+
+Chaque option `--threshold-parameters` contient un seul ensemble de Paramètres.
+Pour vérifier les Variantes qui correspondent à l'un de plusieurs ensembles, utilisez l'API :
+en version 1 de BMF, les `thresholds` d'un Rapport listent chaque Seuil avec son filtre `parameters` sous la forme d'une liste d'ensembles.
+Par exemple :
+
+<ThresholdsPayloadCode />
+
+[variant]: /fr/docs/explanation/benchmarking/#parameters

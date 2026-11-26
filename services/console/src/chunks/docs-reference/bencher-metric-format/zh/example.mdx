@@ -4,16 +4,43 @@ import BmfExample from "../bmf-example.mdx";
 
 <BmfExample />
 
-在这个示例中，有三个[基准测试][benchmark]：
+BMF 版本 1 将每个[基准测试][benchmark]名称映射到一个条目列表，基准测试的每个[变体][parameters]对应一个条目。
+每个条目包含：
 
-- `benchmark_name` 基准测试，包含两个[测量][measure]：
-  - 延迟 (`latency`)
-  - 吞吐量 (`throughput`)
-- `/bin/sh -c ./my_build_script.sh` 基准测试，包含一个测量用于[跟踪构建时间][track build time] (`build-time`)
-- `my_binary` 基准测试，包含一个测量用于[跟踪文件大小][track file size] (`file-size`)
+- `parameters`（可选）：变体运行时使用的[参数][parameters]，是一个值为字符串、数字或布尔值的对象。
+  没有 `parameters` 的条目是参数为空的变体，与 `{}` 相同。
+- `measures`：变体的每个[度量][measure]，映射到其[指标][metric]。
+  指标是映射到一个数字的名称，例如 `"median": 88.0`。
+
+在这个示例中，有三个基准测试：
+
+- `benchmark_name` 基准测试，有两个变体，`size` 为 `64` 和 `size` 为 `512`，每个变体包含两个度量：
+  - Latency (`latency`)，包含 `median`、`mean` 和 `p99` 指标
+  - Throughput (`throughput`)，包含 `mean` 指标
+- `/bin/sh -c ./my_build_script.sh` 基准测试，有一个变体和一个用于[跟踪构建时间][track build time]的度量 (`build-time`)，包含 `value` 指标
+- `my_binary` 基准测试，有一个变体和一个用于[跟踪文件大小][track file size]的度量 (`file-size`)，包含 `value` 指标
+
+参数相等的两个条目是同一个变体，它们的指标会被合并。
+如果两个条目对同一个度量包含同一个指标，则以后面的条目为准。
+没有度量的条目不会写入任何内容。
+
+### Metric Names
+
+Bencher 以相同的方式存储每个指标名称，但它按名称选择度量的默认指标，
+因此请用规范名称来命名每个统计量：
+`mean`、`median`、`min`、`max`、`std_dev`，以及百分位数 `p25`、`p75`、`p90`、`p95`、`p99` 和 `p99_9`。
+置信区间按其所界定的统计量命名，例如 `mean_ci_lower` 和 `mean_ci_upper`，
+如果知道置信水平，请加上它，例如 `mean_ci95_lower`。
+将不是统计量的单个数值（例如计数或构建时间）命名为 `value`。
+
+当没有[阈值][threshold]检查某个度量时，拉取请求评论和 `bencher run` 输出会显示其默认指标：
+`value`，然后是 `median`，然后是 `mean`，然后是按字母顺序排列的第一个名称。
+置信区间名称排在所有其他名称之后。
 
 [benchmark]: /zh/docs/explanation/benchmarking/#benchmark
+[parameters]: /zh/docs/explanation/benchmarking/#parameters
 [measure]: /zh/docs/explanation/benchmarking/#measure
+[metric]: /zh/docs/explanation/benchmarking/#metric
+[threshold]: /zh/docs/explanation/thresholds/
 [track build time]: /zh/docs/how-to/track-build-time/
 [track file size]: /zh/docs/how-to/track-file-size/
-

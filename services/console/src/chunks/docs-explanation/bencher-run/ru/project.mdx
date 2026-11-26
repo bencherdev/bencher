@@ -23,8 +23,12 @@
 Эту Организацию затем можно `claimed` по ссылке `Claim this project` в выводе `bencher run`
 или, используя slug Проекта при аутентификации в последующем вызове `bencher run`.
 
+Новый Проект начинается с [Bencher Metric Format (BMF) версии 1][bmf versions].
+Существующий Проект сохраняет свою версию BMF, и `bencher run` считывает ее перед каждым запуском.
+
 > 🐰 ВАЖНО: Если переменная окружения `CI` установлена в `true`,
 > то вам нужно либо указать проект,
 > либо установить [флаг `--ci-on-the-fly`][ci on the fly].
 
 [ci on the fly]: #--ci-on-the-fly
+[bmf versions]: /ru/docs/reference/bencher-metric-format/#bmf-versions

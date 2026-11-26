@@ -1,0 +1,20 @@
+## `--threshold-metric <METRIC>`
+
+<br />
+
+Utilice el nombre de la [Métrica][metric] especificada para un Umbral.
+En la versión 1 de BMF, un Umbral comprueba una Métrica de su Medida, por nombre, como `median`, `p99` o `value`.
+Por ejemplo, para usar un Umbral para la mediana de la Medida Latency,
+podría escribir `--threshold-measure latency --threshold-metric median`.
+Para elegir qué Métrica comprobar primero, consulte las Métricas que escribe [cada adaptador de arnés de benchmark][adapters].
+Las Métricas que comprueban los Umbrales de una Medida son sus columnas en [el comentario del pull request][github actions] y en la salida de `bencher run`.
+
+En cuanto un Umbral tiene una Métrica o un filtro de parámetros, todos los Umbrales necesitan una Métrica,
+y `bencher run` se detiene con un error que nombra el Umbral al que le falta su Métrica.
+Un `--threshold-measure` sin ningún `--threshold-metric` no establece ningún Umbral:
+la ejecución se registra igualmente, y su Informe advierte que el Umbral se omitió, con una sugerencia para usar `--threshold-metric`.
+En la versión 0 de BMF, `--threshold-metric` detiene `bencher run` con un error antes de enviar nada.
+
+[metric]: /es/docs/explanation/benchmarking/#metric
+[adapters]: /es/docs/explanation/adapters/
+[github actions]: /es/docs/explanation/bencher-run/#--github-actions-github_token

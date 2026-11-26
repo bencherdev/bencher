@@ -20,7 +20,11 @@
 사용자가 인증되지 않은 경우 프로젝트는 새 `unclaimed` 조직 아래에 생성됩니다.
 이 조직은 이후 `bencher run` 출력의 `Claim this project` 링크에서 `claimed` 하거나, 이후 인증된 상태로 `bencher run`을 실행할 때 프로젝트 슬러그를 사용하여 `claimed`할 수 있습니다.
 
+새 프로젝트는 [Bencher Metric Format (BMF) 버전 1][bmf versions]에서 시작합니다.
+기존 프로젝트는 자신의 BMF 버전을 유지하며, `bencher run`은 매 실행 전에 이를 읽습니다.
+
 > 🐰 중요: 만약 `CI` 환경 변수가 `true`로 설정되어 있으면,
 > 프로젝트를 지정하거나 [`--ci-on-the-fly` flag][ci on the fly]를 설정해야 합니다.
 
 [ci on the fly]: #--ci-on-the-fly
+[bmf versions]: /ko/docs/reference/bencher-metric-format/#bmf-versions

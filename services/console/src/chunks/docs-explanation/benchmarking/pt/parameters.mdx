@@ -1,0 +1,13 @@
+### Parameters
+Parâmetros são as entradas com que um Benchmark foi executado, como `{"size": 64}`.
+Cada chave é associada a uma string, um número ou um booleano, e os Parâmetros de um Benchmark contêm no máximo `8` chaves.
+Um Benchmark com um conjunto de Parâmetros é uma Variante,
+então um Benchmark executado com vários conjuntos de Parâmetros tem uma Variante para cada conjunto,
+e o Bencher acompanha as Métricas de cada Variante separadamente.
+Um Benchmark sem Parâmetros tem uma única Variante, com Parâmetros vazios.
+
+Os Parâmetros fazem parte da versão 1 do [Bencher Metric Format (BMF)][bmf],
+e um [adaptador de harness de benchmark][adapters] os lê do seu harness de benchmark sempre que possível.
+
+[bmf]: /pt/docs/reference/bencher-metric-format/
+[adapters]: /pt/docs/explanation/adapters/

@@ -28,6 +28,13 @@ GitHubチェックを作成できない場合、`bencher run`は警告をログ�
 次に、1つの表がすべてのレポートのアラートを、レポートの列とともにまとめます。
 その後、各レポートの結果が折りたたみブロック（例：`Report 2 (microbench): 14 benchmarks, 2 alerts`）に続き、
 レポートにアラートがある場合はそのブロックが開いた状態になります。
+結果の各行は[バリアント][variant]で、ベンチマークの後に、そのパラメータが `key=value` の組で続きます。
+各メジャーには、そのしきい値がチェックする各メトリックの列グループがあり、
+しきい値がない場合はデフォルトのメトリックの列グループがあります。デフォルトは `value`、次に `median`、次に `mean`、次にアルファベット順で最初の名前で、
+`mean_ci_lower` のような信頼区間の名前は他のすべての名前の後になります。
+レポートに警告がある場合は、その結果の後に折りたたまれた `⚠️ Warnings (N)` セクションが続き、`N` は警告の総数です。
+このセクションは各警告のResource、Action、Countを一覧表示し、
+スキップされたしきい値については [`--threshold-metric` オプション](/ja/docs/explanation/thresholds/#--threshold-metric-metric) を示すHintも表示します。
 各ジョブは独自のGitHubチェックとジョブサマリーを保持するため、
 GitHubチェック名と必須ステータスチェックは変わりません。
 コミットがプルリクエストのヘッドコミットでなくなったジョブは、コメントをそのままにします。
@@ -40,6 +47,8 @@ GitHubのコメントにはサイズの上限があるため、コメントは�
 3. すべてのサマリー行とアラートの総数で、アラートの行を除いたもの
 4. 最後の手段として、最初のサマリー行と、残りを示す`and N more reports`
 
+最初の形式以外のすべての形式では、警告のうち `⚠️ Warnings (N)` の行のみが残ります。
+
 行が1つの場合、コメントは以前と同じで、大きすぎる場合は完全なレポートにリンクします。
 
 他のジョブを見つけるために、`bencher run`はヘッドコミットのGitHubチェックを一覧表示します。
@@ -51,6 +60,7 @@ GitHubのコメントにはサイズの上限があるため、コメントは�
 共有コメントを書き込む際、ジョブが更新または削除するのは、自身のGitHubチェックを所有するGitHub Appが投稿したコメントのみで、
 `GITHUB_TOKEN`の場合は`github-actions`ボットです。
 
+[variant]: /ja/docs/explanation/benchmarking/#parameters
 [github token]: https://docs.github.com/ja/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/ja/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
 

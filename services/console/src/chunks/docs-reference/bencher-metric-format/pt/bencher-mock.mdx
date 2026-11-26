@@ -1,6 +1,10 @@
 ## `bencher mock`
 
 O subcomando CLI `bencher mock` é usado para gerar dados JSON simulados no formato Bencher Metric Format (BMF).
+Ele escreve a [versão 1 do BMF][bmf versions], a menos que seja instruído de outra forma:
+cada [Medida][measure] de cada [Benchmark][benchmark] tem uma [Métrica][metric], `value`,
+e cada Benchmark tem uma Variante sem Parâmetros.
+Ele não lê a versão do seu Projeto, então um Projeto na versão 0 precisa de [`--bmf-version 0`](#--bmf-version-bmf_version).
 
 ### `--seed <SEED>`
 
@@ -11,23 +15,31 @@ Se não especificada, uma semente aleatória será usada.
 
 O número de [Benchmarks][benchmark] simulados a serem gerados.
 
-[benchmark]: /pt/docs/explanation/benchmarking/#benchmark
-
 ### `--measure <MEASURE>`
 
-A [Measure][measure] a ser usada para cada [Benchmark][benchmark].
-Várias Measures podem ser especificadas usando a opção `--measure` várias vezes.
-O padrão é a Measure integrada `latency`.
+A [Medida][measure] a ser usada para cada [Benchmark][benchmark].
+Várias Medidas podem ser especificadas usando a opção `--measure` várias vezes.
+O padrão é a Medida integrada `latency`.
 
-[measure]: /pt/docs/explanation/benchmarking/#measure
-[benchmark]: /pt/docs/explanation/benchmarking/#benchmark
+### `--parameters <PARAMETERS>`
+
+Os [Parâmetros][parameters] de uma Variante a ser gerada para cada Benchmark, como um objeto JSON (ex: `--parameters '{"size": 64}'`).
+Cada conjunto de Parâmetros cria uma Variante de cada Benchmark,
+e vários conjuntos podem ser especificados usando a opção `--parameters` várias vezes.
+Se não especificada, cada Benchmark tem uma Variante sem Parâmetros.
+Ela aceita o mesmo JSON que [a opção `--threshold-parameters`][threshold parameters] do `bencher run`,
+e não pode ser usada com `--bmf-version 0`.
+
+### `--bmf-version <BMF_VERSION>`
+
+A versão do BMF a ser escrita, `0` ou `1`.
+O padrão é `1`.
+Na versão 0, cada Medida tem um `value`, um `lower_value` e um `upper_value`.
 
 ### `--pow <POW>`
 
-A potência de 10 a ser usada para as mock [Metrics][metric].
+A potência de 10 a ser usada para as [Métricas][metric] simuladas.
 O padrão é `1`.
-
-[metric]: /pt/docs/explanation/benchmarking/#metric
 
 ### `--fail`
 
@@ -40,3 +52,10 @@ Falhar intermitentemente durante a execução.
 ### `--help`
 
 Exibe a mensagem de ajuda.
+
+[bmf versions]: /pt/docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /pt/docs/explanation/benchmarking/#benchmark
+[measure]: /pt/docs/explanation/benchmarking/#measure
+[metric]: /pt/docs/explanation/benchmarking/#metric
+[parameters]: /pt/docs/explanation/benchmarking/#parameters
+[threshold parameters]: /pt/docs/explanation/thresholds/#--threshold-parameters-parameters

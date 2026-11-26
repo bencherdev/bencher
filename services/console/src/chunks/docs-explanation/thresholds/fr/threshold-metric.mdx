@@ -1,0 +1,20 @@
+## `--threshold-metric <METRIC>`
+
+<br />
+
+Utilisez le nom de [Métrique][metric] spécifié pour un Seuil.
+En version 1 de BMF, un Seuil vérifie une Métrique de sa Mesure, par son nom, comme `median`, `p99` ou `value`.
+Par exemple, pour utiliser un Seuil pour la médiane de la Mesure Latency,
+vous pourriez écrire `--threshold-measure latency --threshold-metric median`.
+Pour choisir quelle Métrique vérifier en premier, consultez les Métriques qu'écrit [chaque adaptateur de harnais de benchmark][adapters].
+Les Métriques que vérifient les Seuils d'une Mesure sont ses colonnes dans [le commentaire de pull request][github actions] et dans la sortie de `bencher run`.
+
+Dès qu'un Seuil a une Métrique ou un filtre de paramètres, chaque Seuil a besoin d'une Métrique,
+et `bencher run` s'arrête avec une erreur qui nomme le Seuil auquel il manque sa Métrique.
+Un `--threshold-measure` sans aucun `--threshold-metric` ne définit aucun Seuil :
+l'exécution est tout de même enregistrée, et son Rapport avertit que le Seuil a été ignoré, avec une suggestion d'utiliser `--threshold-metric`.
+En version 0 de BMF, `--threshold-metric` arrête `bencher run` avec une erreur avant tout envoi.
+
+[metric]: /fr/docs/explanation/benchmarking/#metric
+[adapters]: /fr/docs/explanation/adapters/
+[github actions]: /fr/docs/explanation/bencher-run/#--github-actions-github_token

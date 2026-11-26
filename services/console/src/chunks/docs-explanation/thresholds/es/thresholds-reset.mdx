@@ -1,18 +1,23 @@
-## `---thresholds-reset`
+## `--thresholds-reset`
 
 <br />
 
-Restablecer todos los Umbrales no especificados para el [Branch][branch] y [Testbed][testbed] dados. Si ya existe un Umbral y no está especificado, su [Modelo][model] actual será eliminado.
+Restablecer todos los Umbrales no especificados para el [Branch][branch] y [Testbed][testbed] dados. Si ya existe un Umbral y no está especificado, su [Modelo][model] actual será eliminado,
+sea cual sea su [Medida][measure], su [Métrica][metric] o su filtro de parámetros.
 
 Por ejemplo, si había dos Umbrales para el Branch `main` y Testbed `localhost`:
-- Branch `main`, Testbed `localhost`, [Medida][measure] `latency`
-- Branch `main`, Testbed `localhost`, [Medida][measure] `throughput`
+- Branch `main`, Testbed `localhost`, Medida `latency`, Métrica `median`
+- Branch `main`, Testbed `localhost`, Medida `latency`, Métrica `p99`
 
-Si solo se especifica la Medida `latency` en el subcomando `bencher run`
+Si solo se especifica la Métrica `median` de la Medida `latency` en el subcomando `bencher run`
 y se utiliza `--thresholds-reset`,
-entonces la Medida `throughput` tendría su Modelo eliminado.
+entonces la Métrica `p99` tendría su Modelo eliminado.
+
+En la versión 1 de BMF, un `--threshold-measure` que se omite por no tener `--threshold-metric` no especifica ningún Umbral,
+así que `--thresholds-reset` sigue eliminando el Modelo de cada Umbral que la ejecución no especifica con una Métrica.
 
 [branch]: /es/docs/explanation/branches/#--branch-branch
 [testbed]: /es/docs/explanation/testbeds/#--testbed-testbed
 [model]: /es/docs/explanation/benchmarking/#model
 [measure]: /es/docs/explanation/benchmarking/#measure
+[metric]: /es/docs/explanation/benchmarking/#metric

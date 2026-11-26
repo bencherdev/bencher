@@ -1,9 +1,11 @@
-### Измерение
-Измерение — это единица измерения для метрики.
+### Measure
+Измерение является единицей измерения для метрики.
 По умолчанию во всех проектах создаются измерения `Latency` и `Throughput` с единицами `nanoseconds (ns)` и `operations / second (ops/s)` соответственно.
-Измерение определяется адаптером запуска бенчмарков (benchmark harness adapter) [adapters].
+[Адаптер запуска бенчмарков][adapters] записывает каждое Измерение, о котором сообщает ваш инструмент для бенчмарков,
+а [опция `--measure`][measure option] команды `bencher run` оставляет только перечисленные в ней Измерения.
 
 Если вы используете [Bencher Metric Format (BMF)][bmf], имя, slug или UUID могут использоваться для идентификации измерения.
 
 [adapters]: /ru/docs/explanation/adapters/
+[measure option]: /ru/docs/explanation/bencher-run/#--measure-measure
 [bmf]: /ru/docs/reference/bencher-metric-format/

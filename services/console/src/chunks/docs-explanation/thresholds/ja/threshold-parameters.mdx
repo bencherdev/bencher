@@ -1,0 +1,23 @@
+import ThresholdsPayloadCode from "../thresholds-payload-code.mdx";
+
+## `--threshold-parameters <PARAMETERS>`
+
+<br />
+
+指定されたパラメータフィルタを JSON オブジェクトとしてしきい値に使用します（例：`--threshold-parameters '{"size": 512}'`）。
+しきい値は、オブジェクト内の各キーを同じ値で持つパラメータを持つすべての[バリアント][variant]をチェックします。
+そのため、`{"size": 512}` は `{"op": "read", "size": 512}` と `{"op": "write", "size": 512}` の両方に一致します。
+値は JSON であり、プルリクエストのコメントやコンソールが表示する `size=512` の形式ではありません。
+設定されていない場合、または `{}` に設定されている場合、しきい値はすべてのバリアントをチェックします。
+特定のしきい値に対してこのオプションを無視するには、アンダースコア（`_`）を使用します。
+パラメータフィルタを持つしきい値には、[`--threshold-metric` オプション](#--threshold-metric-metric)も必要です。
+BMF バージョン 0 では、`--threshold-parameters` は何かを送信する前にエラーで `bencher run` を停止させます。
+
+各 `--threshold-parameters` オプションは1組のパラメータを保持します。
+複数の組のいずれか1つに一致するバリアントをチェックするには、API を使用します。
+BMF バージョン 1 では、レポートの `thresholds` は各しきい値を、組のリストとしての `parameters` フィルタとともに一覧にします。
+例：
+
+<ThresholdsPayloadCode />
+
+[variant]: /ja/docs/explanation/benchmarking/#parameters

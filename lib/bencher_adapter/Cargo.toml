@@ -27,6 +27,7 @@ thiserror.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true
+jsonschema.workspace = true
 pretty_assertions.workspace = true
 
 [lints]

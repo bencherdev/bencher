@@ -20,7 +20,11 @@ Si el usuario está autenticado con una clave de API de usuario ([la opción `--
 Si el usuario no está autenticado, el Proyecto se creará bajo una nueva Organización `unclaimed`.
 Esta Organización podrá ser `claimed` desde el enlace `Claim this project` de la salida de `bencher run` o usando el slug del Proyecto mientras se esté autenticado en una invocación posterior de `bencher run`.
 
+Un Proyecto nuevo empieza en la [versión 1 de Bencher Metric Format (BMF)][bmf versions].
+Un Proyecto existente conserva su versión de BMF, y `bencher run` la lee antes de cada ejecución.
+
 > 🐰 IMPORTANTE: Si la variable de entorno `CI` está establecida en `true`,
 > entonces debe especificar el Proyecto o activar [la opción `--ci-on-the-fly`][ci on the fly].
 
 [ci on the fly]: #--ci-on-the-fly
+[bmf versions]: /es/docs/reference/bencher-metric-format/#bmf-versions

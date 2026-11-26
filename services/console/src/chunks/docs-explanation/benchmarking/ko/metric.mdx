@@ -1,2 +1,17 @@
 ### Metric
-Metric은 특정 시점의 성능 퇴보 테스트 결과를 나타내는 단일 값입니다. 하나의 Metric에 대해 최대 세 가지 값인 `value`, `lower_value` 및 `upper_value`를 수집할 수 있습니다. `value`는 모든 Metric에서 필수이며, `lower_value`와 `upper_value`는 각각 독립적으로 선택 사항입니다. 어떤 값들이 수집되는지는 [벤치마크 하네스 어댑터](/ko/docs/explanation/adapters/)에 의해 결정됩니다.
+메트릭은 특정 시점의 성능 퇴보 테스트 결과를 나타내는 단일 값입니다.
+즉, `median`이나 `p99`처럼 측정에 대해 수집된 이름이 있는 하나의 값입니다.
+[벤치마크 하네스 어댑터](/ko/docs/explanation/adapters/)는 벤치마크 하네스가 보고하는 각 통계를 그 통계의 이름으로 각각 별도의 메트릭으로 기록합니다.
+명령어 수나 빌드 시간처럼 통계가 아닌 단일 숫자는 `value` 메트릭입니다.
+하나의 측정은 최대 `32`개의 메트릭을 가질 수 있습니다.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+[BMF 버전 0][bmf versions]에서는 하나의 메트릭에 대해 최대 세 가지 값인 `value`, `lower_value` 및 `upper_value`를 수집할 수 있습니다.
+`value`는 모든 메트릭에서 필수이며, `lower_value`와 `upper_value`는 각각 독립적으로 선택 사항입니다.
+이것이 메트릭 트리플이며, 버전 0 프로젝트에서 여전히 사용됩니다.
+
+</details>
+
+[bmf versions]: /ko/docs/reference/bencher-metric-format/#bmf-versions

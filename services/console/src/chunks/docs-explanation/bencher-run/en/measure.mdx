@@ -1,0 +1,12 @@
+### `--measure <MEASURE>`
+
+<br />
+
+Optional: Keep only the specified [Measure][measure] name, slug, or UUID from the results.
+Every other Measure is dropped before anything is stored.
+Multiple Measures can be kept by using the `--measure` option multiple times.
+Only the first `64` are kept, and the Report warns of the rest.
+A Measure that the results do not contain is ignored.
+If not set, every Measure is kept.
+
+[measure]: /docs/explanation/benchmarking/#measure

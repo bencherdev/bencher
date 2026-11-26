@@ -1,0 +1,20 @@
+## `--threshold-metric <METRIC>`
+
+<br />
+
+Use o nome da [Métrica][metric] especificada para um Limiar.
+Na versão 1 do BMF, um Limiar verifica uma Métrica de sua Medida, pelo nome, como `median`, `p99` ou `value`.
+Por exemplo, para usar um Limiar para a mediana da Medida Latency,
+você pode escrever `--threshold-measure latency --threshold-metric median`.
+Para escolher qual Métrica verificar primeiro, veja as Métricas que [cada adaptador de harness de benchmark][adapters] escreve.
+As Métricas que os Limiares de uma Medida verificam são suas colunas no [comentário do pull request][github actions] e na saída do `bencher run`.
+
+Assim que qualquer Limiar tiver uma Métrica ou um filtro de parâmetros, todo Limiar precisa de uma Métrica,
+e o `bencher run` para com um erro que nomeia o Limiar ao qual falta sua Métrica.
+Um `--threshold-measure` sem nenhum `--threshold-metric` não define nenhum Limiar:
+a execução ainda é registrada, e seu Relatório avisa que o Limiar foi ignorado, com uma dica para usar `--threshold-metric`.
+Na versão 0 do BMF, `--threshold-metric` interrompe o `bencher run` com um erro antes de enviar qualquer coisa.
+
+[metric]: /pt/docs/explanation/benchmarking/#metric
+[adapters]: /pt/docs/explanation/adapters/
+[github actions]: /pt/docs/explanation/bencher-run/#--github-actions-github_token

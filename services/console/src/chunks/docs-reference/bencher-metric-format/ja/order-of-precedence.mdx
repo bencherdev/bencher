@@ -1,6 +1,6 @@
 ## 優先順位
 
-ベンチマークを識別する際の優先順位は次のとおりです:
+[ベンチマーク][benchmark]を識別する際の優先順位は次のとおりです:
 
 1. `UUID`
 2. ケバブケース形式の `name` に `-bencher-ignore` サフィックスが付いている場合、そのサフィックスは除去され、[アラートの抑制][suppressing alerts]に用いられます（最大長 `1024` 文字）
@@ -9,12 +9,34 @@
 
 <br />
 
-測定項目を識別する際の優先順位は次のとおりです:
+[メジャー][measure]を識別する際の優先順位は次のとおりです:
 
 1. `UUID`
 2. `slug`（最大長 `64` 文字）
 3. `name`（最大長 `64` 文字）
 
+<br />
+
+[メトリック][metric]と[パラメータ][parameters]には次の制限があります：
+
+- メトリック名は `1` から `64` 文字で、先頭と末尾に空白を含みません。
+  `value`、`lower_value`、`upper_value` は慣例的な名前であり、特別な名前ではありません。
+- 1つのメジャーが持てるメトリック名は最大 `32` 個です。
+  `32` 個を超える場合は、`value`、`lower_value`、`upper_value` が保持され、次にその他の名前がアルファベット順に保持され、残りはスキップされます。
+- バリアントのパラメータが持てるキーは最大 `8` 個です。
+  キーは `1` から `64` 文字で、先頭と末尾に空白を含みません。
+  値はブール値、数値、または最大 `64` 文字の文字列で、空の文字列でもかまいません。
+- パラメータは [RFC 8785][rfc 8785] で正規化されます。
+  そのため、キーの順序は関係なく、`16`、`16.0`、`1.6e1` は同じ値です。
+
+制限を満たさないベンチマーク、メジャー、またはメトリックの名前はスキップされます。
+パラメータが制限を満たさないバリアントも同様にスキップされ、
+レポートはそれぞれを警告の件数に数えます。
+値が数値ではないメトリックがあると、ペイロード全体が失敗します。
+
 [benchmark]: /ja/docs/explanation/benchmarking/#benchmark
 [suppressing alerts]: /ja/docs/explanation/thresholds/#suppressing-alerts
 [measure]: /ja/docs/explanation/benchmarking/#measure
+[metric]: /ja/docs/explanation/benchmarking/#metric
+[parameters]: /ja/docs/explanation/benchmarking/#parameters
+[rfc 8785]: https://www.rfc-editor.org/rfc/rfc8785

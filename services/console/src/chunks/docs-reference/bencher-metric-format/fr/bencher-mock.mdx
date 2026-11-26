@@ -1,6 +1,10 @@
 ## `bencher mock`
 
 La sous-commande CLI `bencher mock` est utilisée pour générer des données JSON factices au format Bencher Metric Format (BMF).
+Elle écrit la [version 1 de BMF][bmf versions], sauf indication contraire :
+chaque [Mesure][measure] de chaque [Benchmark][benchmark] a une [Métrique][metric], `value`,
+et chaque Benchmark a une Variante sans Paramètres.
+Elle ne lit pas la version de votre Projet, donc un Projet en version 0 a besoin de [`--bmf-version 0`](#--bmf-version-bmf_version).
 
 ### `--seed <SEED>`
 
@@ -11,23 +15,31 @@ Si elle n'est pas spécifiée, une graine aléatoire sera utilisée.
 
 Le nombre de [Benchmarks][benchmark] factices à générer.
 
-[benchmark]: /fr/docs/explanation/benchmarking/#benchmark
-
 ### `--measure <MEASURE>`
 
 La [Mesure][measure] à utiliser pour chaque [Benchmark][benchmark].
 Plusieurs Mesures peuvent être spécifiées en utilisant l'option `--measure` plusieurs fois.
 Par défaut, c'est la Mesure intégrée `latency`.
 
-[measure]: /fr/docs/explanation/benchmarking/#measure
-[benchmark]: /fr/docs/explanation/benchmarking/#benchmark
+### `--parameters <PARAMETERS>`
+
+Les [Paramètres][parameters] d'une Variante à générer pour chaque Benchmark, sous la forme d'un objet JSON (ex : `--parameters '{"size": 64}'`).
+Chaque ensemble de Paramètres crée une Variante de chaque Benchmark,
+et plusieurs ensembles peuvent être spécifiés en utilisant l'option `--parameters` plusieurs fois.
+Si elle n'est pas spécifiée, chaque Benchmark a une Variante sans Paramètres.
+Elle accepte le même JSON que [l'option `--threshold-parameters`][threshold parameters] de `bencher run`,
+et elle ne peut pas être utilisée avec `--bmf-version 0`.
+
+### `--bmf-version <BMF_VERSION>`
+
+La version de BMF à écrire, soit `0`, soit `1`.
+Par défaut, c'est `1`.
+En version 0, chaque Mesure a une `value`, une `lower_value` et une `upper_value`.
 
 ### `--pow <POW>`
 
 La puissance de 10 à utiliser pour les [métriques][metric] factices.
 Par défaut, c'est `1`.
-
-[metric]: /fr/docs/explanation/benchmarking/#metric
 
 ### `--fail`
 
@@ -40,3 +52,10 @@ Par défaut, c'est `1`.
 ### `--help`
 
 Afficher le message d'aide.
+
+[bmf versions]: /fr/docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /fr/docs/explanation/benchmarking/#benchmark
+[measure]: /fr/docs/explanation/benchmarking/#measure
+[metric]: /fr/docs/explanation/benchmarking/#metric
+[parameters]: /fr/docs/explanation/benchmarking/#parameters
+[threshold parameters]: /fr/docs/explanation/thresholds/#--threshold-parameters-parameters

@@ -1,6 +1,10 @@
 ## `bencher mock`
 
 The `bencher mock` CLI subcommand is used to generate mock Bencher Metric Format (BMF) JSON data.
+It writes [BMF version 1][bmf versions] unless told otherwise:
+each [Measure][measure] of each [Benchmark][benchmark] has one [Metric][metric], `value`,
+and each Benchmark has one Variant with no Parameters.
+It does not read your Project's version, so a version 0 Project needs [`--bmf-version 0`](#--bmf-version-bmf_version).
 
 ### `--seed <SEED>`
 
@@ -11,23 +15,31 @@ If not specified, a random seed will be used.
 
 The number of mock [Benchmarks][benchmark] to generate.
 
-[benchmark]: /docs/explanation/benchmarking/#benchmark
-
 ### `--measure <MEASURE>`
 
 The [Measure][measure] to use for each [Benchmark][benchmark].
 Multiple Measures can be specified by using the `--measure` option multiple times.
 The default is the built-in `latency` Measure.
 
-[measure]: /docs/explanation/benchmarking/#measure
-[benchmark]: /docs/explanation/benchmarking/#benchmark
+### `--parameters <PARAMETERS>`
+
+The [Parameters][parameters] of a Variant to generate for every Benchmark, as a JSON object (ex: `--parameters '{"size": 64}'`).
+Each set of Parameters makes one Variant of every Benchmark,
+and multiple sets can be specified by using the `--parameters` option multiple times.
+If not specified, each Benchmark has one Variant with no Parameters.
+It takes the same JSON as [the `--threshold-parameters` option][threshold parameters] of `bencher run`,
+and it cannot be used with `--bmf-version 0`.
+
+### `--bmf-version <BMF_VERSION>`
+
+The BMF version to write, either `0` or `1`.
+The default is `1`.
+At version 0, each Measure has a `value`, a `lower_value`, and an `upper_value`.
 
 ### `--pow <POW>`
 
 The power of 10 to use for the mock [Metrics][metric].
 The default is `1`.
-
-[metric]: /docs/explanation/benchmarking/#metric
 
 ### `--fail`
 
@@ -40,3 +52,10 @@ Intermittently fail while running.
 ### `--help`
 
 Print the help message.
+
+[bmf versions]: /docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /docs/explanation/benchmarking/#benchmark
+[measure]: /docs/explanation/benchmarking/#measure
+[metric]: /docs/explanation/benchmarking/#metric
+[parameters]: /docs/explanation/benchmarking/#parameters
+[threshold parameters]: /docs/explanation/thresholds/#--threshold-parameters-parameters

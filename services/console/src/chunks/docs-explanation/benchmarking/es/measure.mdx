@@ -1,9 +1,11 @@
-### Medida
+### Measure
 Una Medida es la unidad de medida para una Métrica.
 Por defecto todos los Proyectos empiezan con una Medida `Latency` y `Throughput` con unidades de `nanoseconds (ns)` y `operations / second (ops/s)` respectivamente.
-La Medida la determina el [adaptador del arnés de benchmark][adapters].
+El [adaptador del arnés de benchmark][adapters] escribe cada Medida que informa tu arnés de benchmark,
+y [la opción `--measure`][measure option] de `bencher run` conserva solo las Medidas que enumera.
 
 Si estás usando [Bencher Metric Format (BMF)][bmf] el nombre, slug o UUID pueden usarse para identificar una Medida.
 
 [adapters]: /es/docs/explanation/adapters/
+[measure option]: /es/docs/explanation/bencher-run/#--measure-measure
 [bmf]: /es/docs/reference/bencher-metric-format/

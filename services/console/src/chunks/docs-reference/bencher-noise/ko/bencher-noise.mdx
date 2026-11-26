@@ -9,7 +9,7 @@
 - **Cache Jitter**: L3 캐시 크기의 버퍼에 대해 순차 읽기를 수행하여 메모리 캐시 접근 일관성을 측정합니다.
 - **I/O Jitter**: 임시 파일을 쓰고 읽으며 타이밍 변동을 추적하여 파일 시스템 I/O 일관성을 측정합니다.
 - **CPU Steal**: 가상화 플랫폼에서 하이퍼바이저가 얼마나 많은 CPU 시간을 가져가는지 감지합니다.
-- **Noise Score**: 모든 측정을 환경 노이즈 수준의 단일 지표로 결합한 복합 점수(0–100 dB).
+- **Noise Score**: 모든 측정을 환경 노이즈 수준의 단일 지표로 결합한 복합 점수(0에서 100 dB).
 
 ### `bencher noise` 사용법
 
@@ -23,7 +23,7 @@ bencher noise [OPTIONS]
 
 총 측정 시간(초).
 
-기본값: `60`
+기본값: `30`
 
 #### `--format <FORMAT>`
 
@@ -31,8 +31,27 @@ bencher noise [OPTIONS]
 
 - `human`: 시각적 노이즈 바와 조언이 포함된 사람이 읽을 수 있는 터미널 출력.
 - `json`: BMF(Bencher Metric Format) JSON 출력. `bencher run`으로 파이프하기에 적합합니다.
+  그 버전은 [`--bmf-version` 옵션](#--bmf-version-bmf_version)으로 설정합니다.
 
 기본값: `human`
+
+#### `--bmf-version <BMF_VERSION>`
+
+`json` 출력 형식의 [BMF 버전][bmf versions]으로, `0` 또는 `1`입니다.
+`bencher noise`는 프로젝트의 버전을 읽지 않으므로, 버전 0 프로젝트에는 `--bmf-version 0`이 필요합니다.
+
+버전 1에서 출력에는 다음 [벤치마크][benchmark]가 있습니다:
+
+- `bencher::noise::compute_jitter`, `bencher::noise::cache_jitter`, `bencher::noise::io_jitter`, 각각 두 개의 [측정][measure]을 가집니다:
+  - 해당 지터 측정(`compute-jitter`, `cache-jitter` 또는 `io-jitter`)과 `cov` [메트릭][metric], 즉 백분율로 나타낸 변동 계수
+  - 같은 샘플의 `mean`, `std_dev`, `p99` 메트릭을 나노초 단위로 가진 `latency` 측정
+- `bencher::noise::cpu_steal`, 플랫폼이 CPU 스틸을 보고하는 경우 `cpu-steal` 측정과 그 `value` 메트릭을 가집니다
+- `bencher::noise::composite`, `noise-score` 측정과 그 `value` 메트릭을 가집니다
+
+버전 0에서는 모든 측정이 `value`만 가지며, 이는 각 지터 측정의 변동 계수이고, `latency` 측정은 없습니다.
+버전 0에서 버전 1로 옮긴 프로젝트는 메트릭이 이제 `cov`이므로 각 지터 측정의 이력을 새로 시작합니다.
+
+기본값: `1`
 
 #### `--quiet`
 
@@ -42,3 +61,8 @@ bencher noise [OPTIONS]
 #### `--help`
 
 도움말을 출력합니다.
+
+[bmf versions]: /ko/docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /ko/docs/explanation/benchmarking/#benchmark
+[measure]: /ko/docs/explanation/benchmarking/#measure
+[metric]: /ko/docs/explanation/benchmarking/#metric

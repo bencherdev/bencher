@@ -3,3 +3,7 @@
 <br />
 
 Optional: Benchmark-Testfehler zulassen.
+Wenn eine Iteration des Benchmark-Befehls fehlschlägt, gibt `bencher run` den Fehler aus und überspringt diese Iteration:
+Ihre Ausgabe wird nicht geparst, daher wird keines ihrer Ergebnisse gesendet.
+Ein Benchmark-Harness, das mit einem Fehler beendet wird, wenn auch nur ein Benchmark fehlschlägt, wie asv oder Catch2,
+verliert die Ergebnisse dieser gesamten Iteration.

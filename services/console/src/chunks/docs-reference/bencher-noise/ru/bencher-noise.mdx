@@ -9,7 +9,7 @@
 - **Cache Jitter**: Измеряет стабильность доступа к кешу памяти, выполняя последовательные чтения буфера размером с кеш L3.
 - **I/O Jitter**: Измеряет стабильность файловых операций ввода-вывода, записывая и читая временные файлы и отслеживая временну́ю вариацию.
 - **CPU Steal**: На виртуализированных платформах определяет, сколько процессорного времени забирает гипервизор.
-- **Noise Score**: Составная оценка (0–100 дБ), объединяющая все измерения в единый показатель уровня шума окружения.
+- **Noise Score**: Составная оценка (от 0 до 100 дБ), объединяющая все измерения в единый показатель уровня шума окружения.
 
 ### Использование `bencher noise`
 
@@ -23,7 +23,7 @@ bencher noise [OPTIONS]
 
 Общая продолжительность измерения в секундах.
 
-По умолчанию: `60`
+По умолчанию: `30`
 
 #### `--format <FORMAT>`
 
@@ -31,8 +31,27 @@ bencher noise [OPTIONS]
 
 - `human`: Читаемый терминальный вывод с визуальными полосами шума и рекомендациями.
 - `json`: Вывод в формате BMF (Bencher Metric Format) JSON, подходящий для передачи в `bencher run`.
+  Его версия задается [опцией `--bmf-version`](#--bmf-version-bmf_version).
 
 По умолчанию: `human`
+
+#### `--bmf-version <BMF_VERSION>`
+
+[Версия BMF][bmf versions] формата вывода `json`, `0` или `1`.
+`bencher noise` не считывает версию вашего Проекта, поэтому Проекту версии 0 нужен `--bmf-version 0`.
+
+В версии 1 вывод содержит следующие [Бенчмарки][benchmark]:
+
+- `bencher::noise::compute_jitter`, `bencher::noise::cache_jitter` и `bencher::noise::io_jitter`, каждый с двумя [Измерениями][measure]:
+  - Его Измерение джиттера (`compute-jitter`, `cache-jitter` или `io-jitter`) с [Метрикой][metric] `cov`, коэффициентом вариации в процентах
+  - Измерение `latency` с Метриками `mean`, `std_dev` и `p99` тех же выборок, в наносекундах
+- `bencher::noise::cpu_steal`, если платформа сообщает о CPU steal, с Измерением `cpu-steal` и его Метрикой `value`
+- `bencher::noise::composite` с Измерением `noise-score` и его Метрикой `value`
+
+В версии 0 у каждого Измерения есть только `value`, который для каждого Измерения джиттера является коэффициентом вариации, а Измерения `latency` нет.
+Проект, который переходит с версии 0 на версию 1, начинает новую историю для каждого Измерения джиттера, так как его Метрика теперь `cov`.
+
+По умолчанию: `1`
 
 #### `--quiet`
 
@@ -42,3 +61,8 @@ bencher noise [OPTIONS]
 #### `--help`
 
 Вывести справку.
+
+[bmf versions]: /ru/docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /ru/docs/explanation/benchmarking/#benchmark
+[measure]: /ru/docs/explanation/benchmarking/#measure
+[metric]: /ru/docs/explanation/benchmarking/#metric

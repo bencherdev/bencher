@@ -1,0 +1,20 @@
+## `--threshold-metric <METRIC>`
+
+<br />
+
+지정된 [메트릭][metric] 이름을 임계값에 사용하십시오.
+BMF 버전 1에서 임계값은 `median`, `p99` 또는 `value`처럼 이름으로 해당 측정의 메트릭 하나를 검사합니다.
+예를 들어, Latency 측정의 중앙값에 대한 임계값을 사용하려면,
+`--threshold-measure latency --threshold-metric median`이라고 작성할 수 있습니다.
+어떤 메트릭을 먼저 검사할지 고르려면 [각 벤치마크 하네스 어댑터][adapters]가 기록하는 메트릭을 확인하세요.
+측정의 임계값이 검사하는 메트릭은 [pull request 댓글][github actions]과 `bencher run` 출력에서 해당 측정의 열이 됩니다.
+
+어느 임계값이든 메트릭이나 매개변수 필터를 가지면 모든 임계값에 메트릭이 필요하며,
+`bencher run`은 메트릭이 빠진 임계값을 알려주는 오류와 함께 중지됩니다.
+`--threshold-metric`이 전혀 없는 `--threshold-measure`는 임계값을 설정하지 않습니다.
+실행은 그대로 기록되며, 해당 보고서는 임계값을 건너뛰었다는 warning을 남기고 `--threshold-metric`을 사용하라는 힌트를 제공합니다.
+BMF 버전 0에서는 `--threshold-metric`이 무언가를 전송하기 전에 오류와 함께 `bencher run`을 중지시킵니다.
+
+[metric]: /ko/docs/explanation/benchmarking/#metric
+[adapters]: /ko/docs/explanation/adapters/
+[github actions]: /ko/docs/explanation/bencher-run/#--github-actions-github_token

@@ -24,13 +24,13 @@ Exec Form:
 <ExecForm />
 
 The benchmark command can be run multiple times using the [`--iter`][iter option] option,
-and those results can be folded into a single result using the [`--fold`][fold option] option.
+and at BMF version 0 those results can be folded into a single result using the [`--fold`][fold option] option.
 If any of the iterations fail, then the entire command is considered to have failed
 unless the [`--allow-failure`][allow failure flag] flag is set.
 
 If the benchmark command is not specified but the [`--file`][file option] option is,
 then `bencher run` will just read from output file path instead.
-Similarly, if the the benchmark command is not specified but the [`--file-size`][file size option] option is,
+Similarly, if the benchmark command is not specified but the [`--file-size`][file size option] option is,
 then `bencher run` will just read the size of the file at the given file path instead.
 Both `--file` and `--file-size` options can be specified multiple times to read from multiple files.
 
@@ -43,7 +43,7 @@ Both `--file` and `--file-size` options can be specified multiple times to read 
   then each file will be considered a separate <code>iteration</code> of the benchmark command.
   When displayed, these results will be shown in separate tables.
 
-  If you wish to combined these results into a single <code>iteration</code>,
+  At BMF version 0, if you wish to combine these results into a single <code>iteration</code>,
   then you can set the <code>-&#8288;-iter</code> option to <code>1</code>
   and set the <code>-&#8288;-fold</code> option to either the <code>min</code>, <code>max</code>, or <code>median</code> aggregate functions.
   This will fold the results into a single <code>iteration</code>
@@ -64,6 +64,6 @@ This allows you to save the output of another command to a file or pipe it into 
 [adapter option]: #--adapter-adapter
 [file option]: #--file-file
 [file size option]: #--file-size-file
-[iter option]: #--iter-iter
-[fold option]: #--fold-fold
+[iter option]: #--iter-count
+[fold option]: #--fold-aggregate_function
 [allow failure flag]: #--allow-failure

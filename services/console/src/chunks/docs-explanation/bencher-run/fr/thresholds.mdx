@@ -1,4 +1,6 @@
 ### `--threshold-measure <MEASURE>`
+### `--threshold-metric <METRIC>`
+### `--threshold-parameters <PARAMETERS>`
 ### `--threshold-test <TEST>`
 ### `--threshold-min-sample-size <SAMPLE_SIZE>`
 ### `--threshold-max-sample-size <SAMPLE_SIZE>`
@@ -9,5 +11,9 @@
 ### `--error-on-alert`
 
 <br />
+
+En version 1 de BMF, un Seuil vérifie une Métrique d'une Mesure, que `--threshold-metric` nomme.
+Un `--threshold-measure` sans aucun `--threshold-metric` ne définit aucun Seuil :
+l'exécution est tout de même enregistrée, et son Rapport avertit que le Seuil a été ignoré, avec une suggestion d'utiliser `--threshold-metric`.
 
 Voir [seuils et alertes](/fr/docs/explanation/thresholds/) pour un aperçu complet.

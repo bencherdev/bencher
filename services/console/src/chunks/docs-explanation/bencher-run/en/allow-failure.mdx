@@ -3,3 +3,7 @@
 <br />
 
 Optional: Allow benchmark test failure.
+If an iteration of the benchmark command fails, `bencher run` prints the failure and skips that iteration:
+its output is not parsed, so none of its results are sent.
+A benchmark harness that exits with an error when any one benchmark fails, such as asv or Catch2,
+loses the results of that whole iteration.

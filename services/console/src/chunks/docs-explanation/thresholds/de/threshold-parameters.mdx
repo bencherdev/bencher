@@ -1,0 +1,23 @@
+import ThresholdsPayloadCode from "../thresholds-payload-code.mdx";
+
+## `--threshold-parameters <PARAMETERS>`
+
+<br />
+
+Verwenden Sie den angegebenen Parameterfilter für einen Schwellenwert, als JSON-Objekt (z. B. `--threshold-parameters '{"size": 512}'`).
+Der Schwellenwert prüft jede [Variante][variant], deren Parameter jeden Schlüssel des Objekts mit demselben Wert enthalten,
+daher passt `{"size": 512}` sowohl auf `{"op": "read", "size": 512}` als auch auf `{"op": "write", "size": 512}`.
+Der Wert ist JSON, nicht die Form `size=512`, die der Pull-Request-Kommentar und die Console zeigen.
+Wenn nicht gesetzt oder auf `{}` gesetzt, prüft der Schwellenwert jede Variante.
+Um diese Option für einen bestimmten Schwellenwert zu ignorieren, verwenden Sie einen Unterstrich (`_`).
+Ein Schwellenwert mit einem Parameterfilter braucht auch [die Option `--threshold-metric`](#--threshold-metric-metric).
+In BMF Version 0 stoppt `--threshold-parameters` `bencher run` mit einem Fehler, bevor etwas gesendet wird.
+
+Jede `--threshold-parameters` Option enthält einen Satz von Parametern.
+Um die Varianten zu prüfen, die auf einen von mehreren Sätzen passen, verwenden Sie die API:
+In BMF Version 1 listen die `thresholds` eines Berichts jeden Schwellenwert mit seinem `parameters`-Filter als Liste von Sätzen auf.
+Zum Beispiel:
+
+<ThresholdsPayloadCode />
+
+[variant]: /de/docs/explanation/benchmarking/#parameters

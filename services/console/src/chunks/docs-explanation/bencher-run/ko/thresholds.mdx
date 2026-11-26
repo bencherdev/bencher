@@ -1,4 +1,6 @@
 ### `--threshold-measure <MEASURE>`
+### `--threshold-metric <METRIC>`
+### `--threshold-parameters <PARAMETERS>`
 ### `--threshold-test <TEST>`
 ### `--threshold-min-sample-size <SAMPLE_SIZE>`
 ### `--threshold-max-sample-size <SAMPLE_SIZE>`
@@ -9,5 +11,9 @@
 ### `--error-on-alert`
 
 <br />
+
+BMF 버전 1에서 임계값은 측정의 메트릭 하나를 검사하며, 그 메트릭은 `--threshold-metric`으로 지정합니다.
+`--threshold-metric`이 전혀 없는 `--threshold-measure`는 임계값을 설정하지 않습니다.
+실행은 그대로 기록되며, 해당 보고서는 임계값을 건너뛰었다는 warning을 남기고 `--threshold-metric`을 사용하라는 힌트를 제공합니다.
 
 전체 개요는 [임계값 및 알림](/ko/docs/explanation/thresholds/)을 참조하세요.

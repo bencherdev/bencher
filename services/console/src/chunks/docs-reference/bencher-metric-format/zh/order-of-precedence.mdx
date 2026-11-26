@@ -15,6 +15,28 @@
 2. `slug`（最大长度 `64` 字符）
 3. `name`（最大长度 `64` 字符）
 
+<br />
+
+[指标][metric]和[参数][parameters]有以下限制：
+
+- 指标名称为 `1` 到 `64` 个字符，且开头和结尾不能有空白。
+  `value`、`lower_value` 和 `upper_value` 是约定俗成的名称，并不特殊。
+- 一个度量最多包含 `32` 个指标名称。
+  超过 `32` 个时，会保留 `value`、`lower_value` 和 `upper_value`，然后按字母顺序保留其他名称，其余的将被跳过。
+- 一个变体的参数最多包含 `8` 个键。
+  键为 `1` 到 `64` 个字符，且开头和结尾不能有空白。
+  值为布尔值、数字，或最多 `64` 个字符的字符串（可以为空）。
+- 参数按照 [RFC 8785][rfc 8785] 进行规范化，
+  因此键的顺序无关紧要，`16`、`16.0` 和 `1.6e1` 是相同的值。
+
+超出限制的基准、度量或指标名称会被跳过，
+参数超出限制的变体也会被跳过，
+报告会在其警告中统计每一项。
+值不是数字的指标会导致整个负载失败。
+
 [benchmark]: /zh/docs/explanation/benchmarking/#benchmark
 [suppressing alerts]: /zh/docs/explanation/thresholds/#suppressing-alerts
 [measure]: /zh/docs/explanation/benchmarking/#measure
+[metric]: /zh/docs/explanation/benchmarking/#metric
+[parameters]: /zh/docs/explanation/benchmarking/#parameters
+[rfc 8785]: https://www.rfc-editor.org/rfc/rfc8785

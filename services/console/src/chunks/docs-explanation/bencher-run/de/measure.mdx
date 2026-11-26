@@ -1,0 +1,12 @@
+### `--measure <MEASURE>`
+
+<br />
+
+Optional: Behält aus den Ergebnissen nur den angegebenen [Measure][measure]-Namen, Slug oder die UUID.
+Jede andere Measure wird verworfen, bevor etwas gespeichert wird.
+Mehrere Measures können behalten werden, indem die Option `--measure` mehrfach verwendet wird.
+Nur die ersten `64` werden behalten, und der Bericht warnt vor dem Rest.
+Eine Measure, die in den Ergebnissen nicht vorkommt, wird ignoriert.
+Wenn nicht gesetzt, wird jede Measure behalten.
+
+[measure]: /de/docs/explanation/benchmarking/#measure

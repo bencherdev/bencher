@@ -1,14 +1,26 @@
 import BmfSchema from "../bmf-schema.mdx";
+import BmfV0Schema from "../bmf-v0-schema.mdx";
 
 ## Bencher Metric Format (BMF) JSON スキーマ
 
-これは Bencher Metric Format (BMF) JSON の[JSON スキーマ][json schema]です:
+これは Bencher Metric Format (BMF) バージョン 1 JSON の[JSON スキーマ][json schema]です:
 
 <BmfSchema />
 
+スキーマはペイロードの形をチェックします。
+名前とパラメータの制限は、レポートが読み取られるときにチェックされます。
+
 ### スキーマのバージョン:
 
-- 最新: [`https://bencher.dev/bmf.json`](https://bencher.dev/bmf.json)
-- `v0`（最新）: [`https://bencher.dev/v0/bmf.json`](https://bencher.dev/v0/bmf.json)
+- 最新（`v1`）: [`https://bencher.dev/bmf.json`](https://bencher.dev/bmf.json)
+- `v1`: [`https://bencher.dev/v1/bmf.json`](https://bencher.dev/v1/bmf.json)
+- `v0`: [`https://bencher.dev/v0/bmf.json`](https://bencher.dev/v0/bmf.json)
+
+<details>
+<summary>BMF バージョン 0 JSON スキーマ</summary>
+
+<BmfV0Schema />
+
+</details>
 
 [json schema]: https://json-schema.org/draft-07/json-schema-release-notes

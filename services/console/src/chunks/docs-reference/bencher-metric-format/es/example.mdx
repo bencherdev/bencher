@@ -4,15 +4,43 @@ import BmfExample from "../bmf-example.mdx";
 
 <BmfExample />
 
-En este ejemplo, hay tres [referencias][benchmark]:
+La versión 1 de BMF asocia el nombre de cada [Benchmark][benchmark] con una lista de entradas, una por cada [Variante][parameters] del Benchmark.
+Cada entrada contiene:
 
-- Referencia `benchmark_name` con dos [medidas][measure]:
-  - Latencia (`latency`)
-  - Rendimiento (`throughput`)
-- Referencia `/bin/sh -c ./my_build_script.sh` con una medida para [monitorear el tiempo de construcción][track build time] (`build-time`)
-- Referencia `my_binary` con una medida para [monitorear el tamaño del archivo][track file size] (`file-size`)
+- `parameters` (opcional): los [Parámetros][parameters] con los que se ejecutó la Variante, como un objeto cuyos valores son cadenas, números o booleanos.
+  Una entrada sin `parameters` es la Variante con Parámetros vacíos, lo mismo que `{}`.
+- `measures`: cada [Medida][measure] de la Variante, asociada a sus [Métricas][metric].
+  Una Métrica es un nombre asociado a un número, como `"median": 88.0`.
+
+En este ejemplo, hay tres Benchmarks:
+
+- Benchmark `benchmark_name` con dos Variantes, `size` `64` y `size` `512`, cada una con dos Medidas:
+  - Latency (`latency`) con las Métricas `median`, `mean` y `p99`
+  - Throughput (`throughput`) con la Métrica `mean`
+- Benchmark `/bin/sh -c ./my_build_script.sh` con una Variante y una Medida para [monitorear el tiempo de construcción][track build time] (`build-time`), con la Métrica `value`
+- Benchmark `my_binary` con una Variante y una Medida para [monitorear el tamaño del archivo][track file size] (`file-size`), con la Métrica `value`
+
+Dos entradas con Parámetros iguales son una sola Variante, y sus Métricas se combinan.
+Si ambas entradas contienen la misma Métrica para la misma Medida, gana la entrada posterior.
+Una entrada sin Medidas no escribe nada.
+
+### Metric Names
+
+Bencher almacena todos los nombres de Métrica de la misma manera, pero elige la Métrica predeterminada de una Medida por su nombre,
+así que nombre cada estadística con su nombre canónico:
+`mean`, `median`, `min`, `max`, `std_dev` y los percentiles `p25`, `p75`, `p90`, `p95`, `p99` y `p99_9`.
+Nombre un intervalo de confianza según la estadística que acota, como `mean_ci_lower` y `mean_ci_upper`,
+y añada su nivel cuando lo conozca, como `mean_ci95_lower`.
+Nombre `value` a un número único que no sea una estadística, como un conteo o un tiempo de construcción.
+
+Cuando ningún [Umbral][threshold] comprueba una Medida, el comentario del pull request y la salida de `bencher run` muestran su Métrica predeterminada:
+`value`, luego `median`, luego `mean` y luego el primer nombre en orden alfabético.
+El nombre de un intervalo de confianza va después de todos los demás nombres.
 
 [benchmark]: /es/docs/explanation/benchmarking/#benchmark
+[parameters]: /es/docs/explanation/benchmarking/#parameters
 [measure]: /es/docs/explanation/benchmarking/#measure
+[metric]: /es/docs/explanation/benchmarking/#metric
+[threshold]: /es/docs/explanation/thresholds/
 [track build time]: /es/docs/how-to/track-build-time/
 [track file size]: /es/docs/how-to/track-file-size/
