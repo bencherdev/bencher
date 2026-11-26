@@ -11,6 +11,7 @@ stateDiagram-v2
     running --> failed: failed
     running --> unknown: lost contact
     running --> canceled: cancel / hard timeout
+    unknown --> running: iterations left
     unknown --> completed: completed
     unknown --> failed: failed
     unknown --> canceled: cancel / hard timeout

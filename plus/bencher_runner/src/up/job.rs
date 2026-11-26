@@ -74,7 +74,7 @@ pub fn execute_job(
 
     // Passing cancel_flag so the wait for the VM can abort early when the
     // server cancels or the runner stops.
-    let iterations = run_job(log, job, &job_config, host, deadline, &cancel_flag);
+    let run = run_job(log, job, &job_config, host, deadline, &cancel_flag);
 
     // Stop the heartbeat and stop watcher threads
     stop_flag.store(true, Ordering::SeqCst);
@@ -87,18 +87,18 @@ pub fn execute_job(
     });
     if stopped {
         info!(log, "Job stopped with the runner");
-        return iterations.stopped();
+        return run.stopped();
     }
 
     let canceled = cancel_flag.load(Ordering::SeqCst);
     if canceled {
         info!(log, "Job canceled by the server");
     }
-    iterations.finish(canceled)
+    run.finish(canceled)
 }
 
-/// Pulls the Job's image once, before its first iteration, and runs every
-/// iteration from it.
+/// Pulls the Job's image and runs it once, since the server sends each of a
+/// Job's iterations as a Job of its own.
 fn run_job(
     log: &Logger,
     job: &JsonClaimedJob,
@@ -106,11 +106,7 @@ fn run_job(
     host: &mut crate::jail::HostPreparation,
     deadline: JobDeadline,
     cancel_flag: &AtomicBool,
-) -> Iterations {
-    let iter_count = job.config.iter.map_or(1, bencher_json::Iteration::as_usize);
-    if iter_count == 0 {
-        return Iterations::default();
-    }
+) -> Run {
     let allow_failure = job.config.allow_failure.unwrap_or_default();
     let benchmark_name = if job_config.build_time {
         match build_benchmark_name(job) {
@@ -126,128 +122,98 @@ fn run_job(
 
     let image = match PreparedImage::prepare(log, job_config, host, Some(cancel_flag), deadline) {
         Ok(image) => image,
-        Err(e) => {
-            return Iterations {
-                failure: Some(e.to_string()),
-                ..Iterations::default()
-            };
-        },
+        Err(e) => return Run::failed(e.to_string()),
     };
-    run_iterations(
-        log,
-        iter_count,
-        allow_failure,
-        deadline,
-        cancel_flag,
-        |deadline| {
-            let output = image.execute(log, job_config, host, Some(cancel_flag), deadline)?;
-            Ok(output_to_iteration(
-                log,
-                output,
-                job_config.build_time,
-                job_config.file_size,
-                benchmark_name.as_ref(),
-            ))
-        },
-    )
+    run_once(log, allow_failure, deadline, cancel_flag, |deadline| {
+        let output = image.execute(log, job_config, host, Some(cancel_flag), deadline)?;
+        Ok(output_to_iteration(
+            log,
+            output,
+            job_config.build_time,
+            job_config.file_size,
+            benchmark_name.as_ref(),
+        ))
+    })
 }
 
-/// Runs the Job's iterations, each with what is left of `deadline`, until one
-/// fails, the server cancels, or the time runs out.
-fn run_iterations<F>(
+/// Runs the Job with what is left of `deadline`, unless the server has
+/// canceled it or its time has run out.
+fn run_once<F>(
     log: &Logger,
-    iter_count: usize,
     allow_failure: bool,
     deadline: JobDeadline,
     cancel_flag: &AtomicBool,
-    mut run: F,
-) -> Iterations
+    run: F,
+) -> Run
 where
-    F: FnMut(JobDeadline) -> Result<JsonIterationOutput, RunnerError>,
+    F: FnOnce(JobDeadline) -> Result<JsonIterationOutput, RunnerError>,
 {
-    let mut iterations = Iterations {
-        results: Vec::with_capacity(iter_count),
-        ..Iterations::default()
-    };
-    for iteration in 0..iter_count {
-        if cancel_flag.load(Ordering::SeqCst) {
-            break;
-        }
-        if deadline.remaining().is_zero() {
-            iterations.failure = Some(format!(
-                "Job timed out after {}s, before iteration {}/{iter_count}",
-                deadline.timeout().as_secs(),
-                iteration + 1
-            ));
-            break;
-        }
-        info!(log, "Starting iteration"; "iteration" => iteration + 1, "iterations" => iter_count);
-        match run(deadline) {
-            Ok(output) => {
-                iterations.last_exit_code = output.exit_code;
-                let failed = output.exit_code != 0 && !allow_failure;
-                iterations.results.push(output);
-                if failed {
-                    iterations.failure = Some(format!(
-                        "Benchmark exited with non-zero exit code: {}",
-                        iterations.last_exit_code
-                    ));
-                    break;
-                }
-            },
-            // A failure with no time left ends the Job, since no later
-            // iteration could run either.
-            Err(e) if allow_failure && !deadline.remaining().is_zero() => {
-                warn!(log, "Iteration failed, skipped under allow_failure";
-                    "iteration" => iteration + 1,
-                    "iterations" => iter_count,
-                    "error" => bencher_logger::capped(&e),
-                );
-            },
-            Err(e) => {
-                iterations.failure = Some(e.to_string());
-                break;
-            },
-        }
+    if cancel_flag.load(Ordering::SeqCst) {
+        return Run::default();
     }
-    iterations
+    if deadline.remaining().is_zero() {
+        return Run::failed("Job timed out: no time was left for its run".to_owned());
+    }
+    info!(log, "Starting run");
+    match run(deadline) {
+        Ok(output) => {
+            let failure = (output.exit_code != 0 && !allow_failure).then(|| {
+                format!(
+                    "Benchmark exited with non-zero exit code: {}",
+                    output.exit_code
+                )
+            });
+            Run {
+                output: Some(output),
+                failure,
+            }
+        },
+        // A run with no result, which the server drops under allow_failure.
+        // A run out of time fails the Job, since the Job is out of time too.
+        Err(e) if allow_failure && !deadline.remaining().is_zero() => {
+            warn!(log, "Run failed, skipped under allow_failure"; "error" => bencher_logger::capped(&e));
+            Run::default()
+        },
+        Err(e) => Run::failed(e.to_string()),
+    }
 }
 
-/// What a Job's iterations leave behind for its outcome.
+/// What the Job's run leaves behind for its outcome.
 #[derive(Default)]
-struct Iterations {
-    results: Vec<JsonIterationOutput>,
-    last_exit_code: i32,
-    /// Why the iterations stopped early.
+struct Run {
+    output: Option<JsonIterationOutput>,
+    /// Why the run failed.
     failure: Option<String>,
 }
 
-impl Iterations {
-    /// A cancel outranks a failure: the server sends one only for a Job it has
-    /// already ended, and discards any other outcome as late.
-    fn finish(self, canceled: bool) -> JobFinishResult {
-        let Self {
-            results,
-            last_exit_code,
-            failure,
-        } = self;
-        if canceled {
-            return JobFinishResult::Canceled;
-        }
-        if let Some(error) = failure {
-            return JobFinishResult::Failed { error, results };
-        }
-        JobFinishResult::Completed {
-            exit_code: last_exit_code,
-            results,
+impl Run {
+    fn failed(error: String) -> Self {
+        Self {
+            output: None,
+            failure: Some(error),
         }
     }
 
-    /// The runner's stop is why the Job failed, whatever ended its iterations.
+    /// A cancel outranks a failure: the server sends one only for a Job it has
+    /// already ended, and discards any other outcome as late.
+    fn finish(self, canceled: bool) -> JobFinishResult {
+        let Self { output, failure } = self;
+        if canceled {
+            return JobFinishResult::Canceled;
+        }
+        let exit_code = output.as_ref().map_or(0, |output| output.exit_code);
+        let results = output.into_iter().collect();
+        if let Some(error) = failure {
+            return JobFinishResult::Failed { error, results };
+        }
+        JobFinishResult::Completed { exit_code, results }
+    }
+
+    /// The runner's stop is why the Job failed, whatever ended its run.
     fn stopped(self) -> JobFinishResult {
         JobFinishResult::Failed {
             error: "the runner stopped".to_owned(),
-            results: self.results,
+            results: self.output.into_iter().collect(),
         }
     }
 }
@@ -1051,18 +1017,15 @@ pub(crate) mod tests {
         check_sandbox_allowed(None, true).unwrap();
     }
 
-    // --- Iterations::finish ---
+    // --- Run::finish ---
 
     #[test]
     fn a_failure_without_a_cancel_ends_the_job_failed() {
         // Prevents the cancel check passing every Job, which reports a Job
         // that failed on its own as canceled.
-        let iterations = Iterations {
-            failure: Some("Benchmark exited with non-zero exit code: 1".to_owned()),
-            ..Iterations::default()
-        };
+        let run = Run::failed("Benchmark exited with non-zero exit code: 1".to_owned());
 
-        let outcome = iterations.finish(false);
+        let outcome = run.finish(false);
 
         assert!(
             matches!(&outcome, JobFinishResult::Failed { error, .. } if error.ends_with("exit code: 1")),
@@ -1071,18 +1034,14 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn a_cancel_that_ends_an_iteration_ends_the_job_canceled() {
+    fn a_cancel_that_ends_the_run_ends_the_job_canceled() {
         // Prevents the error a server cancel leaves in result collection
         // outranking the cancel, which reports a canceled Job as failed.
-        let iterations = Iterations {
-            failure: Some(
-                RunnerError::from(ExecutionError::Canceled("job was canceled".to_owned()))
-                    .to_string(),
-            ),
-            ..Iterations::default()
-        };
+        let run = Run::failed(
+            RunnerError::from(ExecutionError::Canceled("job was canceled".to_owned())).to_string(),
+        );
 
-        let outcome = iterations.finish(true);
+        let outcome = run.finish(true);
 
         assert!(
             matches!(outcome, JobFinishResult::Canceled),
@@ -1090,128 +1049,127 @@ pub(crate) mod tests {
         );
     }
 
-    // --- run_iterations ---
+    // --- run_once ---
 
     #[test]
-    fn each_iteration_gets_only_what_is_left_of_the_jobs_timeout() {
-        // Prevents each iteration getting the whole timeout, which lets a Job
-        // with several iterations run past the server's limit.
-        let pace = Duration::from_millis(200);
-        let mut left = Vec::new();
-
-        let iterations = run_iterations(
+    fn a_non_zero_exit_fails_the_job_without_allow_failure() {
+        // Kills a non-zero exit reported as completed, which gives the server
+        // a Job to keep that the user asked to fail.
+        let run = run_once(
             &discard(),
-            3,
             false,
             JobDeadline::start(Duration::from_mins(1)),
             &AtomicBool::new(false),
-            |deadline| {
-                left.push(deadline.remaining());
-                std::thread::sleep(pace);
-                Ok(iteration_output())
-            },
+            |_deadline| Ok(exit_output(3)),
         );
 
-        assert_eq!(iterations.results.len(), 3, "every iteration had time");
-        for (earlier, later) in left.iter().zip(left.iter().skip(1)) {
-            assert!(
-                *later <= earlier.saturating_sub(pace),
-                "an iteration must not get back time the one before it used: {left:?}"
-            );
-        }
+        let outcome = run.finish(false);
+        assert!(
+            matches!(&outcome, JobFinishResult::Failed { error, results } if error.ends_with("exit code: 3") && results.len() == 1),
+            "the run's failure and its result are kept: {outcome:?}"
+        );
     }
 
     #[test]
-    fn no_iteration_starts_once_the_jobs_timeout_has_run_out() {
-        // Prevents a VM booting with no time left, after the server's limit.
-        let mut started = 0;
-
-        let iterations = run_iterations(
+    fn a_non_zero_exit_completes_the_job_under_allow_failure() {
+        // Kills allow_failure ignored for a non-zero exit, which fails a Job
+        // whose user allowed the benchmark to fail.
+        let run = run_once(
             &discard(),
-            3,
-            false,
-            JobDeadline::start(Duration::from_secs(1)),
+            true,
+            JobDeadline::start(Duration::from_mins(1)),
             &AtomicBool::new(false),
-            |deadline| {
-                started += 1;
-                if started == 2 {
-                    spend(deadline);
-                }
+            |_deadline| Ok(exit_output(3)),
+        );
+
+        let outcome = run.finish(false);
+        assert!(
+            matches!(&outcome, JobFinishResult::Completed { exit_code: 3, results } if results.len() == 1),
+            "the run completes with its exit code: {outcome:?}"
+        );
+    }
+
+    #[test]
+    fn no_run_starts_once_the_jobs_timeout_has_run_out() {
+        // Prevents a VM booting with no time left, after the server's limit.
+        let mut started = false;
+
+        let run = run_once(
+            &discard(),
+            true,
+            JobDeadline::start(Duration::ZERO),
+            &AtomicBool::new(false),
+            |_deadline| {
+                started = true;
                 Ok(iteration_output())
             },
         );
 
-        assert_eq!(started, 2, "the third iteration had no time to run");
-        let outcome = iterations.finish(false);
-        let JobFinishResult::Failed { error, results } = outcome else {
-            panic!("a Job out of time ends failed, got: {outcome:?}");
-        };
-        assert!(error.contains("timed out"), "the error says why: {error}");
-        assert_eq!(
-            results.len(),
-            2,
-            "the finished iterations' results are kept"
+        assert!(!started, "the run had no time to start");
+        let outcome = run.finish(false);
+        assert!(
+            matches!(&outcome, JobFinishResult::Failed { error, results } if error.contains("timed out") && results.is_empty()),
+            "a Job out of time ends failed: {outcome:?}"
         );
+    }
+
+    #[test]
+    fn no_run_starts_once_the_server_has_canceled() {
+        // Kills a run started for a cancel that landed after the pull, which
+        // spawns the benchmark of a Job the server has ended.
+        let mut started = false;
+
+        let run = run_once(
+            &discard(),
+            false,
+            JobDeadline::start(Duration::from_mins(1)),
+            &AtomicBool::new(true),
+            |_deadline| {
+                started = true;
+                Ok(iteration_output())
+            },
+        );
+
+        assert!(!started, "the canceled Job never runs");
+        assert!(matches!(run.finish(true), JobFinishResult::Canceled));
     }
 
     #[test]
     fn running_out_of_time_ends_the_job_whatever_allow_failure_says() {
-        // Prevents allow_failure skipping a timeout in the last iteration,
-        // which reports a Job that ran out of time as completed.
-        let mut started = 0;
-
-        let iterations = run_iterations(
+        // Prevents allow_failure skipping a timeout, which reports a Job that
+        // ran out of time as completed.
+        let run = run_once(
             &discard(),
-            2,
             true,
             JobDeadline::start(Duration::from_secs(1)),
             &AtomicBool::new(false),
             |deadline| {
-                started += 1;
-                if started == 1 {
-                    return Ok(iteration_output());
-                }
                 spend(deadline);
                 Err(ExecutionError::Timeout("the guest was still running".to_owned()).into())
             },
         );
 
-        let outcome = iterations.finish(false);
-        let JobFinishResult::Failed { error, results } = outcome else {
-            panic!("a Job out of time ends failed, got: {outcome:?}");
-        };
+        let outcome = run.finish(false);
         assert!(
-            error.contains("the guest was still running"),
-            "the iteration's own error is kept: {error}"
+            matches!(&outcome, JobFinishResult::Failed { error, .. } if error.contains("the guest was still running")),
+            "the run's own error is kept: {outcome:?}"
         );
-        assert_eq!(results.len(), 1, "the finished iteration's result is kept");
     }
 
     #[test]
     fn allow_failure_still_skips_a_failure_with_time_left() {
         // Prevents the timeout check swallowing allow_failure for every failure.
-        let mut started = 0;
-
-        let iterations = run_iterations(
+        let run = run_once(
             &discard(),
-            2,
             true,
             JobDeadline::start(Duration::from_mins(1)),
             &AtomicBool::new(false),
-            |_deadline| {
-                started += 1;
-                if started == 1 {
-                    return Err(
-                        ExecutionError::Setup("the image would not unpack".to_owned()).into(),
-                    );
-                }
-                Ok(iteration_output())
-            },
+            |_deadline| Err(ExecutionError::Setup("the image would not unpack".to_owned()).into()),
         );
 
-        let outcome = iterations.finish(false);
+        let outcome = run.finish(false);
         assert!(
-            matches!(&outcome, JobFinishResult::Completed { results, .. } if results.len() == 1),
+            matches!(&outcome, JobFinishResult::Completed { results, .. } if results.is_empty()),
             "a failure with time left is skipped, got: {outcome:?}"
         );
     }
@@ -1255,8 +1213,7 @@ pub(crate) mod tests {
 
     #[test]
     fn a_stop_once_the_job_is_done_leaves_its_outcome() {
-        // Prevents a stop after the last iteration throwing away a Job that
-        // finished.
+        // Prevents a stop after the run throwing away a Job that finished.
         let cancel_flag = AtomicBool::new(false);
 
         let stopped = cancel_on_stop(&AtomicBool::new(true), &cancel_flag, &AtomicBool::new(true));
@@ -1270,35 +1227,38 @@ pub(crate) mod tests {
     #[test]
     fn a_job_the_runner_stopped_fails_with_why() {
         // Prevents a stopped Job reporting the cancel its teardown left, or
-        // losing the results of the iterations that finished.
-        let iterations = Iterations {
-            results: vec![iteration_output()],
+        // losing the result of its run.
+        let run = Run {
+            output: Some(iteration_output()),
             failure: Some(
                 RunnerError::from(ExecutionError::Canceled("job was canceled".to_owned()))
                     .to_string(),
             ),
-            ..Iterations::default()
         };
 
-        let outcome = iterations.stopped();
+        let outcome = run.stopped();
 
         let JobFinishResult::Failed { error, results } = outcome else {
             panic!("a stopped Job ends failed, got: {outcome:?}");
         };
         assert_eq!(error, "the runner stopped", "the user sees why");
-        assert_eq!(results.len(), 1, "the finished iteration's result is kept");
+        assert_eq!(results.len(), 1, "the run's result is kept");
     }
 
     fn iteration_output() -> JsonIterationOutput {
+        exit_output(0)
+    }
+
+    fn exit_output(exit_code: i32) -> JsonIterationOutput {
         JsonIterationOutput {
-            exit_code: 0,
+            exit_code,
             stdout: Some("ran".to_owned()),
             stderr: None,
             output: None,
         }
     }
 
-    /// Stands in for an iteration that runs until the Job is out of time.
+    /// Stands in for a run that lasts until the Job is out of time.
     fn spend(deadline: JobDeadline) {
         while !deadline.remaining().is_zero() {
             std::thread::sleep(Duration::from_millis(10));
@@ -1718,62 +1678,70 @@ pub(crate) mod tests {
     // --- run_job ---
 
     #[test]
-    fn a_jobs_iterations_share_one_pull() {
-        // Kills a pull for every iteration, which downloads the image again
-        // each time the Job runs it.
+    fn a_job_runs_its_image_once() {
+        // Kills a Job that runs its image more than once, or not at all, for
+        // the 1 iteration the server sends.
         let registry = TestRegistry::start(None);
-        let job = registry.job(3, false);
+        let job = registry.job(false);
+        let messages = crate::log::Messages::default();
 
-        let iterations = run_test_job(&discard(), &job, &AtomicBool::new(false));
+        let outcome = run_test_job(&messages.logger(), &job, &AtomicBool::new(false)).finish(false);
 
-        let requests = registry.stop();
-        let stdout: Vec<_> = iterations
-            .results
-            .iter()
-            .map(|output| output.stdout.as_deref())
-            .collect();
         assert_eq!(
-            stdout,
-            [Some("ran\n"); 3],
-            "every iteration runs the image: {:?}",
-            iterations.failure
-        );
-        assert_eq!(
-            requests,
+            registry.stop(),
             Requests {
                 manifests: 1,
                 blobs: 2
             }
         );
+        assert_eq!(messages.count("Command finished"), 1, "the image ran once");
+        let JobFinishResult::Completed { exit_code, results } = outcome else {
+            panic!("a clean run completes, got: {outcome:?}");
+        };
+        let stdout: Vec<_> = results
+            .iter()
+            .map(|output| output.stdout.as_deref())
+            .collect();
+        assert_eq!((exit_code, stdout), (0, vec![Some("ran\n")]));
     }
 
     #[test]
-    fn a_job_with_no_iterations_pulls_nothing() {
-        // Kills a pull ahead of a loop with nothing to run, which fails a Job
-        // with no iteration to fail when its image cannot be pulled.
-        let registry = TestRegistry::start(None);
-        let job = registry.job(0, false);
+    fn the_run_has_only_the_time_the_pull_left() {
+        // Kills a run given a deadline of its own, which runs a benchmark past
+        // the time the server gave the Job.
+        let registry = TestRegistry::serve(
+            None,
+            b"#!/bin/sh\n/bin/sleep 2\necho ran\n",
+            Duration::from_secs(2),
+        );
+        let job = registry.job(false);
 
-        let iterations = run_test_job(&discard(), &job, &AtomicBool::new(false));
+        let outcome = run_job(
+            &discard(),
+            &job,
+            &host_config(&job),
+            &mut crate::jail::HostPreparation::new(),
+            JobDeadline::start(Duration::from_secs(3)),
+            &AtomicBool::new(false),
+        )
+        .finish(false);
 
-        assert_eq!(registry.stop(), Requests::default());
-        let outcome = iterations.finish(false);
+        registry.stop();
         assert!(
-            matches!(outcome, JobFinishResult::Completed { .. }),
-            "{outcome:?}"
+            matches!(&outcome, JobFinishResult::Failed { error, results } if results.is_empty() && (error.contains("Benchmark timeout") || error.contains("timed out"))),
+            "the 2s run outlasts the 1s the pull left: {outcome:?}"
         );
     }
 
     #[test]
-    fn a_pull_that_fails_ends_the_job_before_any_iteration() {
-        // Kills a failed pull skipped like a failed iteration under
-        // allow_failure, which pulls again for every iteration and completes a
-        // Job that never ran.
+    fn a_pull_that_fails_ends_the_job_before_its_run() {
+        // Kills a failed pull skipped like a failed run under allow_failure,
+        // which completes a Job that never ran.
         let registry = TestRegistry::start(None);
-        let mut job = registry.job(2, true);
+        let mut job = registry.job(true);
         job.config.digest = sha256(b"not in the registry").parse().unwrap();
 
-        let iterations = run_test_job(&discard(), &job, &AtomicBool::new(false));
+        let run = run_test_job(&discard(), &job, &AtomicBool::new(false));
 
         assert_eq!(
             registry.stop(),
@@ -1782,7 +1750,7 @@ pub(crate) mod tests {
                 blobs: 0
             }
         );
-        let outcome = iterations.finish(false);
+        let outcome = run.finish(false);
         assert!(
             matches!(&outcome, JobFinishResult::Failed { error, results } if results.is_empty() && error.contains("404")),
             "the pull's failure ends the Job: {outcome:?}"
@@ -1790,16 +1758,16 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn a_cancel_during_the_pull_ends_the_job_before_any_iteration() {
-        // Kills an iteration started once the server's cancel has landed during
-        // the pull, which unpacks and spawns the benchmark of a Job the server
-        // has ended.
+    fn a_cancel_during_the_pull_ends_the_job_before_its_run() {
+        // Kills a run started once the server's cancel has landed during the
+        // pull, which unpacks and spawns the benchmark of a Job the server has
+        // ended.
         let cancel_flag = Arc::new(AtomicBool::new(false));
         let registry = TestRegistry::start(Some(Arc::clone(&cancel_flag)));
-        let job = registry.job(2, false);
+        let job = registry.job(false);
         let messages = crate::log::Messages::default();
 
-        let iterations = run_test_job(&messages.logger(), &job, &cancel_flag);
+        let run = run_test_job(&messages.logger(), &job, &cancel_flag);
 
         assert_eq!(
             registry.stop().manifests,
@@ -1807,9 +1775,9 @@ pub(crate) mod tests {
             "the cancel landed in the pull"
         );
         assert!(
-            !messages.contains("Starting iteration") && iterations.results.is_empty(),
-            "no iteration started: {:?}",
-            iterations.results
+            !messages.contains("Starting run") && run.output.is_none(),
+            "no run started: {:?}",
+            run.output
         );
     }
 
@@ -1818,25 +1786,21 @@ pub(crate) mod tests {
         // Kills a pull for a Job canceled before its preparation starts, which
         // downloads the whole image for a Job the server has ended.
         let registry = TestRegistry::start(None);
-        let job = registry.job(2, false);
+        let job = registry.job(false);
 
-        let iterations = run_test_job(&discard(), &job, &AtomicBool::new(true));
+        let run = run_test_job(&discard(), &job, &AtomicBool::new(true));
 
         assert_eq!(registry.stop(), Requests::default());
-        assert!(
-            iterations.results.is_empty(),
-            "no iteration ran: {:?}",
-            iterations.results
-        );
+        assert!(run.output.is_none(), "nothing ran: {:?}", run.output);
     }
 
     #[test]
-    fn no_tree_outlives_its_iteration_and_no_pull_its_image() {
-        // Kills a tree an iteration leaves behind, and a pull's directory kept
+    fn no_tree_outlives_its_run_and_no_pull_its_image() {
+        // Kills a tree a run leaves behind, and a pull's directory kept
         // once its image is dropped, either of which fills the runner's disk
         // Job after Job.
         let registry = TestRegistry::start(None);
-        let config = host_config(&registry.job(1, false));
+        let config = host_config(&registry.job(false));
         let deadline = JobDeadline::start(Duration::from_mins(1));
         let image = crate::run::PulledImage::pull(&discard(), &config, deadline).unwrap();
 
@@ -1846,7 +1810,7 @@ pub(crate) mod tests {
                 .unwrap()
                 .map(|entry| entry.unwrap().file_name().into_string().unwrap())
                 .collect();
-            assert_eq!(left, ["oci-image"], "only the pull outlives an iteration");
+            assert_eq!(left, ["oci-image"], "only the pull outlives a run");
         }
         let work_dir = image.work_dir().to_owned();
         drop(image);
@@ -1863,7 +1827,7 @@ pub(crate) mod tests {
         fill_store(state_dir);
         let registry = TestRegistry::start(None);
 
-        let iterations = run_stored_job(&registry.job(1, false), state_dir);
+        let run = run_stored_job(&registry.job(false), state_dir);
 
         assert_eq!(
             registry.stop(),
@@ -1872,12 +1836,12 @@ pub(crate) mod tests {
                 blobs: 0
             }
         );
-        let stdout: Vec<_> = iterations
-            .results
-            .iter()
-            .map(|output| output.stdout.as_deref())
-            .collect();
-        assert_eq!(stdout, [Some("ran\n")], "{:?}", iterations.failure);
+        assert_eq!(
+            run.output.and_then(|output| output.stdout).as_deref(),
+            Some("ran\n"),
+            "{:?}",
+            run.failure
+        );
     }
 
     #[test]
@@ -1889,7 +1853,7 @@ pub(crate) mod tests {
         let state_dir = Utf8Path::from_path(state_dir.path()).unwrap();
         fill_store(state_dir);
         let registry = TestRegistry::start(None);
-        let mut job = registry.job(1, false);
+        let mut job = registry.job(false);
         let (claims, _signature) = OCI_TOKEN.rsplit_once('.').unwrap();
         job.oci_token = format!("{claims}.c2lnbmVk").parse().unwrap();
 
@@ -1918,7 +1882,7 @@ pub(crate) mod tests {
         std::fs::create_dir(foreign.join("dpkg")).unwrap();
         let registry = TestRegistry::start(None);
 
-        let outcome = run_stored_job(&registry.job(1, false), foreign).finish(false);
+        let outcome = run_stored_job(&registry.job(false), foreign).finish(false);
 
         assert_eq!(registry.stop(), Requests::default());
         assert!(
@@ -1931,7 +1895,7 @@ pub(crate) mod tests {
     /// Runs the image once, so the store in `state_dir` holds its every blob.
     fn fill_store(state_dir: &Utf8Path) {
         let registry = TestRegistry::start(None);
-        let iterations = run_stored_job(&registry.job(1, false), state_dir);
+        let run = run_stored_job(&registry.job(false), state_dir);
         assert_eq!(
             registry.stop(),
             Requests {
@@ -1939,11 +1903,11 @@ pub(crate) mod tests {
                 blobs: 2
             }
         );
-        assert!(iterations.failure.is_none(), "{:?}", iterations.failure);
+        assert!(run.failure.is_none(), "{:?}", run.failure);
     }
 
     /// Runs `job` as the runner does with its blob store in `state_dir`.
-    fn run_stored_job(job: &JsonClaimedJob, state_dir: &Utf8Path) -> Iterations {
+    fn run_stored_job(job: &JsonClaimedJob, state_dir: &Utf8Path) -> Run {
         let up_config = UpConfig {
             cpu_layout: None,
             image_cache_size: NonZeroU64::new(1 << 30),
@@ -1961,7 +1925,7 @@ pub(crate) mod tests {
     }
 
     /// Runs `job` on the host, with no CPU isolation.
-    fn run_test_job(log: &Logger, job: &JsonClaimedJob, cancel_flag: &AtomicBool) -> Iterations {
+    fn run_test_job(log: &Logger, job: &JsonClaimedJob, cancel_flag: &AtomicBool) -> Run {
         run_job(
             log,
             job,
@@ -1980,8 +1944,9 @@ pub(crate) mod tests {
         build_config_from_job(&up_config, job).unwrap()
     }
 
-    /// A registry on localhost serving one image, whose command prints `ran`,
-    /// to the test Job's token alone, that counts what it is asked for.
+    /// A registry on localhost serving one image, by default one whose command
+    /// prints `ran`, to the test Job's token alone, that counts what it is
+    /// asked for.
     struct TestRegistry {
         address: SocketAddr,
         digest: String,
@@ -1999,7 +1964,17 @@ pub(crate) mod tests {
         /// Sets `cancel_flag`, if any, as it serves the manifest, as a cancel
         /// that lands during the pull does.
         fn start(cancel_flag: Option<Arc<AtomicBool>>) -> Self {
-            let layer = bench_layer();
+            Self::serve(cancel_flag, b"#!/bin/sh\necho ran\n", Duration::ZERO)
+        }
+
+        /// Serves an image whose `/bench` is `script`, with each manifest
+        /// `manifest_delay` late.
+        fn serve(
+            cancel_flag: Option<Arc<AtomicBool>>,
+            script: &[u8],
+            manifest_delay: Duration,
+        ) -> Self {
+            let layer = bench_layer(script);
             let config = serde_json::to_vec(&serde_json::json!({
                 "architecture": "amd64",
                 "os": "linux",
@@ -2052,6 +2027,7 @@ pub(crate) mod tests {
                         if let Some(flag) = &cancel_flag {
                             flag.store(true, Ordering::SeqCst);
                         }
+                        std::thread::sleep(manifest_delay);
                     } else {
                         requests.blobs += 1;
                     }
@@ -2077,12 +2053,11 @@ pub(crate) mod tests {
             }
         }
 
-        /// A Job of `iter` iterations that runs the image.
-        fn job(&self, iter: u32, allow_failure: bool) -> JsonClaimedJob {
+        /// A Job that runs the image.
+        fn job(&self, allow_failure: bool) -> JsonClaimedJob {
             let mut job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 60, false);
             job.config.registry = format!("http://{}", self.address).parse().unwrap();
             job.config.digest = self.digest.parse().unwrap();
-            job.config.iter = Some(bencher_json::Iteration(iter));
             job.config.allow_failure = Some(allow_failure);
             job
         }
@@ -2100,17 +2075,14 @@ pub(crate) mod tests {
         }
     }
 
-    /// A layer holding `/bench`, a script that prints `ran`.
-    fn bench_layer() -> Vec<u8> {
-        let script = b"#!/bin/sh\necho ran\n";
+    /// A layer holding `/bench`, the executable `script`.
+    fn bench_layer(script: &[u8]) -> Vec<u8> {
         let mut header = tar::Header::new_gnu();
         header.set_size(u64::try_from(script.len()).unwrap());
         header.set_mode(0o755);
         header.set_cksum();
         let mut layer = tar::Builder::new(Vec::new());
-        layer
-            .append_data(&mut header, "bench", script.as_slice())
-            .unwrap();
+        layer.append_data(&mut header, "bench", script).unwrap();
         layer.into_inner().unwrap()
     }
 
