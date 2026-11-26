@@ -189,6 +189,7 @@ fn metric_query(
                     schema::threshold::measure_id,
                     schema::threshold::metric,
                     schema::threshold::model_id,
+                    schema::threshold::changepoint_model_id,
                     schema::threshold::created,
                     schema::threshold::modified,
                 ),

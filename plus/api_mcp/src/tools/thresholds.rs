@@ -103,7 +103,8 @@ pub async fn create(
 pub fn view_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
-        "View a threshold. The `threshold` argument is a threshold UUID.",
+        "View a threshold. The `threshold` argument is a threshold UUID. \
+         `model` and `changepoint_model` view the threshold with a replaced model in that slot.",
         json_schema::<ViewThresholdInput>(),
     )
     .with_raw_output_schema(json_schema::<JsonThreshold>())
@@ -122,7 +123,9 @@ pub async fn view(
 pub fn update_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
-        "Update a threshold's statistical model, or remove the model by setting it to null.",
+        "Update a threshold's statistical model, or remove the model by setting `test` to null. \
+         `changepoint_model` is the slot for a model whose test checks a line: leave it out to \
+         keep it, or set it to null to remove it.",
         json_schema::<UpdateThresholdInput>(),
     )
     .with_raw_output_schema(json_schema::<JsonThreshold>())

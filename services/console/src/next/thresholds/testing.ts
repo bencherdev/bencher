@@ -100,6 +100,7 @@ export const thresholdFixture = (
 				replaced: Date.parse("2026-08-30T10:00:00Z"),
 			},
 		],
+		changepoint_models: [],
 		created: Date.parse("2026-08-02T10:00:00Z"),
 		modified: Date.parse("2026-08-30T10:00:00Z"),
 		...fields,

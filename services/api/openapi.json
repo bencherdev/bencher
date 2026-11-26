@@ -8552,7 +8552,7 @@
           "thresholds"
         ],
         "summary": "Create a threshold",
-        "description": "Create a threshold for a project. The user must have `create` permissions for the project, or provide a valid project key for the project. There can only be one threshold for any unique combination of: branch, testbed, parameters filter, measure, and metric name. A threshold with no parameters filter checks every variant, and a threshold that names no metric checks the conventional `value` name. Every threshold that matches a metric row runs: there is no winner among them. A branch, testbed, and measure can have at most 64 thresholds with a model.",
+        "description": "Create a threshold for a project. The user must have `create` permissions for the project, or provide a valid project key for the project. There can only be one threshold for any unique combination of: branch, testbed, parameters filter, measure, and metric name. A threshold with no parameters filter checks every variant, and a threshold that names no metric checks the conventional `value` name. Every threshold that matches a metric row runs: there is no winner among them. A branch, testbed, and measure can have at most 64 thresholds with a model. The model's test must check a metric, and the changepoint model's test must check a line.",
         "operationId": "proj_threshold_post",
         "parameters": [
           {
@@ -8662,6 +8662,14 @@
           },
           {
             "in": "query",
+            "name": "changepoint_model",
+            "description": "View the threshold with the specified changepoint model UUID. This can be used to view a threshold with a historical changepoint model that has since been replaced by a new changepoint model. If not specified, then the current changepoint model is used.",
+            "schema": {
+              "$ref": "#/components/schemas/ModelUuid"
+            }
+          },
+          {
+            "in": "query",
             "name": "model",
             "description": "View the threshold with the specified model UUID. This can be used to view a threshold with a historical model that has since been replaced by a new model. If not specified, then the current model is used.",
             "schema": {
@@ -8731,7 +8739,7 @@
           "thresholds"
         ],
         "summary": "Update a threshold",
-        "description": "Update a threshold for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project. The new model will be added to the threshold and used going forward. The old model will be replaced but still show up in the report history and alerts created when it was active. A threshold with no model can only be given one while its branch, testbed, and measure have fewer than 64 thresholds with a model.",
+        "description": "Update a threshold for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project. The new model will be added to the threshold and used going forward. The old model will be replaced but still show up in the report history and alerts created when it was active. A threshold with no model can only be given one while its branch, testbed, and measure have fewer than 64 thresholds with a model. The changepoint model changes only when the update names it, and its test must check a line.",
         "operationId": "proj_threshold_put",
         "parameters": [
           {
@@ -16027,6 +16035,15 @@
               }
             ]
           },
+          "changepoint_model": {
+            "nullable": true,
+            "description": "The changepoint model, whose test checks a line, to check the threshold's lines with. If not set, the threshold has no changepoint model.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Model"
+              }
+            ]
+          },
           "lower_boundary": {
             "nullable": true,
             "description": "The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.",
@@ -18206,6 +18223,15 @@
       "JsonRemoveModel": {
         "type": "object",
         "properties": {
+          "changepoint_model": {
+            "nullable": true,
+            "description": "The changepoint model, whose test checks a line. Set to `null` to remove the changepoint model. If not set, the changepoint model does not change.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Model"
+              }
+            ]
+          },
           "test": {
             "type": "string",
             "enum": [
@@ -19900,6 +19926,15 @@
           "branch": {
             "$ref": "#/components/schemas/JsonBranch"
           },
+          "changepoint_model": {
+            "nullable": true,
+            "description": "The model whose test checks a line, when the threshold has one.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonModel"
+              }
+            ]
+          },
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -20348,6 +20383,15 @@
       "JsonUpdateModel": {
         "type": "object",
         "properties": {
+          "changepoint_model": {
+            "nullable": true,
+            "description": "The changepoint model, whose test checks a line. Set to `null` to remove the changepoint model. If not set, the changepoint model does not change.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Model"
+              }
+            ]
+          },
           "lower_boundary": {
             "nullable": true,
             "description": "The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.",

@@ -3,6 +3,8 @@ use schemars::JsonSchema;
 
 use serde::{Deserialize, Serialize};
 
+use crate::ValidError;
+
 const STATIC_INT: i32 = 20;
 const PERCENTAGE_INT: i32 = 30;
 const Z_SCORE_INT: i32 = 1;
@@ -28,6 +30,57 @@ pub enum ModelTest {
     LogNormal = LOG_NORMAL_INT,
     Iqr = IQR_INT,
     DeltaIqr = DELTA_IQR_INT,
+}
+
+impl ModelTest {
+    /// The slot of a threshold that a model with this test belongs in.
+    #[must_use]
+    pub const fn slot(self) -> ModelSlot {
+        match self {
+            Self::Static
+            | Self::Percentage
+            | Self::ZScore
+            | Self::TTest
+            | Self::LogNormal
+            | Self::Iqr
+            | Self::DeltaIqr => ModelSlot::Model,
+        }
+    }
+}
+
+/// One of the two model slots of a threshold.
+///
+/// Which slot a model belongs in follows from its test, and a caller never states it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, derive_more::Display)]
+pub enum ModelSlot {
+    /// `model`, which holds a model whose test checks a metric.
+    #[display("model")]
+    Model,
+    /// `changepoint_model`, which holds a model whose test checks a line.
+    #[display("changepoint_model")]
+    ChangepointModel,
+}
+
+impl ModelSlot {
+    pub const ALL: [Self; 2] = [Self::Model, Self::ChangepointModel];
+
+    /// Refuse a model test that belongs in the other slot.
+    pub fn admit(self, test: ModelTest) -> Result<(), ValidError> {
+        if test.slot() == self {
+            Ok(())
+        } else {
+            Err(ValidError::ModelSlot { test, slot: self })
+        }
+    }
+
+    /// What a model in this slot checks.
+    #[must_use]
+    pub const fn checks(self) -> &'static str {
+        match self {
+            Self::Model => "a metric",
+            Self::ChangepointModel => "a line",
+        }
+    }
 }
 
 #[cfg(feature = "db")]

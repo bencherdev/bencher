@@ -2,7 +2,8 @@ use bencher_client::types::{
     JsonReportThresholdEntry, JsonReportThresholdModels, JsonReportThresholds,
 };
 use bencher_json::{
-    Boundary, MeasureNameId, MetricName, ParameterFilter, ParameterSet, SampleSize, Window,
+    Boundary, MeasureNameId, MetricName, ModelSlot, ParameterFilter, ParameterSet, SampleSize,
+    Window,
 };
 
 use crate::{
@@ -100,6 +101,7 @@ impl TryFrom<CliReportThresholds> for Thresholds {
             let lower_boundary = lower_boundaries.next();
             let upper_boundary = upper_boundaries.next();
 
+            let slot = bencher_json::ModelTest::from(test).slot();
             let cli_model = CliModel {
                 test,
                 min_sample_size: min_sample_size.and_then(Into::into),
@@ -117,6 +119,7 @@ impl TryFrom<CliReportThresholds> for Thresholds {
                 measure,
                 metric,
                 parameters: parameter_set,
+                slot,
                 model,
             });
         }
@@ -185,17 +188,19 @@ impl From<Thresholds> for Option<JsonReportThresholds> {
     }
 }
 
-/// The BMF version 1 list once any threshold gives a metric or parameters, else the version 0 map.
+/// The BMF version 1 list once any threshold gives a metric or parameters, or a model that belongs
+/// in the changepoint slot, else the version 0 map, whose models all belong in the metric slot.
 fn into_models(
     declared: Vec<Declared>,
 ) -> Result<Option<JsonReportThresholdModels>, ThresholdsError> {
     if declared.is_empty() {
         return Ok(None);
     }
-    let models = if declared
-        .iter()
-        .any(|threshold| threshold.metric.is_some() || threshold.parameters.is_some())
-    {
+    let models = if declared.iter().any(|threshold| {
+        threshold.metric.is_some()
+            || threshold.parameters.is_some()
+            || threshold.slot == ModelSlot::ChangepointModel
+    }) {
         JsonReportThresholdModels::List(
             declared
                 .into_iter()
@@ -218,6 +223,8 @@ struct Declared {
     measure: MeasureNameId,
     metric: Option<MetricName>,
     parameters: Option<ParameterSet>,
+    /// The server routes a model to its slot by its test, so only the shape of the body needs it.
+    slot: ModelSlot,
     model: Model,
 }
 
@@ -228,6 +235,7 @@ impl Declared {
             metric,
             parameters,
             model,
+            ..
         } = self;
         let metric = metric.ok_or_else(|| ThresholdsError::MissingMetric(measure.clone()))?;
         // The client spells a filter as plain JSON, so the one set travels through it.

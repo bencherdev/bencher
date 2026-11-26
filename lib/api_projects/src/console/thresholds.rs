@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
     BranchName, BranchSlug, BranchUuid, DateTime, DateTimeMillis, MeasureSlug, MeasureUuid, Model,
-    ProjectResourceId, ResourceName, TestbedSlug, TestbedUuid, ThresholdUuid,
+    ModelSlot, ProjectResourceId, ResourceName, TestbedSlug, TestbedUuid, ThresholdUuid,
     project::{
         alert::AlertStatus,
         threshold::{
@@ -25,7 +25,11 @@ use bencher_schema::{
             branch::BranchId,
             measure::MeasureId,
             testbed::TestbedId,
-            threshold::{QueryThreshold, ThresholdId, alert::archived_filter, model::QueryModel},
+            threshold::{
+                QueryThreshold, ThresholdId,
+                alert::archived_filter,
+                model::{ModelId, QueryModel},
+            },
         },
         user::actor::{ApiActor, PubProjectBearerToken},
     },
@@ -120,6 +124,11 @@ async fn get_ls_inner(
             .map(|(_, branch, ..)| branch.id)
             .collect::<Vec<_>>();
         let start_points = start_points(conn, &branch_ids)?;
+        let changepoint_model_ids = rows
+            .iter()
+            .filter_map(|(threshold, ..)| threshold.changepoint_model_id)
+            .collect::<Vec<_>>();
+        let changepoint_models = models_by_id(conn, &changepoint_model_ids)?;
 
         let mut tables = Tables::default();
         let thresholds = rows
@@ -138,6 +147,10 @@ async fn get_ls_inner(
                     parameters: threshold.parameters,
                     metric: threshold.metric,
                     model: model.map(row_model_json),
+                    changepoint_model: threshold
+                        .changepoint_model_id
+                        .and_then(|model_id| changepoint_models.get(&model_id).copied())
+                        .map(row_model_json),
                     raised: count(&raised),
                     active: count(&active),
                 }
@@ -309,11 +322,18 @@ async fn get_one_inner(
             .map_err(resource_not_found_err!(Model, threshold.id))?;
         let start_points = start_points(conn, &[branch.id])?;
 
-        let model = models
-            .iter()
-            .find(|model| Some(model.id) == threshold.model_id)
-            .copied()
-            .map(model_json);
+        let current = |model_id: Option<ModelId>| {
+            models
+                .iter()
+                .find(|model| Some(model.id) == model_id)
+                .copied()
+                .map(model_json)
+        };
+        let model = current(threshold.model_id);
+        let changepoint_model = current(threshold.changepoint_model_id);
+        let (models, changepoint_models) = models
+            .into_iter()
+            .partition::<Vec<_>, _>(|model| model.test.slot() == ModelSlot::Model);
         Ok(JsonConsoleThreshold {
             uuid: threshold.uuid,
             branch: branch.into_json(&start_points),
@@ -323,10 +343,28 @@ async fn get_one_inner(
             metric: threshold.metric,
             model,
             models: models.into_iter().map(model_json).collect(),
+            changepoint_model,
+            changepoint_models: changepoint_models.into_iter().map(model_json).collect(),
             created: threshold.created.into(),
             modified: threshold.modified.into(),
         })
     })
+}
+
+/// The models with these IDs, by ID.
+fn models_by_id(
+    conn: &mut DbConnection,
+    model_ids: &[ModelId],
+) -> Result<HashMap<ModelId, QueryModel>, HttpError> {
+    if model_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    schema::model::table
+        .filter(schema::model::id.eq_any(model_ids))
+        .select(QueryModel::as_select())
+        .load::<QueryModel>(conn)
+        .map(|models| models.into_iter().map(|model| (model.id, model)).collect())
+        .map_err(resource_not_found_err!(Model, model_ids))
 }
 
 /// The project when the actor may read it, which takes a login even on a public project.
