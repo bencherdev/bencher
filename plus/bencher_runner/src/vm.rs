@@ -93,47 +93,73 @@ pub fn vm_execute(
     let jail = JailPaths::new(jail_dir.root());
     info!(log, "Jail built"; "jail_root" => jail.root().as_str());
 
-    // Everything Firecracker reads has to be inside the chroot, so the kernel
-    // lands in the jail root whatever its source.
-    let kernel_dest = jail.kernel().host().as_path();
-    if let Some(kernel) = &config.kernel {
-        copy_file(log, kernel, kernel_dest)?;
-    } else if crate::kernel::KERNEL_BUNDLED {
-        crate::kernel::write_kernel_to_file(kernel_dest)?;
-        info!(log, "Extracted the bundled kernel"; "path" => kernel_dest.as_str());
-    } else {
-        copy_file(log, &find_kernel()?, kernel_dest)?;
-    }
-
-    // Step 6: Create the ext4 rootfs directly in the jail root
-    let rootfs_dest = jail.rootfs().host().as_path();
-    info!(log, "Creating the ext4 rootfs";
-        "path" => rootfs_dest.as_str(),
-        "disk_mib" => config.disk.to_mib(),
-    );
-    bencher_rootfs::create_ext4_with_size(&tree.rootfs, rootfs_dest, config.disk.to_mib())?;
-
-    // The jailer does not chown what the runner placed in the chroot: the
-    // rootfs is written by Firecracker so it is given away, while the kernel is
-    // only read so it stays root-owned.
-    chroot::chown_to_jail(rootfs_dest, config.jail_user)?;
-    chroot::grant_jail_read(kernel_dest)?;
-
-    // Step 7-8: Build Firecracker config and run the microVM
-    let fc_config = build_firecracker_config(
-        log,
-        config,
+    // The tree, with the staged binaries beside it, the jail, with the kernel
+    // and both drives in it, and the blobs the pull wrote.
+    let written = [
         tree.image.work_dir(),
-        vm_id,
-        &state_dir,
-        jail,
-        netns,
-    )?;
+        jail_dir.root(),
+        tree.image.store_dir(),
+    ];
+    build_flush_boot(
+        || {
+            // Everything Firecracker reads has to be inside the chroot, so the
+            // kernel lands in the jail root whatever its source.
+            let kernel_dest = jail.kernel().host().as_path();
+            if let Some(kernel) = &config.kernel {
+                copy_file(log, kernel, kernel_dest)?;
+            } else if crate::kernel::KERNEL_BUNDLED {
+                crate::kernel::write_kernel_to_file(kernel_dest)?;
+                info!(log, "Extracted the bundled kernel"; "path" => kernel_dest.as_str());
+            } else {
+                copy_file(log, &find_kernel()?, kernel_dest)?;
+            }
 
-    refuse_cancelled(cancel_flag)?;
-    let run_output = run_firecracker(log, &fc_config, cancel_flag, deadline)?;
+            // Step 6: Create the ext4 rootfs directly in the jail root
+            let rootfs_dest = jail.rootfs().host().as_path();
+            info!(log, "Creating the ext4 rootfs";
+                "path" => rootfs_dest.as_str(),
+                "disk_mib" => config.disk.to_mib(),
+            );
+            bencher_rootfs::create_ext4_with_size(&tree.rootfs, rootfs_dest, config.disk.to_mib())?;
 
-    Ok(run_output)
+            // The jailer does not chown what the runner placed in the chroot:
+            // the rootfs is written by Firecracker so it is given away, while
+            // the kernel is only read so it stays root-owned.
+            chroot::chown_to_jail(rootfs_dest, config.jail_user)?;
+            chroot::grant_jail_read(kernel_dest)?;
+
+            // Step 7: Build the Firecracker config
+            build_firecracker_config(
+                log,
+                config,
+                tree.image.work_dir(),
+                vm_id,
+                &state_dir,
+                jail,
+                netns,
+            )
+        },
+        || Ok(crate::flush::flush_filesystems(log, &written)?),
+        // Step 8: Run the microVM
+        |fc_config| {
+            refuse_cancelled(cancel_flag)?;
+            Ok(run_firecracker(log, &fc_config, cancel_flag, deadline)?)
+        },
+    )
+}
+
+/// Builds the files a VM boots from, flushes them to disk, and only then
+/// boots it, so no writeback of them runs while the benchmark does. Each step
+/// is a parameter, so a test can stand in for each.
+fn build_flush_boot<C, B, F, R>(build: B, flush: F, boot: R) -> Result<RunOutput, RunnerError>
+where
+    B: FnOnce() -> Result<C, RunnerError>,
+    F: FnOnce() -> Result<(), RunnerError>,
+    R: FnOnce(C) -> Result<RunOutput, RunnerError>,
+{
+    let files = build()?;
+    flush()?;
+    boot(files)
 }
 
 fn prepare_state_dir(
@@ -390,4 +416,74 @@ fn find_kernel() -> Result<Utf8PathBuf, RunnerError> {
         hint: "Place at /usr/local/share/bencher/vmlinux".to_owned(),
     }
     .into())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cell::RefCell;
+    use std::time::Duration;
+
+    use super::*;
+    use crate::error::ExecutionError;
+
+    fn powered_off() -> RunOutput {
+        RunOutput {
+            exit_code: 0,
+            stdout: String::new(),
+            stderr: String::new(),
+            output_files: None,
+            duration: Duration::ZERO,
+        }
+    }
+
+    #[test]
+    fn the_flush_runs_after_the_disk_is_built_and_before_the_vm_boots() {
+        // Kills a flush that is skipped or runs once the VM is up, which leaves
+        // the writeback of the tree and the disk to run during the benchmark.
+        let steps = RefCell::new(Vec::new());
+
+        build_flush_boot(
+            || {
+                steps.borrow_mut().push("build");
+                Ok(())
+            },
+            || {
+                steps.borrow_mut().push("flush");
+                Ok(())
+            },
+            |()| {
+                steps.borrow_mut().push("boot");
+                Ok(powered_off())
+            },
+        )
+        .unwrap();
+
+        assert_eq!(steps.into_inner(), ["build", "flush", "boot"]);
+    }
+
+    #[test]
+    fn a_failed_flush_fails_the_run_before_the_vm_boots() {
+        let booted = RefCell::new(false);
+
+        let result = build_flush_boot(
+            || Ok(()),
+            || {
+                Err(ExecutionError::Flush {
+                    path: Utf8PathBuf::from("/var/lib/bencher"),
+                    source: std::io::Error::from_raw_os_error(libc::EIO),
+                }
+                .into())
+            },
+            |()| {
+                *booted.borrow_mut() = true;
+                Ok(powered_off())
+            },
+        );
+
+        let Err(RunnerError::Execution(ExecutionError::Flush { path, .. })) = &result else {
+            panic!("the run must fail with its flush error, got: {result:?}");
+        };
+        assert_eq!(path, "/var/lib/bencher");
+        assert!(!booted.into_inner(), "a VM booted after its flush failed");
+    }
 }

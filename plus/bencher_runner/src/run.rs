@@ -433,6 +433,12 @@ impl PulledImage {
         &self.work_dir
     }
 
+    /// Where the pull wrote the blobs it missed.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn store_dir(&self) -> &Utf8Path {
+        self.store.dir()
+    }
+
     pub(crate) fn oci_config(&self) -> &ResolvedOciConfig {
         &self.oci_config
     }
