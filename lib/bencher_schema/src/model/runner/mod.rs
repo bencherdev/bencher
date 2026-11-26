@@ -34,7 +34,7 @@ pub mod status;
 
 pub use job::{
     InsertJob, JobId, JobTimeout, PendingInsertJob, QueryJob, UpdateJob, check_job_github,
-    check_minted_dispatch, in_flight_jobs, mark_orphaned_claimed_jobs_unknown,
+    check_tokenless_dispatch, in_flight_jobs, mark_orphaned_claimed_jobs_unknown,
     reprocess_completed_jobs,
 };
 pub use job_callback::{

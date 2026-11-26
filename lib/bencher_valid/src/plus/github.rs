@@ -179,7 +179,8 @@ impl AsRef<str> for GitHubAppSlug {
     }
 }
 
-/// Whether an installation of the app has approved its contents write.
+/// Whether an installation of the app has approved its checks write, pull requests write, and
+/// contents read.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

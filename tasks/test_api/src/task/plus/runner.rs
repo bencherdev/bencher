@@ -21,20 +21,29 @@ const DOCKER_IMAGE: &str = "ghcr.io/bencherdev/bencher:latest";
 const IMAGE_TAG: &str = "runner-test";
 const MOCK_IMAGE_TAG: &str = "runner-test-mock";
 
-// A claimed project sends the GitHub Actions dispatch on any plan when it carries a bearer token
-// and the `bencher_run` event. GitHub answers this one's invalid token with a 4xx.
-const DISPATCH_CALLBACK: [&str; 6] = [
-    "--callback-url",
-    "https://api.github.com/repos/bencherdev/bencher/dispatches",
-    "--callback-header",
-    "Authorization: Bearer invalid-token",
-    "--callback-body",
-    r#"{"event_type":"bencher_run","client_payload":{}}"#,
+const DISPATCH_URL: &str = "https://api.github.com/repos/bencherdev/bencher/dispatches";
+const DISPATCH_BODY: &str = r#"{"event_type":"bencher_run","client_payload":{}}"#;
+// An organization without a plan skips every callback, so neither of these is ever sent.
+const SKIPPED_CALLBACKS: [&[&str]; 2] = [
+    &[
+        "--callback-url",
+        "https://receiver.example/bencher/callback",
+    ],
+    &[
+        "--callback-url",
+        DISPATCH_URL,
+        "--callback-header",
+        "Authorization: Bearer invalid-token",
+        "--callback-body",
+        DISPATCH_BODY,
+    ],
 ];
-// An organization without a plan skips any other callback, so this one is never sent.
-const SKIPPED_CALLBACK: [&str; 2] = [
+// The dispatch with no token that older CLIs send is refused at submit.
+const TOKENLESS_DISPATCH: [&str; 4] = [
     "--callback-url",
-    "https://receiver.example/bencher/callback",
+    DISPATCH_URL,
+    "--callback-body",
+    DISPATCH_BODY,
 ];
 
 #[derive(Debug)]
@@ -1051,6 +1060,18 @@ fn submit_detached(
     token: &Jwt,
     extra: &[&str],
 ) -> anyhow::Result<bencher_json::JsonReport> {
+    let output = run_detached(host, token, extra)?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run --detach failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    Ok(serde_json::from_slice(&output.stdout)?)
+}
+
+/// `bencher run --detach` with `extra`, whatever its outcome.
+fn run_detached(host: &str, token: &Jwt, extra: &[&str]) -> anyhow::Result<std::process::Output> {
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
     cmd.args([
@@ -1078,14 +1099,7 @@ fn submit_detached(
     ])
     .args(extra)
     .current_dir(CLI_DIR);
-    let output = cmd.output()?;
-    anyhow::ensure!(
-        output.status.success(),
-        "bencher run --detach failed:\nstdout: {}\nstderr: {}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    Ok(serde_json::from_slice(&output.stdout)?)
+    Ok(cmd.output()?)
 }
 
 /// Attach to a submitted job with `bencher run --job`, which waits for the job and prints its report.
@@ -1112,36 +1126,40 @@ fn attach_job(host: &str, token: &Jwt, job_uuid: JobUuid) -> anyhow::Result<std:
     Ok(cmd.output()?)
 }
 
-/// Run the callback runner smoke test on an organization without a plan: a custom callback is
-/// skipped, and the GitHub Actions dispatch settles with the answer of its real `https` receiver.
+/// Run the callback runner smoke test on an organization without a plan: a custom callback and
+/// the GitHub Actions dispatch with a token are skipped, and the dispatch with no token is refused.
 fn run_callback_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running callback runner smoke test against: {host}");
 
-    let job_uuid = submit_callback_job(host, token, &SKIPPED_CALLBACK)?;
-    let job = view_job(host, token, job_uuid)?;
-    anyhow::ensure!(
-        job.callback
-            == Some(JsonJobCallback {
-                state: JobCallbackState::Skipped,
-                status: None,
-            }),
-        "Expected job {job_uuid} to show a skipped callback: {:?}",
-        job.callback
-    );
-    println!("Custom callback of job {job_uuid} skipped without a plan");
+    for callback in SKIPPED_CALLBACKS {
+        let job_uuid = submit_callback_job(host, token, callback)?;
+        let job = view_job(host, token, job_uuid)?;
+        anyhow::ensure!(
+            job.callback
+                == Some(JsonJobCallback {
+                    state: JobCallbackState::Skipped,
+                    status: None,
+                }),
+            "Expected job {job_uuid} to show a skipped callback: {:?}",
+            job.callback
+        );
+        println!("Callback of job {job_uuid} skipped without a plan");
+    }
 
-    let job_uuid = submit_callback_job(host, token, &DISPATCH_CALLBACK)?;
-    let callback = wait_for_settled_callback(host, token, job_uuid)?;
+    let output = run_detached(
+        host,
+        token,
+        &[&TOKENLESS_DISPATCH[..], &["--exec", "mock"]].concat(),
+    )?;
+    let stderr = String::from_utf8_lossy(&output.stderr);
     anyhow::ensure!(
-        callback.state == JobCallbackState::Failed
-            && callback
-                .status
-                .is_some_and(|status| (400..500).contains(&status)),
-        "Expected the callback of job {job_uuid} to fail with the receiver's 4xx: {callback:?}"
+        !output.status.success() && stderr.contains("Upgrade the Bencher CLI"),
+        "Expected the dispatch with no token to be refused:\nstdout: {}\nstderr: {stderr}",
+        String::from_utf8_lossy(&output.stdout)
     );
-    println!("Callback of job {job_uuid} settled with the receiver's answer: {callback:?}");
+    println!("Dispatch with no token refused at submit");
     Ok(())
 }
 
@@ -1159,34 +1177,6 @@ fn submit_callback_job(host: &str, token: &Jwt, callback: &[&str]) -> anyhow::Re
         String::from_utf8_lossy(&output.stderr)
     );
     Ok(job_uuid)
-}
-
-/// Poll `bencher job view` until the job's callback settles.
-fn wait_for_settled_callback(
-    host: &str,
-    token: &Jwt,
-    job_uuid: JobUuid,
-) -> anyhow::Result<JsonJobCallback> {
-    // A final answer settles at once. A retried one takes up to three 10 s attempts
-    // and the 4 s and 16 s waits between them.
-    let timeout = std::time::Duration::from_secs(90);
-    let start = std::time::Instant::now();
-
-    loop {
-        let job = view_job(host, token, job_uuid)?;
-        let Some(callback) = job.callback else {
-            anyhow::bail!("Expected job {job_uuid} to have a callback: {job:?}");
-        };
-        if callback.state != JobCallbackState::Pending {
-            return Ok(callback);
-        }
-        if start.elapsed() > timeout {
-            anyhow::bail!(
-                "Timed out waiting for the callback of job {job_uuid} to settle: {callback:?}"
-            );
-        }
-        std::thread::sleep(std::time::Duration::from_secs(1));
-    }
 }
 
 /// Run the runner smoke test with user key authentication.

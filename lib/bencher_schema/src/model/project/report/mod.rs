@@ -40,7 +40,7 @@ use crate::model::{
         series::count_active,
         testbed::{RunJob, RunTestbed},
     },
-    runner::{JobId, PendingInsertJob, SourceIp, check_job_github, check_minted_dispatch},
+    runner::{JobId, PendingInsertJob, SourceIp, check_job_github, check_tokenless_dispatch},
 };
 use crate::{
     actor_conn,
@@ -205,13 +205,7 @@ impl QueryReport {
         check_report_thresholds_shape(bmf_version, json_report.thresholds.as_ref())?;
         #[cfg(feature = "plus")]
         if let Some(new_run_job) = &new_run_job {
-            check_minted_dispatch(
-                context,
-                query_project,
-                new_run_job.is_claimed,
-                new_run_job.run_job.callback.as_ref(),
-            )
-            .await?;
+            check_tokenless_dispatch(new_run_job.run_job.callback.as_ref())?;
             check_job_github(
                 context,
                 query_project,

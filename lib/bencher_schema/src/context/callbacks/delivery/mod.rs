@@ -12,7 +12,7 @@ use bencher_json::{
     GitHubIssueNumber, GitHubRepositoryId, JobStatus, JobUuid, JsonNewCallback, JsonReport,
     OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName,
     project::github::LinkedRepositoryReason,
-    runner::{CALLBACK_JOB_STATUSES, GitHubDispatch, JobCallbackState},
+    runner::{CALLBACK_JOB_STATUSES, JobCallbackState},
 };
 use dashmap::DashMap;
 #[cfg(feature = "sentry")]
@@ -23,7 +23,6 @@ use diesel::{
     r2d2::{ConnectionManager, Pool, PooledConnection},
     result::QueryResult,
 };
-use http::HeaderMap;
 use http::StatusCode;
 use slog::Logger;
 use tokio::{
@@ -72,7 +71,7 @@ pub(super) struct Delivery {
     sender: Arc<dyn CallbackSender>,
     shutdown: CancellationToken,
     clock: Clock,
-    /// Mints the token of a dispatch that goes out without its own, and of every post.
+    /// Mints the token of every post.
     github_app: Option<Arc<GitHubApp>>,
     /// Where a post's comment links to.
     console_url: Url,
@@ -111,12 +110,6 @@ enum Unprepared {
     Report,
     #[display("render")]
     Render,
-    /// A dispatch without a token, on a server that has no GitHub App to mint one.
-    #[display("app")]
-    NoApp,
-    /// A dispatch without a token, for a project with no connected linked repository.
-    #[display("link")]
-    NoLink,
     /// Shutdown cut the wait for a report build short, so the callback waits for the next start.
     #[display("shutdown")]
     Shutdown,
@@ -144,7 +137,6 @@ impl Unprepared {
         match self {
             Self::Open => Some(CallbackFailure::Open),
             Self::Parse | Self::Report | Self::Render => Some(CallbackFailure::Render),
-            Self::NoApp | Self::NoLink => Some(CallbackFailure::Unminted),
             Self::Shutdown => None,
         }
     }
@@ -196,7 +188,7 @@ impl Delivery {
             return;
         };
         match self.prepare(log, &claim, &sealed, &context, report).await {
-            Ok(outgoing) => self.attempt(log, claim, outgoing).await,
+            Ok(request) => self.attempt(log, claim, request).await,
             Err(unprepared) => self.unsent(log, &claim, unprepared).await,
         }
     }
@@ -299,7 +291,7 @@ impl Delivery {
         sealed: &SealedRequest,
         context: &CallbackContext,
         report: QueryReport,
-    ) -> Result<Outgoing, Unprepared> {
+    ) -> Result<CallbackRequest, Unprepared> {
         let Ok(opened) = self.key.open(claim.job_uuid, sealed) else {
             return Err(Unprepared::Open);
         };
@@ -307,17 +299,8 @@ impl Delivery {
         let Ok(callback) = serde_json::from_slice::<JsonNewCallback>(&opened) else {
             return Err(Unprepared::Parse);
         };
-        // A minted dispatch goes out with headers of its own, so it never builds the stored ones.
-        let route = if callback.github_dispatch() == Some(GitHubDispatch::Minted) {
-            let Some(app) = self.github_app.clone() else {
-                return Err(Unprepared::NoApp);
-            };
-            Route::Minted(app)
-        } else {
-            let Ok(headers) = callback.delivery_headers(BENCHER_API_VERSION) else {
-                return Err(Unprepared::Parse);
-            };
-            Route::Stored(headers)
+        let Ok(headers) = callback.delivery_headers(BENCHER_API_VERSION) else {
+            return Err(Unprepared::Parse);
         };
         let report = if callback.sends_report() {
             Some(self.report(log, claim.job_uuid, report).await?)
@@ -328,13 +311,10 @@ impl Delivery {
         let Ok(body) = callback.render(context, report.as_ref()) else {
             return Err(Unprepared::Render);
         };
-        Ok(match route {
-            Route::Stored(headers) => Outgoing::Stored(CallbackRequest {
-                url: callback.url().clone(),
-                headers,
-                body,
-            }),
-            Route::Minted(app) => Outgoing::Minted { app, body },
+        Ok(CallbackRequest {
+            url: callback.url().clone(),
+            headers,
+            body,
         })
     }
 
@@ -392,7 +372,9 @@ impl Delivery {
         }
     }
 
-    async fn attempt(&self, log: &Logger, mut claim: Claim, outgoing: Outgoing) {
+    async fn attempt(&self, log: &Logger, mut claim: Claim, request: CallbackRequest) {
+        let credential = CallbackCredential::of(&request);
+        let host = request.url.host_str().unwrap_or_default();
         loop {
             let number = claim.attempts + 1;
             // A count at the limit, as a restart can find, never sends again.
@@ -414,19 +396,6 @@ impl Delivery {
             {
                 return;
             }
-            // A dispatch without a token goes to the project's link as it stands at each attempt.
-            let target = match &outgoing {
-                Outgoing::Stored(request) => Target::Stored(request),
-                Outgoing::Minted { app, body } => {
-                    let Ok(Some(link)) = self.connected_link(log, &claim).await else {
-                        self.unsent(log, &claim, Unprepared::NoLink).await;
-                        return;
-                    };
-                    Target::Minted { app, link, body }
-                },
-            };
-            let credential = target.credential();
-            let host = target.host();
             let Some(Some(turn)) = self
                 .shutdown
                 .run_until_cancelled(self.governor.turn(&credential))
@@ -435,9 +404,9 @@ impl Delivery {
                 return;
             };
             let started = Instant::now();
-            let Some((attempt, stage)) = self
+            let Some(attempt) = self
                 .shutdown
-                .run_until_cancelled(self.send(log, &claim, target))
+                .run_until_cancelled(self.sender.send(&request))
                 .await
             else {
                 return;
@@ -446,7 +415,10 @@ impl Delivery {
             log_attempt(
                 log,
                 &claim,
-                Reached { host: &host, stage },
+                Reached {
+                    host,
+                    stage: Stage::Send,
+                },
                 number,
                 &attempt,
                 started.elapsed(),
@@ -478,8 +450,7 @@ impl Delivery {
         }
     }
 
-    /// The project's connected link as it stands now, without which a dispatch with no token of
-    /// its own never goes out.
+    /// The project's connected link as it stands now.
     async fn connected_link(
         &self,
         log: &Logger,
@@ -494,51 +465,6 @@ impl Delivery {
         })
     }
 
-    async fn send(
-        &self,
-        log: &Logger,
-        claim: &Claim,
-        target: Target<'_>,
-    ) -> (CallbackAttempt, Stage) {
-        match target {
-            Target::Stored(request) => (self.sender.send(request).await, Stage::Send),
-            Target::Minted { app, link, body } => self.dispatch(log, claim, app, link, body).await,
-        }
-    }
-
-    /// Mint a token for the linked repository, send the dispatch to that repository with it, and
-    /// keep the repository's current full name. The token is dropped with the request, sent or not.
-    async fn dispatch(
-        &self,
-        log: &Logger,
-        claim: &Claim,
-        app: &GitHubApp,
-        link: QueryLinkedRepository,
-        body: &str,
-    ) -> (CallbackAttempt, Stage) {
-        let (link, GitHubInstallationToken { token, full_name }) =
-            match self.mint(log, claim, app, link, Mint::Dispatch).await {
-                Ok(minted) => minted,
-                Err(NoToken { attempt, stage, .. }) => return (attempt, stage),
-            };
-        let Ok(headers) = GitHubDispatch::minted_headers(BENCHER_API_VERSION, &token) else {
-            return (CallbackAttempt::Unminted, Stage::Mint);
-        };
-        drop(token);
-        let request = CallbackRequest {
-            url: app.dispatch_url(&full_name),
-            headers,
-            body: body.to_owned(),
-        };
-        let attempt = self.sender.send(&request).await;
-        drop(request);
-        let written = link.write_full_name(&mut *self.connection.lock().await, &full_name);
-        if let Err(e) = written {
-            slog::error!(log, "Failed to write a linked repository's full name"; "job" => %claim.job_uuid, "error" => %e);
-        }
-        (attempt, Stage::Send)
-    }
-
     /// Mint a token for the link. A refusal that says the repository left the installation looks
     /// up the installation that holds it now: the link moves there and mints once more, or with
     /// none, disconnects. A lookup that fails leaves the link as it is.
@@ -548,10 +474,12 @@ impl Delivery {
         claim: &Claim,
         app: &GitHubApp,
         link: QueryLinkedRepository,
-        mint: Mint,
     ) -> Result<(QueryLinkedRepository, GitHubInstallationToken), NoToken> {
         let now = self.clock.now();
-        let refusal = match mint.send(app, now, &link).await {
+        let refusal = match app
+            .mint_post(now, link.installation_id, link.repository_id)
+            .await
+        {
             Ok(token) => return Ok((link, token)),
             Err(refusal) => refusal,
         };
@@ -579,7 +507,10 @@ impl Delivery {
                 return Err(NoToken::new(refused(refusal), Stage::Mint));
             },
         };
-        match mint.send(app, now, &link).await {
+        match app
+            .mint_post(now, link.installation_id, link.repository_id)
+            .await
+        {
             Ok(token) => Ok((link, token)),
             Err(refusal) => {
                 if let Some(reason) = gone(&refusal) {
@@ -640,31 +571,6 @@ impl Delivery {
     }
 }
 
-/// A callback ready for its attempts.
-enum Outgoing {
-    /// Sent exactly as stored.
-    Stored(CallbackRequest),
-    /// A dispatch with no token of its own, which goes out only with a token minted for the
-    /// project's linked repository, to that repository.
-    Minted { app: Arc<GitHubApp>, body: String },
-}
-
-/// How a callback goes out: with its stored headers, or with a token the app mints.
-enum Route {
-    Stored(HeaderMap),
-    Minted(Arc<GitHubApp>),
-}
-
-/// Where one attempt goes.
-enum Target<'a> {
-    Stored(&'a CallbackRequest),
-    Minted {
-        app: &'a GitHubApp,
-        link: QueryLinkedRepository,
-        body: &'a str,
-    },
-}
-
 /// Where an attempt went, and how far it got.
 struct Reached<'a> {
     host: &'a str,
@@ -690,36 +596,6 @@ enum Stage {
     Comment,
 }
 
-impl Target<'_> {
-    /// A minted dispatch spends its installation's rate limit, whatever token each attempt mints.
-    fn credential(&self) -> CallbackCredential {
-        match self {
-            Self::Stored(request) => CallbackCredential::of(request),
-            Self::Minted { app, link, body: _ } => CallbackCredential::installation(
-                &app.dispatch_url(&link.full_name),
-                link.installation_id.into(),
-            ),
-        }
-    }
-
-    fn host(&self) -> String {
-        let url = match self {
-            Self::Stored(request) => request.url.clone(),
-            Self::Minted { app, link, body: _ } => app.dispatch_url(&link.full_name),
-        };
-        url.host_str().unwrap_or_default().to_owned()
-    }
-}
-
-/// What a mint's token can write.
-#[derive(Debug, Clone, Copy)]
-enum Mint {
-    /// The contents, for a dispatch.
-    Dispatch,
-    /// The checks and the pull requests, for a post.
-    Post,
-}
-
 /// A mint that gave no token: the attempt it counts as, and where it ended.
 struct NoToken {
     attempt: CallbackAttempt,
@@ -735,26 +611,6 @@ enum NoTokenCause {
     /// The link was disconnected, since no installation holds its repository.
     Disconnected,
     Other,
-}
-
-impl Mint {
-    async fn send(
-        self,
-        app: &GitHubApp,
-        now: bencher_json::DateTime,
-        link: &QueryLinkedRepository,
-    ) -> Result<GitHubInstallationToken, GitHubAppError> {
-        match self {
-            Self::Dispatch => {
-                app.mint(now, link.installation_id, link.repository_id)
-                    .await
-            },
-            Self::Post => {
-                app.mint_post(now, link.installation_id, link.repository_id)
-                    .await
-            },
-        }
-    }
 }
 
 impl NoToken {

@@ -1,6 +1,6 @@
 use bencher_comment::{GitHubApi, ReportComment};
 #[cfg(feature = "plus")]
-use bencher_json::{JsonNewCallback, ResourceName, runner::JsonNewJobGitHub};
+use bencher_json::runner::JsonNewJobGitHub;
 use bencher_json::{JsonProject, ProjectSlug, ProjectUuid, ReportUuid};
 use url::Url;
 
@@ -37,6 +37,10 @@ pub enum JobFailure {
 pub enum CiError {
     #[error("{0}")]
     GitHub(#[from] GitHubError),
+    #[error(
+        "`--ci-callback-token` is removed: with `--detach`, Bencher posts the GitHub Check and pull request comment to the project's linked GitHub repository itself. Remove the flag."
+    )]
+    CallbackTokenRemoved,
 }
 
 impl TryFrom<CliRunCi> for Option<Ci> {
@@ -47,24 +51,22 @@ impl TryFrom<CliRunCi> for Option<Ci> {
             github_actions,
             ci_only_thresholds,
             ci_only_on_alert,
-            ci_public_links,
             ci_id,
             ci_number,
             ci_i_am_vulnerable_to_pwn_requests,
-            #[cfg(feature = "plus")]
             ci_callback_token,
         } = ci;
+        if ci_callback_token.is_some() {
+            return Err(CiError::CallbackTokenRemoved);
+        }
         Ok(github_actions.map(|token| {
             Ci::GitHubActions(GitHubActions {
                 token,
                 ci_only_thresholds,
                 ci_only_on_alert,
-                ci_public_links,
                 ci_id,
                 ci_number,
                 ci_i_am_vulnerable_to_pwn_requests,
-                #[cfg(feature = "plus")]
-                callback_token: ci_callback_token,
                 #[cfg(feature = "plus")]
                 dispatch: None,
             })
@@ -78,14 +80,6 @@ impl Ci {
             Self::GitHubActions(github_actions) => {
                 github_actions.safety_check(log).map_err(Into::into)
             },
-        }
-    }
-
-    /// Whether a detached run's dispatch carries `--ci-callback-token`.
-    #[cfg(feature = "plus")]
-    pub fn has_callback_token(&self) -> bool {
-        match self {
-            Self::GitHubActions(github_actions) => github_actions.callback_token.is_some(),
         }
     }
 
@@ -149,25 +143,6 @@ impl Ci {
         }
     }
 
-    /// Best-effort: a detached run names its report in its check.
-    #[cfg(feature = "plus")]
-    pub async fn report_submitted(
-        &self,
-        check: &CiCheck,
-        project: ProjectUuid,
-        report: ReportUuid,
-        sub_adapter: &bencher_comment::SubAdapter,
-        log: bool,
-    ) {
-        match (self, check) {
-            (Self::GitHubActions(github_actions), CiCheck::GitHubActions(handle)) => {
-                github_actions
-                    .report_submitted(handle, project, report, sub_adapter, log)
-                    .await;
-            },
-        }
-    }
-
     /// The pull request context a detached run sends, so that the server can post for it.
     #[cfg(feature = "plus")]
     pub fn job_github(&self, log: bool) -> Result<Option<JsonNewJobGitHub>, CiError> {
@@ -175,25 +150,6 @@ impl Ci {
             Self::GitHubActions(github_actions) => {
                 github_actions.job_github(log).map_err(Into::into)
             },
-        }
-    }
-
-    /// The callback a detached run sends, so that its attach can complete the check.
-    #[cfg(feature = "plus")]
-    pub fn dispatch_callback(
-        &self,
-        check: Option<&CiCheck>,
-        sub_adapter: &bencher_comment::SubAdapter,
-        log: bool,
-    ) -> Result<Option<JsonNewCallback>, CiError> {
-        match self {
-            Self::GitHubActions(github_actions) => github_actions
-                .dispatch_callback(
-                    check.map(|CiCheck::GitHubActions(handle)| handle),
-                    sub_adapter,
-                    log,
-                )
-                .map_err(Into::into),
         }
     }
 
@@ -212,18 +168,6 @@ impl Ci {
         match self {
             Self::GitHubActions(github_actions) => {
                 github_actions.adopted_check().map(CiCheck::GitHubActions)
-            },
-        }
-    }
-
-    /// Best-effort: complete a detached run's check whose callback will never fire.
-    #[cfg(feature = "plus")]
-    pub async fn complete_unfired(&self, check: CiCheck, project_name: &ResourceName, log: bool) {
-        match (self, check) {
-            (Self::GitHubActions(github_actions), CiCheck::GitHubActions(handle)) => {
-                github_actions
-                    .complete_unfired_check(handle, project_name, log)
-                    .await;
             },
         }
     }

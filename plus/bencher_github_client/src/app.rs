@@ -121,23 +121,6 @@ impl GitHubApp {
         url
     }
 
-    /// Mints a token that can write the contents of the one repository and nothing else.
-    pub async fn mint(
-        &self,
-        now: DateTime,
-        installation: GitHubInstallationId,
-        repository: GitHubRepositoryId,
-    ) -> Result<GitHubInstallationToken, GitHubAppError> {
-        let JsonMinted {
-            token,
-            repositories,
-        } = self
-            .mint_for(now, installation, repository, CONTENTS_WRITE)
-            .await?;
-        let full_name = minted_name(repository, &repositories)?;
-        Ok(GitHubInstallationToken { token, full_name })
-    }
-
     /// Mints a token that can write the checks and the pull requests of the one repository and
     /// nothing else.
     pub async fn mint_post(
@@ -264,12 +247,6 @@ impl GitHubApp {
         Ok(html_url)
     }
 
-    /// Where a dispatch to the repository goes, on the same API as the mint.
-    pub fn dispatch_url(&self, full_name: &GitHubRepositoryName) -> Url {
-        self.api
-            .url(&["repos", full_name.owner(), full_name.name(), "dispatches"])
-    }
-
     fn jwt(&self, now: DateTime) -> jsonwebtoken::errors::Result<String> {
         let now = now.timestamp();
         let claims = JsonAppClaims {
@@ -366,11 +343,6 @@ struct JsonMintPermissions {
     pull_requests: Option<&'static str>,
 }
 
-const CONTENTS_WRITE: JsonMintPermissions = JsonMintPermissions {
-    contents: Some("write"),
-    checks: None,
-    pull_requests: None,
-};
 const CONTENTS_READ: JsonMintPermissions = JsonMintPermissions {
     contents: Some("read"),
     checks: None,
@@ -546,47 +518,10 @@ mod tests {
         assert!(matches!(error, GitHubAppError::Key(_)), "{error:?}");
     }
 
-    // Kills asking for any other repository or for more than one, asking for any other
-    // permission, sending the request anywhere else or under any other JWT, sending it with no
-    // user agent, and reading the owner or the name from anywhere else.
-    #[tokio::test]
-    async fn the_mint_asks_for_one_repository_with_contents_write() {
-        let (private_key, public) = key_pair();
-        let server = Server::start(vec![minted(&minted_repository(REPOSITORY_ID))]).await;
-
-        let token = app(&private_key, Some(&server))
-            .mint(DateTime::TEST, installation(), repository())
-            .await
-            .unwrap();
-
-        assert_eq!(token.token.as_ref(), TOKEN);
-        assert_eq!(
-            (token.full_name.owner(), token.full_name.name()),
-            ("octo-cat", format!("repo-{REPOSITORY_ID}").as_str())
-        );
-        let [request] = server.received().await.try_into().ok().unwrap();
-        assert_eq!(
-            request.request_line(),
-            format!("POST /github/app/installations/{INSTALLATION_ID}/access_tokens HTTP/1.1")
-        );
-        assert_eq!(request.header("user-agent"), Some(USER_AGENT));
-        assert_eq!(
-            request.json(),
-            serde_json::json!({
-                "repository_ids": [REPOSITORY_ID],
-                "permissions": { "contents": "write" },
-            })
-        );
-        let jwt = request
-            .header("authorization")
-            .and_then(|authorization| authorization.strip_prefix("Bearer "))
-            .unwrap();
-        assert_eq!(verify(jwt, &public).unwrap().iss, CLIENT_ID);
-    }
-
     // Kills a post mint that asks for contents, for any other permission or access, or for any
-    // other or more repositories, that sends anywhere else, or that refuses a token for exactly
-    // the one repository.
+    // other or more repositories, that sends anywhere else, under any other JWT, or with no user
+    // agent, that reads the owner or the name from anywhere else, or that refuses a token for
+    // exactly the one repository.
     #[tokio::test]
     async fn the_post_mint_asks_for_one_repository_with_checks_and_pull_requests_write() {
         let (private_key, public) = key_pair();
@@ -607,6 +542,7 @@ mod tests {
             request.request_line(),
             format!("POST /github/app/installations/{INSTALLATION_ID}/access_tokens HTTP/1.1")
         );
+        assert_eq!(request.header("user-agent"), Some(USER_AGENT));
         assert_eq!(
             request.json(),
             serde_json::json!({
@@ -883,33 +819,6 @@ mod tests {
         }
     }
 
-    // Kills dropping or reordering a segment, building on any API but the app's, a URL that
-    // misses the base's path, and keeping the empty segment of a base's trailing slash.
-    #[test]
-    fn the_dispatch_url_is_on_the_app_api() {
-        let (private_key, _public) = key_pair();
-        let full_name = "octo-cat/hello.world".parse().unwrap();
-
-        let github = app(&private_key, None).dispatch_url(&full_name);
-
-        assert_eq!(
-            github.as_str(),
-            "https://api.github.com/repos/octo-cat/hello.world/dispatches"
-        );
-        for base in ["http://127.0.0.1/github", "http://127.0.0.1/github/"] {
-            let fake = app(&private_key, None)
-                .with_base_url(base.parse().unwrap())
-                .unwrap()
-                .dispatch_url(&full_name);
-
-            assert_eq!(
-                fake.as_str(),
-                "http://127.0.0.1/github/repos/octo-cat/hello.world/dispatches",
-                "{base}"
-            );
-        }
-    }
-
     // Kills an install page on any other host or under any other app, and dropping the state.
     #[test]
     fn the_install_url_carries_the_state() {
@@ -944,7 +853,7 @@ mod tests {
             let server = Server::start(vec![minted(&listed.join(", "))]).await;
 
             let error = app(&private_key, Some(&server))
-                .mint(DateTime::TEST, installation(), repository())
+                .mint_post(DateTime::TEST, installation(), repository())
                 .await
                 .unwrap_err();
 
@@ -964,8 +873,8 @@ mod tests {
         }
     }
 
-    // The dispatch URL is built from the minted name, so this kills accepting one that is not two
-    // path segments.
+    // Every request after the mint is built from the minted name, so this kills accepting one that
+    // is not two path segments.
     #[tokio::test]
     async fn the_mint_refuses_a_repository_name_that_does_not_parse() {
         let (private_key, _public) = key_pair();
@@ -973,7 +882,7 @@ mod tests {
             Server::start(vec![minted(&named_minted_repository(REPOSITORY_ID, ".."))]).await;
 
         let error = app(&private_key, Some(&server))
-            .mint(DateTime::TEST, installation(), repository())
+            .mint_post(DateTime::TEST, installation(), repository())
             .await
             .unwrap_err();
 
@@ -1017,7 +926,7 @@ mod tests {
             let server = Server::start(vec![(status, body)]).await;
 
             let error = app(&private_key, Some(&server))
-                .mint(DateTime::TEST, installation(), repository())
+                .mint_post(DateTime::TEST, installation(), repository())
                 .await
                 .unwrap_err();
 
@@ -1176,7 +1085,7 @@ mod tests {
             .await;
 
             let error = app(&private_key, Some(&server))
-                .mint(DateTime::TEST, installation(), repository())
+                .mint_post(DateTime::TEST, installation(), repository())
                 .await
                 .unwrap_err();
 

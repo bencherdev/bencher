@@ -166,7 +166,8 @@ pub struct CliRunBranch {
         hide = true,
         alias = "else-branch",
         alias = "endif-branch",
-        alias = "no-hash"
+        alias = "no-hash",
+        alias = "ci-public-links"
     )]
     pub deprecated: bool,
 }
@@ -245,10 +246,6 @@ pub enum CliRunFormat {
     Html,
 }
 
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "each bool is an independent CI flag"
-)]
 #[derive(Args, Debug)]
 #[clap(group(
     ArgGroup::new("ci_cd")
@@ -265,9 +262,6 @@ pub struct CliRunCi {
     /// Only start posting results to CI if an Alert is generated (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_only_on_alert: bool,
-    /// All links should be to public URLs that do not require a login (requires: `--github-actions`)
-    #[clap(long, requires = "ci_cd")]
-    pub ci_public_links: bool,
     /// Custom ID for posting results to CI, used in place of the Project name in the GitHub Check name (ie `Bencher Report (<ID>)`) (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_id: Option<String>,
@@ -277,16 +271,9 @@ pub struct CliRunCi {
     /// CAUTION: Override safety checks and accept that you are vulnerable to pwn requests (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd", hide = true)]
     pub ci_i_am_vulnerable_to_pwn_requests: bool,
-    /// Fine-grained personal access token with contents write on this repository, for the `repository_dispatch` that a detached job's callback sends; without it, Bencher posts the GitHub Check and pull request comment to the project's linked repository (requires: `--github-actions` and `--detach`).
-    /// Bencher sends it after this workflow's `GITHUB_TOKEN` has expired, so it cannot be that token.
-    #[cfg(feature = "plus")]
-    #[clap(
-        long,
-        value_name = "TOKEN",
-        requires = "ci_cd",
-        requires = "detach",
-        value_parser = parse_token
-    )]
+    /// Removed: refused, so that a workflow that still passes it never runs its token as the
+    /// benchmark command.
+    #[clap(long, value_name = "TOKEN", hide = true)]
     pub ci_callback_token: Option<Secret>,
 }
 
@@ -318,7 +305,6 @@ pub struct CliRunJob {
             "start_point_max_versions",
             "start_point_clone_thresholds",
             "start_point_reset",
-            "deprecated",
             "testbed",
             "spec_reset",
             "adapter",
@@ -353,7 +339,6 @@ pub struct CliRunJob {
             "callback_url",
             "callback_header",
             "callback_body",
-            "ci_callback_token",
         ]
     )]
     pub job: Option<bencher_json::JobUuid>,
@@ -381,8 +366,12 @@ pub struct CliRunJob {
     #[clap(long, alias = "poll-interval", requires = "remote_job")]
     pub job_poll_interval: Option<bencher_json::PollTimeout>,
 
-    /// Detach after submitting the remote job, without waiting for completion (requires: --image).
-    #[clap(long, requires = "image", conflicts_with = "job_poll_interval")]
+    /// Detach after submitting the remote job, without waiting for completion (requires: --image; conflicts with: --error-on-alert).
+    #[clap(
+        long,
+        requires = "image",
+        conflicts_with_all = ["job_poll_interval", "error_on_alert"]
+    )]
     pub detach: bool,
 
     /// Callback `https` URL that Bencher sends one request to when the detached job finishes (requires: --image and --detach; conflicts with: --github-actions)
@@ -460,7 +449,6 @@ mod tests {
             &["--start-point-clone-thresholds"],
         ),
         ("start_point_reset", &["--start-point-reset"]),
-        ("deprecated", &["--else-branch"]),
         ("testbed", &["--testbed", "base"]),
         ("spec_reset", &["--spec-reset"]),
         ("adapter", &["--adapter", "json"]),
@@ -511,7 +499,6 @@ mod tests {
         ("callback_url", &["--callback-url", CALLBACK_URL]),
         ("callback_header", &["--callback-header", "X-Token: token"]),
         ("callback_body", &["--callback-body", "{}"]),
-        ("ci_callback_token", &["--ci-callback-token", "token"]),
     ];
 
     // Every `bencher run` argument that works beside `--job`.
@@ -530,10 +517,10 @@ mod tests {
             "ci_only_on_alert",
             &["--github-actions", "token", "--ci-only-on-alert"],
         ),
-        (
-            "ci_public_links",
-            &["--github-actions", "token", "--ci-public-links"],
-        ),
+        // A hidden flag with no effect, which `--ci-public-links` is an alias of.
+        ("deprecated", &["--ci-public-links"]),
+        // Refused after parsing.
+        ("ci_callback_token", &["--ci-callback-token", "token"]),
         ("ci_id", &["--github-actions", "token", "--ci-id", "suite"]),
         (
             "ci_number",
@@ -759,31 +746,51 @@ mod tests {
         }
     }
 
+    // The benchmark command takes every unknown flag that follows it. Kills a parser that lets the
+    // removed flag and its token become the command.
     #[test]
-    fn ci_callback_token_requires_github_actions_and_detach() {
-        assert_missing(
-            &parse_callback(&[
+    fn ci_callback_token_never_becomes_the_command() {
+        let run = parse_callback(&[
+            "--image",
+            "alpine:3.18",
+            "--detach",
+            "--github-actions",
+            "token",
+            "--ci-callback-token",
+            "callback-token",
+        ])
+        .unwrap();
+        assert!(run.ci.ci_callback_token.is_some());
+        assert_eq!(run.cmd.command, None);
+    }
+
+    // A detached run returns before it has a report. Kills a parser that takes both.
+    #[test]
+    fn error_on_alert_conflicts_with_detach() {
+        let err = parse_callback(&["--image", "alpine:3.18", "--detach", "--error-on-alert"])
+            .unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::ArgumentConflict, "{err}");
+        parse_callback(&["--image", "alpine:3.18", "--error-on-alert"]).unwrap();
+    }
+
+    // A workflow that still passes the flag keeps working. Kills a parser that refuses it, or that
+    // still asks for `--github-actions` beside it.
+    #[test]
+    fn ci_public_links_is_accepted_with_no_effect() {
+        for args in [
+            &["--ci-public-links", "bencher", "mock"][..],
+            &[
                 "--image",
                 "alpine:3.18",
                 "--detach",
-                "--ci-callback-token",
-                "token",
-            ])
-            .unwrap_err(),
-            &["--github-actions"],
-        );
-        assert_missing(
-            &parse_callback(&[
-                "--image",
-                "alpine:3.18",
                 "--github-actions",
                 "token",
-                "--ci-callback-token",
-                "token",
-            ])
-            .unwrap_err(),
-            &["--detach"],
-        );
+                "--ci-public-links",
+            ],
+        ] {
+            let run = parse_callback(args).unwrap_or_else(|err| panic!("{args:?}: {err}"));
+            assert!(run.branch.deprecated, "{args:?}");
+        }
     }
 
     #[test]
@@ -803,27 +810,6 @@ mod tests {
 
     const EMPTY_TOKEN: &str =
         "the token is empty, so it could never authenticate: check that the secret it reads is set";
-
-    #[test]
-    fn empty_ci_callback_token_is_refused() {
-        const DETACH_TOKEN: [&str; 6] = [
-            "--image",
-            "alpine:3.18",
-            "--detach",
-            "--github-actions",
-            "token",
-            "--ci-callback-token",
-        ];
-        // An unset repository secret expands to an empty argument.
-        for token in ["", "   "] {
-            let args = DETACH_TOKEN.into_iter().chain([token]).collect::<Vec<_>>();
-            let err = parse_callback(&args).unwrap_err();
-            assert_eq!(err.kind(), ErrorKind::ValueValidation, "{args:?}: {err}");
-            let message = err.to_string();
-            assert!(message.contains("--ci-callback-token"), "{message}");
-            assert!(message.contains(EMPTY_TOKEN), "{message}");
-        }
-    }
 
     #[test]
     fn empty_github_actions_token_is_refused() {

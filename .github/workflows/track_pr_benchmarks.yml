@@ -15,7 +15,7 @@ jobs:
     name: Track PR Benchmarks with Bencher
     if: ${{ github.event.workflow_run.event == 'pull_request' }}
     permissions:
-      checks: write
+      contents: read
     runs-on: ubuntu-22.04
     env:
       PR_EVENT: event.json

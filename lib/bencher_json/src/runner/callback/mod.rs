@@ -1,9 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use http::header::{
-    ACCEPT, AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue, USER_AGENT,
-};
+use http::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue, USER_AGENT};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize, Serializer};
@@ -11,7 +9,7 @@ use serde_json::Value;
 use url::Url;
 
 use crate::runner::JobStatus;
-use crate::{JsonReport, Sanitize, Secret, strip_bearer_token};
+use crate::{JsonReport, Sanitize, Secret};
 
 mod body;
 mod state;
@@ -34,9 +32,6 @@ pub const CALLBACK_JOB_STATUSES: [JobStatus; 3] =
 
 // The `repository_dispatch` event type that released `bencher run` versions compose.
 const DISPATCH_EVENT_TYPE: &str = "bencher_run";
-const GITHUB_ACCEPT: &str = "application/vnd.github+json";
-const GITHUB_API_VERSION_HEADER: &str = "x-github-api-version";
-const GITHUB_API_VERSION: &str = "2022-11-28";
 
 // The HTTP client owns message framing and the connection, so these are never the customer's.
 const REFUSED_HEADERS: [&str; 9] = [
@@ -188,31 +183,18 @@ impl JsonNewCallback {
         Ok(headers)
     }
 
-    /// Whether the callback is the GitHub Actions dispatch that `bencher run` composes, in either
-    /// form.
-    pub fn is_bencher_run_dispatch(&self) -> bool {
-        self.github_dispatch().is_some()
-    }
-
-    /// The form of the GitHub Actions dispatch that `bencher run` composes, if the callback is
-    /// one: the `bencher_run` event, sent to a repository on github.com with a bearer token or
-    /// with no `Authorization` header at all.
-    pub fn github_dispatch(&self) -> Option<GitHubDispatch> {
+    /// Whether the callback is the GitHub Actions dispatch that `bencher run` v0.6.16 and v0.6.17
+    /// compose without a token: the `bencher_run` event, to a repository on github.com, with no
+    /// `Authorization` header.
+    pub fn is_tokenless_dispatch(&self) -> bool {
         let event_type = self
             .body
             .as_ref()
             .and_then(|body| body.get("event_type"))
             .and_then(Value::as_str);
-        if !is_github_dispatch_url(&self.url) || event_type != Some(DISPATCH_EVENT_TYPE) {
-            return None;
-        }
-        let Some(authorization) = self.headers.get(AUTHORIZATION.as_str()) else {
-            return Some(GitHubDispatch::Minted);
-        };
-        authorization
-            .as_ref()
-            .and_then(|value| strip_bearer_token(value.as_ref()))
-            .map(|_| GitHubDispatch::Bearer)
+        is_github_dispatch_url(&self.url)
+            && event_type == Some(DISPATCH_EVENT_TYPE)
+            && !self.headers.contains_key(AUTHORIZATION.as_str())
     }
 
     /// Whether the body sends the job's report, as a callback without a body does.
@@ -258,39 +240,6 @@ impl Sanitize for JsonNewCallback {
         } = self;
         url.clone_from(origin);
         headers.values_mut().for_each(Sanitize::sanitize);
-    }
-}
-
-/// Who supplies the token of the GitHub Actions dispatch that `bencher run` composes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum GitHubDispatch {
-    /// The customer's token, so it is sent exactly as stored.
-    Bearer,
-    /// None, so Bencher mints one for the project's linked repository at each attempt.
-    Minted,
-}
-
-impl GitHubDispatch {
-    /// The headers of a minted dispatch: Bencher's, GitHub's, and the minted `token`, and never a
-    /// stored header. Every value is sensitive, so the map's `Debug` never prints one.
-    pub fn minted_headers(version: &str, token: &Secret) -> Result<HeaderMap, http::Error> {
-        let mut headers = HeaderMap::from_iter([
-            (CONTENT_TYPE, HeaderValue::from_static("application/json")),
-            (ACCEPT, HeaderValue::from_static(GITHUB_ACCEPT)),
-            (
-                HeaderName::from_static(GITHUB_API_VERSION_HEADER),
-                HeaderValue::from_static(GITHUB_API_VERSION),
-            ),
-        ]);
-        headers.insert(USER_AGENT, bencher_user_agent(version).try_into()?);
-        headers.insert(
-            AUTHORIZATION,
-            format!("Bearer {}", token.as_ref()).try_into()?,
-        );
-        headers
-            .values_mut()
-            .for_each(|value| value.set_sensitive(true));
-        Ok(headers)
     }
 }
 
@@ -442,7 +391,7 @@ fn header_value(name: &str, value: String) -> Result<Option<Secret>, CallbackErr
 mod tests {
     use std::collections::BTreeMap;
 
-    use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue, USER_AGENT};
+    use http::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue, USER_AGENT};
     use pretty_assertions::assert_eq;
     use serde::Deserialize;
     use serde_json::{Value, json};
@@ -450,7 +399,7 @@ mod tests {
     use url::Url;
 
     use super::{
-        CallbackError, GitHubDispatch, JsonNewCallback, MAX_CALLBACK_HEADER_NAME_LEN,
+        CallbackError, JsonNewCallback, MAX_CALLBACK_HEADER_NAME_LEN,
         MAX_CALLBACK_HEADER_VALUE_LEN, MAX_CALLBACK_HEADERS, MAX_CALLBACK_URL_LEN,
         is_github_dispatch_url,
     };
@@ -570,14 +519,12 @@ mod tests {
         }
     }
 
-    /// Each `None` row differs from what `bencher run` composes, with or without a token, in one
-    /// respect. Kills a minted form that skips the URL or the event check, that admits an empty or
-    /// any other `Authorization` header, or that sends a dispatch with a token as minted.
+    /// Each `false` row differs from the dispatch that `bencher run` v0.6.16 and v0.6.17 compose
+    /// without a token in one respect. Kills a check that skips the URL, the event, or the
+    /// `Authorization` header, or that reads only a bearer token as one.
     #[test]
-    fn a_bencher_run_dispatch_is_exactly_what_the_cli_composes() {
+    fn a_tokenless_dispatch_is_exactly_what_the_old_cli_composes() {
         const BEARER: Option<(&str, &str)> = Some(("Authorization", "Bearer github_pat_token"));
-        const BEARER_FORM: Option<GitHubDispatch> = Some(GitHubDispatch::Bearer);
-        const MINTED_FORM: Option<GitHubDispatch> = Some(GitHubDispatch::Minted);
         const GHES: &str = "https://github.example.com/api/v3/repos/owner/repo/dispatches";
         let authorization = |value| Some(("Authorization", value));
         let with_event_type = |event_type: Option<Value>| {
@@ -593,73 +540,50 @@ mod tests {
             body
         };
         let composed = || Some(with_event_type(Some(json!("bencher_run"))));
-        for (url, bearer, body, expected) in [
-            (DISPATCH, BEARER, composed(), BEARER_FORM),
-            // HTTP auth schemes are case-insensitive.
-            (
-                DISPATCH,
-                authorization("bearer github_pat_token"),
-                composed(),
-                BEARER_FORM,
-            ),
-            (DISPATCH, None, composed(), MINTED_FORM),
-            // GitHub reads the token only from `Authorization`, so this one goes out minted.
+        for (url, header, body, expected) in [
+            (DISPATCH, None, composed(), true),
+            // GitHub reads a token only from `Authorization`.
             (
                 DISPATCH,
                 Some(("Proxy-Authorization", "Bearer github_pat_token")),
                 composed(),
-                MINTED_FORM,
+                true,
             ),
-            // A GitHub Enterprise Server host
-            (GHES, BEARER, composed(), None),
-            (GHES, None, composed(), None),
+            (DISPATCH, BEARER, composed(), false),
             (
                 DISPATCH,
                 authorization("Basic dXNlcjpwYXNz"),
                 composed(),
-                None,
+                false,
             ),
-            (DISPATCH, authorization(""), composed(), None),
-            (DISPATCH, authorization("Bearer "), composed(), None),
-            (DISPATCH, authorization("Bearer \t "), composed(), None),
-            (DISPATCH, BEARER, None, None),
-            (DISPATCH, None, None, None),
+            (DISPATCH, authorization(""), composed(), false),
+            // A GitHub Enterprise Server host
+            (GHES, None, composed(), false),
+            (URL, None, composed(), false),
+            (DISPATCH, None, None, false),
             (
                 DISPATCH,
-                BEARER,
+                None,
                 Some(json!([with_event_type(Some(json!("bencher_run")))])),
-                None,
+                false,
             ),
-            (DISPATCH, BEARER, Some(with_event_type(None)), None),
-            (DISPATCH, None, Some(with_event_type(None)), None),
-            (
-                DISPATCH,
-                BEARER,
-                Some(with_event_type(Some(json!("deploy")))),
-                None,
-            ),
+            (DISPATCH, None, Some(with_event_type(None)), false),
             (
                 DISPATCH,
                 None,
                 Some(with_event_type(Some(json!("deploy")))),
-                None,
+                false,
             ),
             (
                 DISPATCH,
-                BEARER,
+                None,
                 Some(with_event_type(Some(json!("BENCHER_RUN")))),
-                None,
-            ),
-            (
-                DISPATCH,
-                BEARER,
-                Some(with_event_type(Some(json!("bencher_run{{ job.status }}")))),
-                None,
+                false,
             ),
         ] {
             let headers = [
                 Some(("Accept", "application/vnd.github+json")),
-                bearer,
+                header,
                 Some(("X-GitHub-Api-Version", "2022-11-28")),
             ]
             .into_iter()
@@ -667,52 +591,11 @@ mod tests {
             .collect::<Vec<_>>();
             let callback = new_callback(url, &headers, body.clone()).unwrap();
             assert_eq!(
-                callback.github_dispatch(),
+                callback.is_tokenless_dispatch(),
                 expected,
-                "{url} {bearer:?} {body:?}"
-            );
-            assert_eq!(
-                callback.is_bencher_run_dispatch(),
-                expected.is_some(),
-                "{url} {bearer:?} {body:?}"
+                "{url} {header:?} {body:?}"
             );
         }
-    }
-
-    /// Kills a minted dispatch without its token or with any other, without Bencher's user agent
-    /// or GitHub's headers, and with a value that `Debug` prints.
-    #[test]
-    fn minted_headers_carry_the_token_and_hide_it() {
-        const TOKEN: &str = "ghs_minted-token-marker";
-        let headers = GitHubDispatch::minted_headers("1.2.3", &TOKEN.parse().unwrap()).unwrap();
-
-        assert_eq!(
-            headers,
-            HeaderMap::from_iter([
-                (
-                    AUTHORIZATION,
-                    HeaderValue::from_str(&format!("Bearer {TOKEN}")).unwrap()
-                ),
-                (
-                    ACCEPT,
-                    HeaderValue::from_static("application/vnd.github+json")
-                ),
-                (CONTENT_TYPE, HeaderValue::from_static("application/json")),
-                (
-                    USER_AGENT,
-                    HeaderValue::from_static(
-                        "Bencher/1.2.3 (+https://bencher.dev/docs/explanation/images/)"
-                    )
-                ),
-                (
-                    http::header::HeaderName::from_static("x-github-api-version"),
-                    HeaderValue::from_static("2022-11-28")
-                ),
-            ])
-        );
-        assert!(headers.values().all(HeaderValue::is_sensitive));
-        let debug = format!("{headers:?}");
-        assert!(!debug.contains(TOKEN), "{debug}");
     }
 
     #[test]

@@ -12,10 +12,10 @@
 use std::{
     collections::VecDeque,
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
-use bencher_api_tests::{LogCapture, TestProject, TestServer, TestUser};
+use bencher_api_tests::{LogCapture, TestProject, TestServer, TestUser, github::github_signature};
 use bencher_json::{
     Clock, JobStatus, JobUuid, JsonReport,
     project::github::{LinkedRepositoryReason, LinkedRepositoryStatus},
@@ -42,6 +42,7 @@ const MOVED_INSTALLATION: u64 = 8192;
 const REPOSITORY: u64 = 4096;
 const OTHER_REPOSITORY: u64 = 4097;
 const FULL_NAME: &str = "octo-cat/repo";
+const RENAMED: &str = "octo-cat/renamed";
 const TOKEN: &str = "ghs_post-token-marker";
 const SHA: &str = "0123456789abcdef0123456789abcdef01234567";
 const OTHER_SHA: &str = "fedcba9876543210fedcba9876543210fedcba98";
@@ -54,6 +55,7 @@ const REPOSITORY_INACCESSIBLE: &str = "There is at least one repository that doe
 const MINT: &str = "POST /github/app/installations/2048/access_tokens";
 const MINT_MOVED: &str = "POST /github/app/installations/8192/access_tokens";
 const INSTALLATION_PAGE: &str = "GET /github/app/installations/2048";
+const LOOKUP: &str = "GET /github/repos/octo-cat/repo/installation";
 const CREATE_CHECK: &str = "POST /github/repos/octo-cat/repo/check-runs";
 const UPDATE_CHECK: &str = "PATCH /github/repos/octo-cat/repo/check-runs/";
 const HEAD: &str = "GET /github/repos/octo-cat/repo/pulls/7";
@@ -351,20 +353,35 @@ async fn a_post_settled_meanwhile_is_not_logged_as_failed() {
 }
 
 // Kills a refusal for a repository that left the installation that neither moves nor disconnects
-// the link as the dispatch's does, and a post that goes on without a link.
+// the link, a disconnect for the wrong reason, and a post that goes on without a link.
 #[tokio::test]
 async fn a_mint_refused_for_a_repository_that_left_moves_or_disconnects_the_link() {
-    let mut fake = Fake::default();
-    fake.refuse_mint(INSTALLATION, 404, "Not Found");
-    let setup = Setup::new(fake).await;
-    let job = setup.submit_ok(&github(None)).await;
-    setup.until_state(job, JobGitHubState::Failed).await;
-    assert_eq!(
-        setup.github.lines(),
-        [MINT, "GET /github/repos/octo-cat/repo/installation"]
-    );
-    assert_eq!(setup.post(job).failure, Some(JobGitHubFailure::Unlinked));
-    assert_eq!(setup.linked().1, LinkedRepositoryStatus::Disconnected);
+    for (status, message, reason) in [
+        (404, "Not Found", LinkedRepositoryReason::Uninstalled),
+        (
+            422,
+            REPOSITORY_INACCESSIBLE,
+            LinkedRepositoryReason::Removed,
+        ),
+    ] {
+        let mut fake = Fake::default();
+        fake.refuse_mint(INSTALLATION, status, message);
+        let setup = Setup::new(fake).await;
+        let job = setup.submit_ok(&github(None)).await;
+        setup.until_state(job, JobGitHubState::Failed).await;
+        assert_eq!(setup.github.lines(), [MINT, LOOKUP], "{status}");
+        assert_eq!(
+            setup.post(job).failure,
+            Some(JobGitHubFailure::Unlinked),
+            "{status}"
+        );
+        let link = setup.stored_link();
+        assert_eq!(
+            (link.status, link.reason),
+            (LinkedRepositoryStatus::Disconnected, Some(reason)),
+            "{status}"
+        );
+    }
 
     let mut fake = Fake::default();
     fake.refuse_mint(INSTALLATION, 422, REPOSITORY_INACCESSIBLE);
@@ -374,9 +391,32 @@ async fn a_mint_refused_for_a_repository_that_left_moves_or_disconnects_the_link
     setup.until_checks(1).await;
     assert_eq!(
         setup.github.lines(),
+        [MINT, LOOKUP, MINT_MOVED, CREATE_CHECK]
+    );
+    assert_eq!(
+        setup.linked(),
+        (MOVED_INSTALLATION, LinkedRepositoryStatus::Connected)
+    );
+    assert_eq!(setup.post(job).state, JobGitHubState::Pending);
+}
+
+// A renamed or transferred repository's lookup answers with a redirect. Kills a redirect not
+// followed on the API's origin, and one followed anywhere else.
+#[tokio::test]
+async fn a_lookup_redirected_on_the_api_origin_moves_the_link() {
+    let mut fake = Fake::default();
+    fake.fail(MINT, 404);
+    fake.redirect_lookup("/github/repositories/4096/installation");
+    fake.install(MOVED_INSTALLATION);
+    let setup = Setup::new(fake).await;
+    setup.submit_ok(&github(None)).await;
+    setup.until_checks(1).await;
+    assert_eq!(
+        setup.github.lines(),
         [
             MINT,
-            "GET /github/repos/octo-cat/repo/installation",
+            LOOKUP,
+            "GET /github/repositories/4096/installation",
             MINT_MOVED,
             CREATE_CHECK,
         ]
@@ -385,7 +425,403 @@ async fn a_mint_refused_for_a_repository_that_left_moves_or_disconnects_the_link
         setup.linked(),
         (MOVED_INSTALLATION, LinkedRepositoryStatus::Connected)
     );
+
+    let mut fake = Fake::default();
+    fake.fail(MINT, 404);
+    fake.redirect_lookup("https://elsewhere.example/repositories/4096/installation");
+    fake.install(MOVED_INSTALLATION);
+    let setup = Setup::new(fake).await;
+    let job = setup.submit_ok(&github(None)).await;
+    setup
+        .until_logged("GitHub post request", "stage=lookup")
+        .await;
+    setup.server.drain_callbacks().await;
+    assert_eq!(setup.github.lines(), [MINT, LOOKUP]);
+    assert_eq!(
+        setup.linked(),
+        (INSTALLATION, LinkedRepositoryStatus::Connected)
+    );
     assert_eq!(setup.post(job).state, JobGitHubState::Pending);
+}
+
+// The mint answers with the repository's name now, which a rename or a transfer changes. Kills a
+// post that sends its requests to the stored name, and a new name never written back.
+#[tokio::test]
+async fn a_renamed_repository_gets_its_post_at_its_new_name() {
+    let setup = Setup::new(Fake::default().renamed(RENAMED)).await;
+    let job = setup.submit_ok(&github(Some(NUMBER))).await;
+    setup.until_checks(1).await;
+
+    setup.end_and_fire(job, JobStatus::Processed).await;
+
+    assert_eq!(
+        setup.github.lines(),
+        [
+            MINT,
+            "POST /github/repos/octo-cat/renamed/check-runs",
+            MINT,
+            "PATCH /github/repos/octo-cat/renamed/check-runs/1",
+            "GET /github/repos/octo-cat/renamed/pulls/7",
+            "GET /github/repos/octo-cat/renamed/issues/7/comments",
+            "POST /github/repos/octo-cat/renamed/issues/7/comments",
+        ]
+    );
+    assert_eq!(setup.stored_link().full_name.to_string(), RENAMED);
+    assert_eq!(setup.post(job).state, JobGitHubState::Posted);
+}
+
+// Kills a second refusal that leaves the moved link connected.
+#[tokio::test]
+async fn a_moved_link_refused_again_disconnects() {
+    let mut fake = Fake::default();
+    fake.refuse_mint(INSTALLATION, 404, "Not Found");
+    fake.refuse_mint(MOVED_INSTALLATION, 404, "Not Found");
+    fake.install(MOVED_INSTALLATION);
+    let setup = Setup::new(fake).await;
+    let job = setup.submit_ok(&github(None)).await;
+    setup.until_state(job, JobGitHubState::Failed).await;
+
+    assert_eq!(setup.github.lines(), [MINT, LOOKUP, MINT_MOVED]);
+    assert_eq!(setup.post(job).failure, Some(JobGitHubFailure::Unlinked));
+    let link = setup.stored_link();
+    assert_eq!(
+        (u64::from(link.installation_id), link.status, link.reason),
+        (
+            MOVED_INSTALLATION,
+            LinkedRepositoryStatus::Disconnected,
+            Some(LinkedRepositoryReason::Uninstalled)
+        )
+    );
+}
+
+// A refusal that leaves the link as it is asks nothing more of GitHub. Kills a lookup, and with it
+// a move or a disconnect, after a 403.
+#[tokio::test]
+async fn a_refusal_that_keeps_the_link_looks_up_nothing() {
+    let mut fake = Fake::default();
+    fake.fail(MINT, 403);
+    let setup = Setup::new(fake).await;
+    let job = setup.submit_ok(&github(None)).await;
+    setup
+        .until_logged("GitHub post request", "status=403")
+        .await;
+    setup.server.drain_callbacks().await;
+
+    assert_eq!(setup.github.lines(), [MINT]);
+    assert_eq!(
+        setup.linked(),
+        (INSTALLATION, LinkedRepositoryStatus::Connected)
+    );
+    assert_eq!(setup.post(job).state, JobGitHubState::Pending);
+}
+
+// Kills a failed lookup that disconnects the link or fails the post, which a later attempt can
+// still make.
+#[tokio::test]
+async fn a_failed_lookup_leaves_the_link() {
+    let mut fake = Fake::default();
+    fake.fail(MINT, 404);
+    fake.fail(LOOKUP, 500);
+    let setup = Setup::new(fake).await;
+    let job = setup.submit_ok(&github(None)).await;
+    setup
+        .until_logged("GitHub post request", "stage=lookup")
+        .await;
+
+    setup.end_and_fire(job, JobStatus::Processed).await;
+
+    assert_eq!(setup.github.lines(), [MINT, LOOKUP, MINT, CREATE_CHECK]);
+    assert_eq!(
+        setup.linked(),
+        (INSTALLATION, LinkedRepositoryStatus::Connected)
+    );
+    assert_eq!(setup.post(job).state, JobGitHubState::Posted);
+}
+
+// A lookup holds its answer while the project's link is replaced, so the move finds no link to
+// move. Kills a mint once more for the link the attempt read, which the project no longer has,
+// and a move or a disconnect that lands on the link that replaced it.
+#[tokio::test]
+async fn a_link_replaced_during_a_lookup_is_left_alone() {
+    let mut fake = Fake::default();
+    fake.fail(MINT, 404);
+    fake.install(MOVED_INSTALLATION);
+    fake.hold(LOOKUP);
+    let setup = Setup::new(fake).await;
+    setup.submit_ok(&github(None)).await;
+    setup.github.until_held().await;
+
+    setup.link(INSTALLATION, OTHER_REPOSITORY);
+    setup.github.release();
+    setup
+        .until_logged("GitHub post request", "status=404")
+        .await;
+    setup.server.drain_callbacks().await;
+
+    assert_eq!(setup.github.lines(), [MINT, LOOKUP]);
+    let link = setup.stored_link();
+    assert_eq!(
+        (
+            u64::from(link.installation_id),
+            u64::from(link.repository_id),
+            link.status,
+        ),
+        (
+            INSTALLATION,
+            OTHER_REPOSITORY,
+            LinkedRepositoryStatus::Connected
+        )
+    );
+}
+
+// The pacer reads a refused mint as it reads any refused request. Kills a 5xx from the mint that
+// ends the post, and a 429's `retry-after` or a spent limit's reset that never reaches the pacer,
+// which would then wait out a minute's fallback pause.
+#[tokio::test]
+async fn a_refused_mint_is_retried_when_its_answer_says_to() {
+    let reset = (SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+        + 1)
+    .to_string();
+    for (status, headers) in [
+        (500, Vec::new()),
+        (429, vec![("retry-after", "1")]),
+        (
+            403,
+            vec![
+                ("x-ratelimit-remaining", "0"),
+                ("x-ratelimit-reset", reset.as_str()),
+            ],
+        ),
+    ] {
+        let setup = Setup::new(Fake::default()).await;
+        let job = setup.submit_ok(&github(None)).await;
+        setup.until_checks(1).await;
+        setup.github.fail_with(MINT, status, &headers);
+        let fired = Instant::now();
+
+        setup.end_and_fire(job, JobStatus::Processed).await;
+
+        assert!(fired.elapsed() < SETTLE, "{status}: {:?}", fired.elapsed());
+        assert_eq!(
+            setup.github.lines()[2..],
+            [MINT, MINT, "PATCH /github/repos/octo-cat/repo/check-runs/1"],
+            "{status}"
+        );
+        let post = setup.post(job);
+        assert_eq!(
+            (post.state, post.attempts, post.status.map(u16::from)),
+            (JobGitHubState::Posted, 2, Some(status)),
+            "{status}"
+        );
+    }
+}
+
+// Kills a mint that never answers classed as anything but a timeout, and one that ends the post.
+#[tokio::test]
+async fn a_mint_timeout_is_retried() {
+    let setup = Setup::new(Fake::default()).await;
+    let job = setup.submit_ok(&github(None)).await;
+    setup.until_checks(1).await;
+    setup.github.silence(MINT);
+
+    setup.end_and_fire(job, JobStatus::Processed).await;
+
+    setup.assert_logged("GitHub post request", &["stage=mint", "outcome=timeout"]);
+    assert_eq!(
+        setup.github.lines()[2..],
+        [MINT, MINT, "PATCH /github/repos/octo-cat/repo/check-runs/1"]
+    );
+    let post = setup.post(job);
+    assert_eq!(
+        (post.state, post.attempts, post.status),
+        (JobGitHubState::Posted, 2, None)
+    );
+}
+
+// Kills pacing a post by anything but its installation, which would hold every other
+// installation's posts behind one installation's rate limit. The 429's `retry-after` pauses its
+// own installation for longer than the test waits.
+#[tokio::test]
+async fn a_rate_limit_pauses_only_its_installation() {
+    let setup = Setup::new(Fake::default()).await;
+    let org = setup.server.create_org(&setup.user, "Other Post Org").await;
+    let other = setup
+        .server
+        .create_project(&setup.user, &org, "Other Post Project")
+        .await;
+    setup.server.link_repository(
+        &other,
+        &setup.user,
+        MOVED_INSTALLATION,
+        REPOSITORY,
+        FULL_NAME,
+    );
+    let limited = setup.submit_ok(&github(None)).await;
+    let (status, body) = submit(&setup.server, &setup.user, &other, &github(None)).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let unlimited = serde_json::from_str::<JsonReport>(&body)
+        .unwrap()
+        .job
+        .unwrap();
+    setup.until_checks(2).await;
+    setup.github.fail_with(MINT, 429, &[("retry-after", "60")]);
+
+    setup.fire(limited, JobStatus::Processed);
+    setup
+        .until(|| setup.post(limited).attempts == 1, "the limited attempt")
+        .await;
+    setup.fire(unlimited, JobStatus::Processed);
+    setup
+        .until(
+            || setup.post(unlimited).state == JobGitHubState::Posted,
+            "the unlimited post",
+        )
+        .await;
+
+    let limited = setup.post(limited);
+    assert_eq!(
+        (limited.state, limited.status.map(u16::from)),
+        (JobGitHubState::Pending, Some(429))
+    );
+    let Setup { server, .. } = setup;
+    server.close().await;
+}
+
+// Kills reading the link once for every post: a link removed after a refused attempt fails the
+// post before it mints again.
+#[tokio::test]
+async fn the_next_attempt_finds_a_removed_link_and_mints_nothing() {
+    let setup = Setup::new(Fake::default()).await;
+    let job = setup.submit_ok(&github(None)).await;
+    setup.until_checks(1).await;
+    setup.github.fail_with(MINT, 500, &[]);
+
+    setup.fire(job, JobStatus::Processed);
+    setup.until_first_attempt(job).await;
+    QueryLinkedRepository::delete(&mut setup.server.db_conn(), setup.stored_link().project_id)
+        .unwrap();
+    setup.server.drain_callbacks().await;
+
+    assert_eq!(setup.github.lines()[2..], [MINT]);
+    let post = setup.post(job);
+    assert_eq!(
+        (post.state, post.failure, post.attempts),
+        (JobGitHubState::Failed, Some(JobGitHubFailure::Unlinked), 2)
+    );
+}
+
+// The app is uninstalled after the start creates the check. Kills a post that reads the link
+// whatever its status, which would mint and post for a disconnected link.
+#[tokio::test]
+async fn a_link_disconnected_before_the_fire_sends_nothing() {
+    let setup = Setup::new(Fake::default()).await;
+    let job = setup.submit_ok(&github(Some(NUMBER))).await;
+    setup.until_checks(1).await;
+    let uninstalled = format!(
+        r#"{{"action": "deleted", "installation": {{"id": {INSTALLATION}}}, "sender": {{"login": "octo-cat"}}}}"#
+    );
+    let response = setup
+        .server
+        .github_webhook(
+            "installation",
+            Some(&github_signature(&uninstalled)),
+            &uninstalled,
+        )
+        .await;
+    assert_eq!(response.status(), StatusCode::ACCEPTED);
+    assert_eq!(
+        setup.linked(),
+        (INSTALLATION, LinkedRepositoryStatus::Disconnected)
+    );
+
+    setup.end_and_fire(job, JobStatus::Processed).await;
+
+    assert_eq!(setup.github.lines(), [MINT, CREATE_CHECK]);
+    let post = setup.post(job);
+    assert_eq!(
+        (post.state, post.failure),
+        (JobGitHubState::Failed, Some(JobGitHubFailure::Unlinked))
+    );
+}
+
+// Kills a move that lands on another project's link or on a link replaced since, that matches by
+// status, or that leaves the moved link disconnected.
+#[tokio::test]
+async fn a_move_touches_only_the_link_it_read() {
+    let setup = Setup::new(Fake::default()).await;
+    let Setup {
+        server,
+        user,
+        project,
+        ..
+    } = &setup;
+    let org = server.create_org(user, "Other Post Org").await;
+    let other = server
+        .create_project(user, &org, "Other Post Project")
+        .await;
+    let read = setup.stored_link();
+    server.link_repository(&other, user, INSTALLATION, REPOSITORY, FULL_NAME);
+    let mut conn = server.db_conn();
+    read.disconnect(&mut conn, LinkedRepositoryReason::Removed)
+        .unwrap();
+
+    let moved = read
+        .move_to(&mut conn, installation_id(MOVED_INSTALLATION))
+        .unwrap()
+        .expect("The link moves");
+
+    let state = |link: &QueryLinkedRepository| {
+        (
+            u64::from(link.installation_id),
+            u64::from(link.repository_id),
+            link.status,
+            link.reason,
+        )
+    };
+    let connected = |installation, repository| {
+        (
+            installation,
+            repository,
+            LinkedRepositoryStatus::Connected,
+            None,
+        )
+    };
+    let stored = |project: &TestProject| {
+        schema::linked_repository::table
+            .inner_join(schema::project::table)
+            .filter(schema::project::uuid.eq(project.uuid))
+            .select(QueryLinkedRepository::as_select())
+            .first::<QueryLinkedRepository>(&mut server.db_conn())
+            .unwrap()
+    };
+    assert_eq!(state(&moved), connected(MOVED_INSTALLATION, REPOSITORY));
+    assert_eq!(
+        state(&stored(project)),
+        connected(MOVED_INSTALLATION, REPOSITORY)
+    );
+    assert_eq!(
+        state(&stored(&other)),
+        connected(INSTALLATION, REPOSITORY),
+        "another project's link"
+    );
+
+    let replaced = read.move_to(&mut conn, installation_id(6000)).unwrap();
+    assert!(replaced.is_none(), "a link on another installation since");
+    assert_eq!(
+        state(&stored(project)),
+        connected(MOVED_INSTALLATION, REPOSITORY)
+    );
+
+    setup.link(INSTALLATION, OTHER_REPOSITORY);
+    let replaced = read.move_to(&mut conn, installation_id(6000)).unwrap();
+    assert!(replaced.is_none(), "a link to another repository since");
+    assert_eq!(
+        state(&stored(project)),
+        connected(INSTALLATION, OTHER_REPOSITORY)
+    );
 }
 
 // Kills a retry that completes the check again, a failed comment that leaves the check in
@@ -1274,13 +1710,17 @@ impl Setup {
     }
 
     fn linked(&self) -> (u64, LinkedRepositoryStatus) {
-        let link: QueryLinkedRepository = schema::linked_repository::table
+        let link = self.stored_link();
+        (link.installation_id.into(), link.status)
+    }
+
+    fn stored_link(&self) -> QueryLinkedRepository {
+        schema::linked_repository::table
             .inner_join(schema::project::table)
             .filter(schema::project::uuid.eq(self.project.uuid))
             .select(QueryLinkedRepository::as_select())
             .first(&mut self.server.db_conn())
-            .unwrap();
-        (link.installation_id.into(), link.status)
+            .unwrap()
     }
 
     fn end(&self, job: JobUuid, status: JobStatus) {
@@ -1292,12 +1732,17 @@ impl Setup {
 
     /// End the job, fire its post, and wait for every task to settle.
     async fn end_and_fire(&self, job: JobUuid, status: JobStatus) {
+        self.fire(job, status);
+        self.server.drain_callbacks().await;
+    }
+
+    /// End the job and fire its post.
+    fn fire(&self, job: JobUuid, status: JobStatus) {
         self.end(job, status);
         self.server
             .context()
             .callbacks
             .fire(&self.log.logger(), self.job_id(job));
-        self.server.drain_callbacks().await;
     }
 
     async fn fire_pending(&self) {
@@ -1562,6 +2007,10 @@ fn created(server: &TestServer) -> [i64; 5] {
     .map(Result::unwrap)
 }
 
+fn installation_id(id: u64) -> bencher_json::GitHubInstallationId {
+    bencher_json::GitHubInstallationId::try_from(id).unwrap()
+}
+
 /// A stand-in for GitHub that answers each request by its route, and keeps the checks and the
 /// comments it was asked to write.
 struct FakeGitHub {
@@ -1584,9 +2033,33 @@ struct Fake {
     refusals: Vec<(u64, u16, String)>,
     /// The installation that holds the repository now, if any.
     installation: Option<u64>,
-    /// The next request whose line starts with each prefix gets the status.
-    failures: VecDeque<(String, u16)>,
+    failures: VecDeque<Failure>,
     hold: Option<String>,
+    /// The next request whose line starts with this gets no answer, so its client times out.
+    silence: Option<String>,
+    /// Where the next lookup of the repository's installation redirects.
+    redirect: Option<String>,
+    /// The repository's full name, which the mint returns, when it is not `FULL_NAME`.
+    renamed: Option<String>,
+}
+
+/// The next request whose line starts with `prefix` gets the status and the headers.
+struct Failure {
+    prefix: String,
+    status: u16,
+    headers: Headers,
+}
+
+/// An answer's headers, each a name and a value.
+type Headers = Vec<(String, String)>;
+
+/// When the fake sends an answer.
+#[derive(Clone, Copy)]
+enum Timing {
+    Now,
+    /// Once the test calls `release`.
+    Released,
+    Never,
 }
 
 #[derive(Debug, Clone)]
@@ -1616,12 +2089,41 @@ impl Fake {
         self
     }
 
+    fn renamed(mut self, full_name: &str) -> Self {
+        self.renamed = Some(full_name.to_owned());
+        self
+    }
+
+    fn full_name(&self) -> &str {
+        self.renamed.as_deref().unwrap_or(FULL_NAME)
+    }
+
     fn fail(&mut self, prefix: &str, status: u16) {
-        self.failures.push_back((prefix.to_owned(), status));
+        self.fail_with(prefix, status, &[]);
+    }
+
+    fn fail_with(&mut self, prefix: &str, status: u16, headers: &[(&str, &str)]) {
+        let headers = headers
+            .iter()
+            .map(|(name, value)| ((*name).to_owned(), (*value).to_owned()))
+            .collect();
+        self.failures.push_back(Failure {
+            prefix: prefix.to_owned(),
+            status,
+            headers,
+        });
+    }
+
+    fn redirect_lookup(&mut self, location: &str) {
+        self.redirect = Some(location.to_owned());
     }
 
     fn hold(&mut self, prefix: &str) {
         self.hold = Some(prefix.to_owned());
+    }
+
+    fn silence(&mut self, prefix: &str) {
+        self.silence = Some(prefix.to_owned());
     }
 
     fn refuse_mint(&mut self, installation: u64, status: u16, message: &str) {
@@ -1667,29 +2169,30 @@ impl Fake {
         serde_json::Value::Array(comments).to_string()
     }
 
-    /// The answer to one request, and whether to hold it.
-    fn answer(&mut self, request: Request) -> (u16, String, bool) {
+    /// The answer to one request, its headers, and when to send it.
+    fn answer(&mut self, request: Request) -> (u16, String, Headers, Timing) {
         let line = request.line.clone();
         let body = request.body.clone();
         self.requests.push(request);
-        let holds = self
-            .hold
-            .as_deref()
-            .is_some_and(|hold| line.starts_with(hold));
-        if holds {
-            self.hold = None;
-        }
-        if let Some(index) = self
-            .failures
-            .iter()
-            .position(|(prefix, _)| line.starts_with(prefix.as_str()))
-        {
-            let (_, status) = self.failures.remove(index).unwrap();
-            return (status, r#"{"message": "Refused"}"#.to_owned(), holds);
+        let timing = self.timing(&line);
+        if let Some((status, body, headers)) = self.scripted(&line) {
+            return (status, body, headers, timing);
         }
         let (method, path) = line.split_once(' ').unwrap();
         let path = path.split('?').next().unwrap();
         let segments: Vec<&str> = path.trim_start_matches("/github/").split('/').collect();
+        // Only the lookup still finds the repository by a name it no longer has.
+        if let ["repos", owner, name, rest @ ..] = segments.as_slice()
+            && *rest != ["installation"]
+            && format!("{owner}/{name}") != self.full_name()
+        {
+            return (
+                404,
+                r#"{"message": "Not Found"}"#.to_owned(),
+                Vec::new(),
+                timing,
+            );
+        }
         let (status, body) = match (method, segments.as_slice()) {
             ("POST", ["app", "installations", installation, "access_tokens"]) => {
                 let installation: u64 = installation.parse().unwrap();
@@ -1700,10 +2203,11 @@ impl Fake {
                 {
                     (*status, format!(r#"{{"message": "{message}"}}"#))
                 } else {
+                    let (owner, name) = self.full_name().split_once('/').unwrap();
                     (
                         201,
                         format!(
-                            r#"{{"token": "{TOKEN}", "expires_at": "2024-07-11T07:23:00Z", "repositories": [{{"id": {REPOSITORY}, "name": "repo", "owner": {{"login": "octo-cat"}}}}]}}"#
+                            r#"{{"token": "{TOKEN}", "expires_at": "2024-07-11T07:23:00Z", "repositories": [{{"id": {REPOSITORY}, "name": "{name}", "owner": {{"login": "{owner}"}}}}]}}"#
                         ),
                     )
                 }
@@ -1712,20 +2216,19 @@ impl Fake {
                 200,
                 format!(r#"{{"id": {installation}, "html_url": "{APPROVAL_URL}"}}"#),
             ),
-            ("GET", ["repos", "octo-cat", "repo", "installation"]) => {
-                self.installation.map_or_else(
-                    || (404, r#"{"message": "Not Found"}"#.to_owned()),
-                    |id| (200, format!(r#"{{"id": {id}}}"#)),
-                )
-            },
-            ("POST", ["repos", "octo-cat", "repo", "check-runs"]) => {
+            (
+                "GET",
+                ["repos", "octo-cat", "repo", "installation"] | ["repositories", _, "installation"],
+            ) => self.installation.map_or_else(
+                || (404, r#"{"message": "Not Found"}"#.to_owned()),
+                |id| (200, format!(r#"{{"id": {id}}}"#)),
+            ),
+            ("POST", ["repos", _, _, "check-runs"]) => {
                 self.checks += 1;
                 (201, format!(r#"{{"id": {}}}"#, self.checks))
             },
-            ("PATCH", ["repos", "octo-cat", "repo", "check-runs", id]) => {
-                (200, format!(r#"{{"id": {id}}}"#))
-            },
-            ("GET", ["repos", "octo-cat", "repo", "pulls", _]) => {
+            ("PATCH", ["repos", _, _, "check-runs", id]) => (200, format!(r#"{{"id": {id}}}"#)),
+            ("GET", ["repos", _, _, "pulls", _]) => {
                 if self.no_pull_request {
                     (404, r#"{"message": "Not Found"}"#.to_owned())
                 } else {
@@ -1733,15 +2236,13 @@ impl Fake {
                     (200, format!(r#"{{"head": {{"sha": "{head}"}}}}"#))
                 }
             },
-            ("GET", ["repos", "octo-cat", "repo", "issues", _, "comments"]) => {
-                (200, self.comments_page(&line))
-            },
-            ("POST", ["repos", "octo-cat", "repo", "issues", _, "comments"]) => {
+            ("GET", ["repos", _, _, "issues", _, "comments"]) => (200, self.comments_page(&line)),
+            ("POST", ["repos", _, _, "issues", _, "comments"]) => {
                 self.comment(BOT, "Bot", Some("bencher-test"), &comment_body(&body));
                 let id = self.comments.len();
                 (201, format!(r#"{{"id": {id}}}"#))
             },
-            ("PATCH", ["repos", "octo-cat", "repo", "issues", "comments", id]) => {
+            ("PATCH", ["repos", _, _, "issues", "comments", id]) => {
                 let id: u64 = id.parse().unwrap();
                 if let Some(comment) = self.comments.iter_mut().find(|comment| comment.id == id) {
                     comment.body = comment_body(&body);
@@ -1752,7 +2253,49 @@ impl Fake {
             },
             _ => (404, r#"{"message": "Not Found"}"#.to_owned()),
         };
-        (status, body, holds)
+        (status, body, Vec::new(), timing)
+    }
+
+    /// When to send the answer to the request: a silenced or held request uses up its mark.
+    fn timing(&mut self, line: &str) -> Timing {
+        if self
+            .silence
+            .as_deref()
+            .is_some_and(|silence| line.starts_with(silence))
+        {
+            self.silence = None;
+            Timing::Never
+        } else if self
+            .hold
+            .as_deref()
+            .is_some_and(|hold| line.starts_with(hold))
+        {
+            self.hold = None;
+            Timing::Released
+        } else {
+            Timing::Now
+        }
+    }
+
+    /// The answer a test scripted for the request, if any: a failure, or a lookup's redirect.
+    fn scripted(&mut self, line: &str) -> Option<(u16, String, Headers)> {
+        if let Some(index) = self
+            .failures
+            .iter()
+            .position(|failure| line.starts_with(failure.prefix.as_str()))
+        {
+            let Failure {
+                prefix: _,
+                status,
+                headers,
+            } = self.failures.remove(index)?;
+            return Some((status, r#"{"message": "Refused"}"#.to_owned(), headers));
+        }
+        if !line.starts_with(LOOKUP) {
+            return None;
+        }
+        let location = self.redirect.take()?;
+        Some((301, String::new(), vec![("location".to_owned(), location)]))
     }
 }
 
@@ -1772,13 +2315,30 @@ impl FakeGitHub {
                 loop {
                     let (mut stream, _) = listener.accept().await.unwrap();
                     let request = read_request(&mut stream).await;
-                    let (status, body, wait) = fake.lock().unwrap().answer(request);
-                    if wait {
-                        held.notify_one();
-                        release.notified().await;
+                    let (status, body, headers, timing) = fake.lock().unwrap().answer(request);
+                    match timing {
+                        Timing::Now => {},
+                        Timing::Released => {
+                            held.notify_one();
+                            release.notified().await;
+                        },
+                        Timing::Never => {
+                            // Until the client times out and hangs up.
+                            drop(stream.read_to_end(&mut Vec::new()).await);
+                            continue;
+                        },
                     }
+                    let headers = headers
+                        .iter()
+                        .fold(String::new(), |mut lines, (name, value)| {
+                            lines.push_str(name);
+                            lines.push_str(": ");
+                            lines.push_str(value);
+                            lines.push_str("\r\n");
+                            lines
+                        });
                     let response = format!(
-                        "HTTP/1.1 {status} Status\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+                        "HTTP/1.1 {status} Status\r\ncontent-type: application/json\r\ncontent-length: {}\r\n{headers}connection: close\r\n\r\n{body}",
                         body.len()
                     );
                     stream.write_all(response.as_bytes()).await.unwrap();
@@ -1803,6 +2363,16 @@ impl FakeGitHub {
 
     fn release(&self) {
         self.release.notify_one();
+    }
+
+    /// The next request whose line starts with `prefix` gets the status and the headers.
+    fn fail_with(&self, prefix: &str, status: u16, headers: &[(&str, &str)]) {
+        self.fake.lock().unwrap().fail_with(prefix, status, headers);
+    }
+
+    /// The next request whose line starts with `prefix` gets no answer.
+    fn silence(&self, prefix: &str) {
+        self.fake.lock().unwrap().silence(prefix);
     }
 
     fn requests(&self) -> Vec<Request> {
