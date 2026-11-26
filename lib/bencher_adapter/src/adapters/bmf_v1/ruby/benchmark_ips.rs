@@ -9,7 +9,7 @@ use serde::{Deserialize, Deserializer, de::Error as _};
 
 use crate::{
     Adaptable, Settings,
-    adapters::bmf_v1::leaf::{LeafResults, Variant},
+    adapters::bmf_v1::leaf::{LeafResults, Variant, parameter_set},
     results::adapter_results::AdapterResults,
 };
 
@@ -82,7 +82,7 @@ impl Spread {
         };
         let mut parameters = serde_json::Map::new();
         parameters.insert(STATS.to_owned(), stats.into());
-        serde_json::from_value(serde_json::Value::Object(parameters)).ok()
+        parameter_set(parameters)
     }
 
     fn insert(self, variant: &mut Variant<'_>, mean: f64) {

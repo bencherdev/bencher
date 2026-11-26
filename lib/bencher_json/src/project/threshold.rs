@@ -13,8 +13,8 @@ use serde::{
 
 use crate::{
     BranchNameId, BranchSlug, BranchUuid, JsonBranch, JsonMeasure, JsonModel, JsonTestbed,
-    MeasureNameId, MeasureSlug, MeasureUuid, ModelUuid, ParameterFilter, ProjectUuid,
-    TestbedNameId, TestbedSlug, TestbedUuid,
+    MeasureNameId, MeasureSlug, MeasureUuid, ModelUuid, ParameterFilter, ParameterFilterInput,
+    ProjectUuid, TestbedNameId, TestbedSlug, TestbedUuid,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
@@ -34,7 +34,7 @@ pub struct JsonNewThreshold {
     /// A variant matches when any entry in the filter is a subset of its parameters.
     /// If not set, or set to an empty list, the threshold checks every variant.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub parameters: Option<ParameterFilter>,
+    pub parameters: Option<ParameterFilterInput>,
     /// The UUID, slug, or name of the threshold measure.
     pub measure: MeasureNameId,
     /// The name of the metric this threshold checks.
@@ -469,5 +469,31 @@ impl<'de> Deserialize<'de> for JsonUpdateThreshold {
         }
 
         deserializer.deserialize_struct("JsonUpdateThreshold", FIELDS, UpdateThresholdVisitor)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::JsonNewThreshold;
+    use crate::MAX_PARAMETER_KEYS;
+
+    /// Kills a new threshold that reads its filter without the input caps.
+    #[test]
+    fn new_threshold_parameters_past_the_key_cap_error() {
+        let threshold = |count: usize| {
+            let keys = (0..count)
+                .map(|key| (format!("k{key}"), serde_json::Value::from(key)))
+                .collect::<serde_json::Map<_, _>>();
+            serde_json::json!({
+                "branch": "main",
+                "testbed": "localhost",
+                "measure": "latency",
+                "test": "t_test",
+                "parameters": [keys],
+            })
+        };
+        serde_json::from_value::<JsonNewThreshold>(threshold(MAX_PARAMETER_KEYS))
+            .expect("Failed to read a new threshold at the cap");
+        serde_json::from_value::<JsonNewThreshold>(threshold(MAX_PARAMETER_KEYS + 1)).unwrap_err();
     }
 }

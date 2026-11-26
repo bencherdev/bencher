@@ -15,7 +15,7 @@ use crate::{
     adapters::{
         bmf_v1::{
             finite::finite_json,
-            leaf::{LeafResults, Variant},
+            leaf::{LeafResults, Variant, parameter_set},
             runs::insert_runs,
         },
         util::Units,
@@ -73,8 +73,7 @@ impl Adaptable for AdapterCppGoogleV1 {
                 results.skip_benchmark();
                 continue;
             };
-            let Ok(parameters) = serde_json::from_value(serde_json::Value::Object(parameters))
-            else {
+            let Some(parameters) = parameter_set(parameters) else {
                 results.skip_variant();
                 continue;
             };
@@ -85,10 +84,8 @@ impl Adaptable for AdapterCppGoogleV1 {
         }
         for ((run_name, threads), fields) in memory {
             let (name, parameters, _) = name_and_parameters(run_name, threads);
-            let (Ok(benchmark_name), Ok(parameters)) = (
-                name.parse(),
-                serde_json::from_value(serde_json::Value::Object(parameters)),
-            ) else {
+            let (Ok(benchmark_name), Some(parameters)) = (name.parse(), parameter_set(parameters))
+            else {
                 continue;
             };
             let mut variant = results.variant(benchmark_name, parameters);
@@ -320,7 +317,7 @@ enum AggregateUnit {
 #[cfg(test)]
 mod test_cpp_google_v1 {
     use bencher_json::{
-        BmfVersion,
+        BmfVersion, MAX_PARAMETER_KEYS,
         project::{
             measure::built_in::{
                 BuiltInMeasure as _,
@@ -824,6 +821,28 @@ mod test_cpp_google_v1 {
                 ),
                 "{run_name}"
             );
+        }
+    }
+
+    /// Kills a row whose arguments past the key cap are kept, or skipped uncounted.
+    #[test]
+    fn adapter_cpp_google_v1_arguments_past_the_key_cap() {
+        let row = |name: &str| {
+            format!(
+                r#"{{"name": "{name}", "run_name": "{name}", "run_type": "iteration", "threads": 1, "iterations": 1, "real_time": 1.0, "cpu_time": 2.0, "time_unit": "ns"}}"#
+            )
+        };
+        for (count, skipped) in [(MAX_PARAMETER_KEYS, 0), (MAX_PARAMETER_KEYS + 1, 1)] {
+            let wide = (0..count).fold("BM_wide".to_owned(), |name, arg| format!("{name}/{arg}"));
+            let input = format!(
+                r#"{{"benchmarks": [{}, {}]}}"#,
+                row(&wide),
+                row("BM_narrow")
+            );
+            let results = Adapter::CppGoogle
+                .convert(&input, Settings::new(None, BmfVersion::V1))
+                .expect("Failed to parse");
+            assert_eq!(results.skipped.variants, skipped, "{count} arguments");
         }
     }
 

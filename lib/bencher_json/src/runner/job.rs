@@ -1,7 +1,8 @@
 use std::collections::{BTreeMap, HashMap};
 
 use bencher_valid::{
-    BmfVersion, DateTime, ImageDigest, ImageReference, Jwt, PollTimeout, Timeout, Url,
+    BenchmarkPrefix, BmfVersion, DateTime, ImageDigest, ImageReference, Jwt, PollTimeout, Timeout,
+    Url,
 };
 use camino::Utf8PathBuf;
 #[cfg(feature = "schema")]
@@ -300,6 +301,7 @@ struct JsonUncheckedJobConfig {
     pub iter: Option<Iteration>,
     pub fold: Option<JsonFold>,
     pub measures: Option<MeasureFilter>,
+    pub benchmark_prefix: Option<BenchmarkPrefix>,
     pub bmf_version: Option<BmfVersion>,
     pub allow_failure: Option<bool>,
     pub backdate: Option<DateTime>,
@@ -325,6 +327,7 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
             iter,
             fold,
             measures,
+            benchmark_prefix,
             bmf_version,
             allow_failure,
             backdate,
@@ -351,6 +354,7 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
             iter,
             fold,
             measures,
+            benchmark_prefix,
             bmf_version,
             allow_failure,
             backdate,
@@ -413,6 +417,9 @@ pub struct JsonJobConfig {
     /// The measures to keep from the results
     #[serde(skip_serializing_if = "Option::is_none")]
     pub measures: Option<MeasureFilter>,
+    /// The string put in front of every benchmark name at BMF version 1
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub benchmark_prefix: Option<BenchmarkPrefix>,
     /// The Bencher Metric Format (BMF) version the run's results are read as
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bmf_version: Option<BmfVersion>,

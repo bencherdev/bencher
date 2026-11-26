@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use bencher_json::{
-    BenchmarkNameId, BmfVersion, MeasureNameId, ParameterSet, project::report::Adapter,
+    BenchmarkNameId, BmfVersion, MeasureNameId, ParameterSet, ParameterSetInput,
+    project::report::Adapter,
 };
 use serde::Deserialize;
 
@@ -65,7 +66,9 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
             measures,
         } in entries
         {
-            let Ok(parameters) = serde_json::from_value::<ParameterSet>(parameters) else {
+            let Ok(parameters) =
+                serde_json::from_value::<ParameterSetInput>(parameters).map(ParameterSet::from)
+            else {
                 skipped.variants += 1;
                 continue;
             };

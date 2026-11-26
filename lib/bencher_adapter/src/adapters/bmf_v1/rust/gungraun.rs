@@ -3,7 +3,7 @@ use bencher_json::BenchmarkName;
 use crate::{
     Adaptable, Settings,
     adapters::bmf_v1::{
-        leaf::{LeafResults, Variant},
+        leaf::{LeafResults, Variant, parameter_set},
         rust::{
             gungraun_json::AdapterRustGungraunJsonV1, gungraun_stdout::AdapterRustGungraunStdoutV1,
         },
@@ -35,7 +35,7 @@ pub(super) fn tool_variant<'r>(
         parameters.insert("@id".to_owned(), id.into());
     }
     parameters.insert("@tool".to_owned(), tool.as_str().into());
-    let Ok(parameters) = serde_json::from_value(serde_json::Value::Object(parameters)) else {
+    let Some(parameters) = parameter_set(parameters) else {
         results.skip_variant();
         return None;
     };

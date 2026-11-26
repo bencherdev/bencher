@@ -2804,6 +2804,63 @@ async fn reports_post_creates_the_mitata_measures_in_their_units() {
     );
 }
 
+// POST /v0/projects/{project}/reports - the benchmark prefix goes in front of every name at
+// version 1, whether a harness leaf, the user's own BMF JSON, or `magic` parsed it, and a version
+// 0 report ignores it
+//
+// Kills: a server that never applies the prefix, applies it to some adapters only, or applies it
+// at version 0.
+#[tokio::test]
+async fn reports_post_prefixes_every_benchmark_name_at_version_1_only() {
+    let server = TestServer::new().await;
+    for (adapter, results, bmf_version, benchmark) in [
+        ("rust_bench", RUST_BENCH, 1, "api bench_one"),
+        ("magic", RUST_BENCH, 1, "api bench_one"),
+        ("json", BMF_V1, 1, "api bench_one"),
+        ("rust_bench", RUST_BENCH, 0, "bench_one"),
+        ("json", BMF_V0, 0, "bench_one"),
+    ] {
+        let label = format!("prefix{adapter}{bmf_version}").replace('_', "");
+        let (token, project_slug) = ingest_project(&server, &label).await;
+        let report = settled_report(
+            results,
+            bmf_version,
+            &serde_json::json!({ "adapter": adapter, "benchmark_prefix": "api " }),
+        );
+        let report = post_report_body(&server, &token, &project_slug, &report).await;
+        assert_eq!(report.warnings, None, "{label}");
+        let (_, benchmarks, _, _) = stored(&server, &project_slug);
+        assert_eq!(benchmarks, vec![benchmark.to_owned()], "{label}");
+    }
+}
+
+// POST /v0/projects/{project}/reports - a benchmark whose prefixed name is too long is skipped,
+// and the report warns of it
+//
+// Kills: a prefixed name past the limit that is stored or refuses the report, and a skip that the
+// report does not warn of.
+#[tokio::test]
+async fn reports_post_warns_of_a_benchmark_whose_prefixed_name_is_too_long() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "prefixlong").await;
+    let prefix = "p".repeat(256);
+    let too_long = "t".repeat(BenchmarkName::MAX_LEN - prefix.len() + 1);
+    let entry = serde_json::json!([{ "measures": { "latency": { "value": 1.0 } } }]);
+    let results = serde_json::json!({ "bench_one": entry, too_long: entry });
+    let report = settled_report(
+        &results.to_string(),
+        1,
+        &serde_json::json!({ "adapter": "json", "benchmark_prefix": prefix }),
+    );
+    let report = post_report_body(&server, &token, &project_slug, &report).await;
+    assert_eq!(
+        report.warnings,
+        Some(vec![skipped(ReportWarningResource::Benchmark, 1)])
+    );
+    let (_, benchmarks, _, _) = stored(&server, &project_slug);
+    assert_eq!(benchmarks, vec![format!("{prefix}bench_one")]);
+}
+
 const JMH_MODES: &str = include_str!("../../bencher_adapter/tool_output/java/jmh/modes.json");
 const MITATA_GC: &str = include_str!("../../bencher_adapter/tool_output/js/mitata/default_gc.json");
 const MITATA_COUNTERS: &str =

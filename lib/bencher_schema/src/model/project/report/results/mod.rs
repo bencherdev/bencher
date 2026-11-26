@@ -146,6 +146,12 @@ impl ReportResults {
             })?;
         self.parse = Some(ParseRecord::parsed(&results_array, warnings));
 
+        if bmf_version == BmfVersion::V1
+            && let Some(prefix) = &settings.benchmark_prefix
+        {
+            results_array.prefix_benchmarks(prefix);
+        }
+
         if let Some(measures) = &settings.measures {
             self.keep_measures(context, measures, &mut results_array)
                 .await?;

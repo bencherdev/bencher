@@ -2,7 +2,8 @@ use bencher_client::types::{
     JsonReportThresholdEntry, JsonReportThresholdModels, JsonReportThresholds,
 };
 use bencher_json::{
-    Boundary, MeasureNameId, MetricName, ParameterFilter, ParameterSet, SampleSize, Window,
+    Boundary, MeasureNameId, MetricName, ParameterFilter, ParameterSet, ParameterSetInput,
+    SampleSize, Window,
 };
 
 use crate::{
@@ -46,7 +47,7 @@ pub enum ThresholdsError {
     #[error("There are more metrics than Measures")]
     ExtraMetrics(Vec<ElidedOption<MetricName>>),
     #[error("There are more parameters than Measures")]
-    ExtraParameters(Vec<ElidedOption<ParameterSet>>),
+    ExtraParameters(Vec<ElidedOption<ParameterSetInput>>),
     #[error("There are more model tests than Measures: {0:?}")]
     ExtraTests(Vec<CliModelTest>),
     #[error("There are more minimum sample sizes than model tests")]
@@ -90,7 +91,10 @@ impl TryFrom<CliReportThresholds> for Thresholds {
         let mut upper_boundaries = threshold_upper_boundary.into_iter();
         for measure in threshold_measure {
             let metric = metrics.next().and_then(Into::into);
-            let parameter_set = parameters.next().and_then(Into::into);
+            let parameter_set = parameters
+                .next()
+                .and_then(Option::<ParameterSetInput>::from)
+                .map(ParameterSet::from);
             let test = tests
                 .next()
                 .ok_or(ThresholdsError::MissingTest(measure.clone()))?;
@@ -254,6 +258,8 @@ impl Declared {
 mod tests {
     use clap::Parser as _;
 
+    use bencher_json::MAX_PARAMETER_KEYS;
+
     use super::{JsonReportThresholds, Thresholds, ThresholdsError};
     use crate::parser::project::report::CliReportThresholds;
 
@@ -397,6 +403,34 @@ mod tests {
             thresholds(&parameters),
             Err(ThresholdsError::ExtraParameters(_))
         ));
+    }
+
+    // Kills a parameters option read without the key cap: the option is input, so it is refused.
+    #[test]
+    fn thresholds_refuse_parameters_past_the_key_cap() {
+        let set = |count: usize| {
+            let keys = (0..count)
+                .map(|key| format!(r#""k{key}":{key}"#))
+                .collect::<Vec<_>>()
+                .join(",");
+            format!("{{{keys}}}")
+        };
+        let (at_the_cap, past_the_cap) = (set(MAX_PARAMETER_KEYS), set(MAX_PARAMETER_KEYS + 1));
+        let flags = |set: &str| {
+            [LATENCY.as_slice(), &["--threshold-metric", "p99"]]
+                .concat()
+                .into_iter()
+                .map(ToOwned::to_owned)
+                .chain(["--threshold-parameters".to_owned(), set.to_owned()])
+                .collect::<Vec<String>>()
+        };
+        let at_the_cap = flags(&at_the_cap);
+        thresholds(&at_the_cap.iter().map(String::as_str).collect::<Vec<_>>())
+            .expect("Failed to read parameters at the cap");
+        assert!(
+            Cli::try_parse_from(std::iter::once("bencher".to_owned()).chain(flags(&past_the_cap)))
+                .is_err()
+        );
     }
 
     #[derive(clap::Parser)]

@@ -8,6 +8,7 @@ use subtle as _;
 use wasm_bindgen_test as _;
 
 mod benchmark_name;
+mod benchmark_prefix;
 mod bmf_version;
 mod branch_name;
 mod commit_title;
@@ -42,6 +43,7 @@ pub use crate::image_digest::ImageDigest;
 pub use crate::slug::{BASE_36, Slug};
 pub use crate::url::Url;
 pub use benchmark_name::BenchmarkName;
+pub use benchmark_prefix::BenchmarkPrefix;
 pub use bmf_version::{ACCEPTED_BMF_VERSIONS, BmfVersion, is_valid_bmf_version};
 pub use branch_name::BranchName;
 pub use commit_title::CommitTitle;

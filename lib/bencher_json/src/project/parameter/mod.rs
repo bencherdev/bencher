@@ -10,14 +10,16 @@ mod filter;
 #[cfg(feature = "db")]
 pub mod jsonb;
 
-pub use filter::{MAX_FILTER_SETS, ParameterFilter};
+pub use filter::{MAX_FILTER_SETS, ParameterFilter, ParameterFilterInput};
 
-/// The most keys one parameter set may carry, anchored to the number of metrics
-/// one measure may carry.
+/// The most keys one parameter set may carry as input, anchored to the number of
+/// metrics one measure may carry.
 ///
-/// Deliberately low: raising the cap is a release note and lowering it is a
-/// breaking change, so the asymmetry runs one way.
-pub const MAX_PARAMETER_KEYS: usize = 8;
+/// Only [`ParameterSetInput`] enforces it, never a read: a client reads what a
+/// server with a higher cap stored, so a client that refused past its own cap
+/// would break the day the cap rose. Lowering it would refuse the next report of
+/// a variant already stored.
+pub const MAX_PARAMETER_KEYS: usize = 16;
 
 /// A benchmark parameter set: the permutation of inputs that a benchmark ran with.
 ///
@@ -152,16 +154,7 @@ impl<'de> Deserialize<'de> for ParameterSet {
     where
         D: Deserializer<'de>,
     {
-        // The map has already collapsed duplicate keys by the time it is counted,
-        // so the cap bounds distinct keys and a key spelled twice still counts once.
-        let parameters = BTreeMap::deserialize(deserializer)?;
-        if parameters.len() > MAX_PARAMETER_KEYS {
-            return Err(de::Error::custom(format!(
-                "Parameters may carry at most {MAX_PARAMETER_KEYS} keys, found {}",
-                parameters.len()
-            )));
-        }
-        Ok(Self(parameters))
+        BTreeMap::deserialize(deserializer).map(Self)
     }
 }
 
@@ -176,45 +169,109 @@ impl JsonSchema for ParameterSet {
     }
 
     fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
-        use schemars::schema::{
-            InstanceType, ObjectValidation, SchemaObject, StringValidation, SubschemaValidation,
-        };
-
-        // A string value is length bound, and may be empty, so the schema says so
-        // rather than leaving a generated client to find out. The non-empty bound on a
-        // key is `propertyNames`, which OpenAPI 3.0 has no keyword for.
-        let string = SchemaObject {
-            instance_type: Some(InstanceType::String.into()),
-            string: Some(Box::new(StringValidation {
-                max_length: u32::try_from(ParameterValue::MAX_LEN).ok(),
-                ..Default::default()
-            })),
-            ..Default::default()
-        };
-
-        let scalar = SchemaObject {
-            subschemas: Some(Box::new(SubschemaValidation {
-                any_of: Some(vec![
-                    string.into(),
-                    f64::json_schema(generator),
-                    bool::json_schema(generator),
-                ]),
-                ..Default::default()
-            })),
-            ..Default::default()
-        };
-
-        SchemaObject {
-            instance_type: Some(InstanceType::Object.into()),
-            object: Some(Box::new(ObjectValidation {
-                max_properties: u32::try_from(MAX_PARAMETER_KEYS).ok(),
-                additional_properties: Some(Box::new(scalar.into())),
-                ..Default::default()
-            })),
-            ..Default::default()
-        }
-        .into()
+        parameter_set_schema(generator, None)
     }
+}
+
+/// A parameter set as input, which refuses more than [`MAX_PARAMETER_KEYS`] keys.
+#[derive(Debug, Clone)]
+pub struct ParameterSetInput(ParameterSet);
+
+impl From<ParameterSetInput> for ParameterSet {
+    fn from(input: ParameterSetInput) -> Self {
+        input.0
+    }
+}
+
+impl FromStr for ParameterSetInput {
+    type Err = ParametersError;
+
+    fn from_str(parameters: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(parameters).map_err(ParametersError::Json)
+    }
+}
+
+impl Serialize for ParameterSetInput {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ParameterSetInput {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // The map has already collapsed duplicate keys by the time it is counted,
+        // so the cap bounds distinct keys and a key spelled twice still counts once.
+        let parameters = ParameterSet::deserialize(deserializer)?;
+        if parameters.0.len() > MAX_PARAMETER_KEYS {
+            return Err(de::Error::custom(format!(
+                "Parameters may carry at most {MAX_PARAMETER_KEYS} keys, found {}",
+                parameters.0.len()
+            )));
+        }
+        Ok(Self(parameters))
+    }
+}
+
+#[cfg(feature = "schema")]
+impl JsonSchema for ParameterSetInput {
+    fn schema_name() -> String {
+        "ParameterSetInput".to_owned()
+    }
+
+    fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        parameter_set_schema(generator, u32::try_from(MAX_PARAMETER_KEYS).ok())
+    }
+}
+
+#[cfg(feature = "schema")]
+fn parameter_set_schema(
+    generator: &mut schemars::r#gen::SchemaGenerator,
+    max_properties: Option<u32>,
+) -> schemars::schema::Schema {
+    use schemars::schema::{
+        InstanceType, ObjectValidation, SchemaObject, StringValidation, SubschemaValidation,
+    };
+
+    // A string value is length bound, and may be empty, so the schema says so
+    // rather than leaving a generated client to find out. The non-empty bound on a
+    // key is `propertyNames`, which OpenAPI 3.0 has no keyword for.
+    let string = SchemaObject {
+        instance_type: Some(InstanceType::String.into()),
+        string: Some(Box::new(StringValidation {
+            max_length: u32::try_from(ParameterValue::MAX_LEN).ok(),
+            ..Default::default()
+        })),
+        ..Default::default()
+    };
+
+    let scalar = SchemaObject {
+        subschemas: Some(Box::new(SubschemaValidation {
+            any_of: Some(vec![
+                string.into(),
+                f64::json_schema(generator),
+                bool::json_schema(generator),
+            ]),
+            ..Default::default()
+        })),
+        ..Default::default()
+    };
+
+    SchemaObject {
+        instance_type: Some(InstanceType::Object.into()),
+        object: Some(Box::new(ObjectValidation {
+            max_properties,
+            additional_properties: Some(Box::new(scalar.into())),
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+    .into()
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -427,7 +484,9 @@ fn hex_digit(nibble: u32) -> char {
 mod tests {
     use ordered_float::OrderedFloat;
 
-    use super::{ParameterKey, ParameterScalar, ParameterSet};
+    use super::{
+        MAX_PARAMETER_KEYS, ParameterKey, ParameterScalar, ParameterSet, ParameterSetInput,
+    };
 
     fn parse(parameters: &str) -> ParameterSet {
         parameters
@@ -713,42 +772,59 @@ mod tests {
         format!("{{{entries}}}")
     }
 
-    // The cap is deliberately low, so raising it stays easy and lowering it never
-    // has to happen.
+    // Kills a read that enforces the cap, which breaks every client compiled with a
+    // lower cap the day a server raises it.
     #[test]
-    fn rejects_more_than_the_key_cap() {
-        keys(8)
-            .parse::<ParameterSet>()
+    fn reads_past_the_key_cap() {
+        let parameters = parse(&keys(MAX_PARAMETER_KEYS * 2));
+        assert_eq!(parameters.tags().count(), MAX_PARAMETER_KEYS * 2);
+    }
+
+    // Kills an input that drops the cap or is off by one.
+    #[test]
+    fn input_rejects_more_than_the_key_cap() {
+        keys(MAX_PARAMETER_KEYS)
+            .parse::<ParameterSetInput>()
             .expect("Failed to parse a parameter set at the cap");
         assert!(
-            keys(9).parse::<ParameterSet>().is_err(),
-            "expected a ninth key to be rejected"
+            keys(MAX_PARAMETER_KEYS + 1)
+                .parse::<ParameterSetInput>()
+                .is_err(),
+            "expected a key past the cap to be rejected"
         );
     }
 
     // The cap counts keys, not entries. Duplicates collapse to last wins before the
-    // count, so a key spelled nine times is one key and never trips the cap.
+    // count, so a key spelled past the cap is one key and never trips the cap.
     #[test]
     fn duplicate_keys_do_not_count_against_the_cap() {
-        let nine_spellings = format!(
+        let spellings = format!(
             "{{{}}}",
-            (0..9)
+            (0..=MAX_PARAMETER_KEYS)
                 .map(|index| format!(r#""a": {index}"#))
                 .collect::<Vec<_>>()
                 .join(",")
         );
-        assert_eq!(canonical(&nine_spellings), r#"{"a":8}"#);
+        let input = spellings
+            .parse::<ParameterSetInput>()
+            .expect("Failed to parse one key spelled past the cap");
+        assert_eq!(
+            ParameterSet::from(input).canonical(),
+            format!(r#"{{"a":{MAX_PARAMETER_KEYS}}}"#)
+        );
 
-        // Eight distinct keys stay eight distinct keys however often they repeat.
+        // Distinct keys at the cap stay that many distinct keys however often they repeat.
         let doubled = format!(
             "{{{}}}",
             (0..2)
-                .flat_map(|_| (0..8).map(|index| format!(r#""k{index}": {index}"#)))
+                .flat_map(|_| {
+                    (0..MAX_PARAMETER_KEYS).map(|index| format!(r#""k{index}": {index}"#))
+                })
                 .collect::<Vec<_>>()
                 .join(",")
         );
         doubled
-            .parse::<ParameterSet>()
+            .parse::<ParameterSetInput>()
             .expect("Failed to parse duplicated keys at the cap");
     }
 

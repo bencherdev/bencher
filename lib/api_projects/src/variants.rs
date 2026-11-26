@@ -3,7 +3,7 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    BenchmarkResourceId, JsonDirection, JsonPagination, JsonVariant, JsonVariants,
+    BenchmarkResourceId, JsonDirection, JsonPagination, JsonVariant, JsonVariants, ParameterSet,
     ProjectResourceId, VariantUuid,
     project::variant::{JsonNewVariant, JsonUpdateVariant},
 };
@@ -268,7 +268,7 @@ pub async fn post_inner(
         &path_params.benchmark,
     )?;
 
-    let JsonNewVariant { parameters } = json_variant;
+    let parameters = ParameterSet::from(json_variant.parameters);
     QueryVariant::create(context, query_project.id, query_benchmark.id, &parameters)
         .await
         .map(|variant| variant.into_json_for_benchmark(&query_benchmark))

@@ -1,7 +1,8 @@
 #[cfg(feature = "plus")]
 use bencher_json::SpecResourceId;
 use bencher_json::{
-    BranchNameId, DateTime, GitHash, MeasureNameId, ProjectResourceId, Secret, TestbedNameId,
+    BenchmarkPrefix, BranchNameId, DateTime, GitHash, MeasureNameId, ProjectResourceId, Secret,
+    TestbedNameId,
     project::{branch::START_POINT_MAX_VERSIONS, report::Iteration},
 };
 #[cfg(feature = "plus")]
@@ -68,6 +69,11 @@ pub struct CliRun {
     /// Every other measure is dropped before it is stored. If not set, every measure is kept.
     #[clap(long)]
     pub measure: Vec<MeasureNameId>,
+
+    /// Put in front of every benchmark name, with no delimiter, so `--benchmark-prefix "api "` names `GET /users` as `api GET /users`.
+    /// Read at BMF version 1 only.
+    #[clap(long, env = "BENCHER_BENCHMARK_PREFIX", value_name = "PREFIX")]
+    pub benchmark_prefix: Option<BenchmarkPrefix>,
 
     /// Backdate the report (seconds since epoch)
     /// NOTE: This will NOT effect the ordering of past reports
@@ -304,7 +310,7 @@ pub struct CliRunJob {
     pub image: Option<bencher_json::ImageReference>,
 
     /// Attach to a submitted remote job: wait for it, then post its results (requires: --project).
-    /// It refuses the report options, including from `BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER`, and `BENCHER_CMD`.
+    /// It refuses the report options, including from `BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER`, `BENCHER_BENCHMARK_PREFIX`, and `BENCHER_CMD`.
     #[clap(
         long,
         value_name = "UUID",
@@ -326,6 +332,7 @@ pub struct CliRunJob {
             "iter",
             "fold",
             "measure",
+            "benchmark_prefix",
             "backdate",
             "allow_failure",
             "threshold_measure",
@@ -468,6 +475,7 @@ mod tests {
         ("iter", &["--iter", "3"]),
         ("fold", &["--fold", "min"]),
         ("measure", &["--measure", "latency"]),
+        ("benchmark_prefix", &["--benchmark-prefix", "api "]),
         ("backdate", &["--backdate", "1700000000"]),
         ("allow_failure", &["--allow-failure"]),
         ("threshold_measure", &["--threshold-measure", "latency"]),

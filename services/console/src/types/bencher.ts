@@ -7,6 +7,9 @@ export type BenchmarkName = string;
 /** A benchmark UUID, slug, or name. */
 export type BenchmarkNameId = Uuid | Slug | string;
 
+/** The string put in front of every benchmark name a report holds, joined with no delimiter. */
+export type BenchmarkPrefix = string;
+
 /** An benchmark UUID or slug. */
 export type BenchmarkResourceId = Uuid | Slug;
 
@@ -147,6 +150,8 @@ export interface JsonJobConfig {
 	fold?: JsonFold;
 	/** The measures to keep from the results */
 	measures?: MeasureNameId[];
+	/** The string put in front of every benchmark name at BMF version 1 */
+	benchmark_prefix?: BenchmarkPrefix;
 	/** The Bencher Metric Format (BMF) version the run's results are read as */
 	bmf_version?: BmfVersion;
 	/** Allow benchmark failure without short-circuiting iterations */

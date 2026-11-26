@@ -1,6 +1,6 @@
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, BmfVersion, MeasureNameId, MetricName, ParameterSet,
-    project::report::Adapter,
+    ParameterSetInput, project::report::Adapter,
 };
 
 use crate::results::{
@@ -137,4 +137,13 @@ impl Variant<'_> {
     pub(crate) fn skip_metric(&mut self) {
         self.skipped.metrics += 1;
     }
+}
+
+/// A leaf's parameters, which are input and so refused past the key cap.
+pub(crate) fn parameter_set(
+    parameters: serde_json::Map<String, serde_json::Value>,
+) -> Option<ParameterSet> {
+    serde_json::from_value::<ParameterSetInput>(serde_json::Value::Object(parameters))
+        .ok()
+        .map(Into::into)
 }

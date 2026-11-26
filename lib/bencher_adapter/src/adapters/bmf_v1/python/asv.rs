@@ -18,7 +18,7 @@ use crate::{
     adapters::{
         bmf_v1::{
             finite::{Finite, finite_json},
-            leaf::{LeafResults, Variant},
+            leaf::{LeafResults, Variant, parameter_set},
         },
         util::Units,
     },
@@ -86,10 +86,7 @@ impl Adaptable for AdapterPythonAsvJson {
                     .enumerate()
                     .map(|(position, repr)| (format!("@param{position}"), parameter(shown(repr))))
                     .collect();
-                let (Some(_), Ok(parameters)) = (
-                    value.get(),
-                    serde_json::from_value::<ParameterSet>(serde_json::Value::Object(parameters)),
-                ) else {
+                let (Some(_), Some(parameters)) = (value.get(), parameter_set(parameters)) else {
                     results.skip_variant();
                     continue;
                 };
@@ -443,7 +440,7 @@ impl Table {
                     .map(|(name, value)| (name.clone(), parameter(value)))
                     .collect::<serde_json::Map<_, _>>();
                 let parameters = (parameters.len() == names.len())
-                    .then(|| serde_json::from_value(serde_json::Value::Object(parameters)).ok())
+                    .then(|| parameter_set(parameters))
                     .flatten();
                 let (Some(parameters), Some(values)) = (parameters, kind.values(cell)) else {
                     results.skip_variant();
@@ -518,18 +515,22 @@ fn cells(line: &str, spans: &[(usize, usize)]) -> Vec<String> {
 
 #[cfg(test)]
 mod test_python_asv_v1 {
-    use bencher_json::project::{
-        measure::built_in::{
-            BuiltInMeasure as _,
-            default::{Latency, Memory, PeakMemory},
+    use bencher_json::{
+        BmfVersion, MAX_PARAMETER_KEYS,
+        project::{
+            measure::built_in::{
+                BuiltInMeasure as _,
+                default::{Latency, Memory, PeakMemory},
+            },
+            report::Adapter,
         },
-        report::Adapter,
     };
     use std::collections::BTreeSet;
 
     use pretty_assertions::assert_eq;
 
     use crate::{
+        Adaptable as _, Settings,
         adapters::bmf_v1::test_util::{
             Expected, assert_ignores_average, assert_value, assert_variant, convert_v1, variants,
         },
@@ -648,12 +649,23 @@ mod test_python_asv_v1 {
 
     /// Kills a value's representation read in any other way than asv prints it (a string in
     /// double quotes kept whole, a class by its name), a combination asv skipped (`NaN`) or a
-    /// failed one stored or left uncounted, a ninth parameter kept, the infinite interval asv
+    /// failed one stored or left uncounted, a parameter past the cap kept, the infinite interval asv
     /// writes for a single sample stored or counted, a `timeraw_` benchmark or a parametrized
     /// memory benchmark dropped, and a failed or a `track_` benchmark left uncounted.
     #[test]
     fn adapter_python_asv_json_v1_shapes() {
-        let results = convert_v1(Adapter::PythonAsvJson, SHAPES);
+        // The capture's nine parameter case, widened past the cap, as text since it holds `NaN`.
+        let nine = r#"[["1"], ["2"], ["3"], ["4"], ["5"], ["6"], ["7"], ["8"], ["9"]]"#;
+        let past_the_cap = (1..=MAX_PARAMETER_KEYS + 1)
+            .map(|n| format!(r#"["{n}"]"#))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let shapes = std::fs::read_to_string(format!("./tool_output/{SHAPES}")).unwrap();
+        assert_eq!(shapes.matches(nine).count(), 1);
+        let shapes = shapes.replace(nine, &format!("[{past_the_cap}]"));
+        let results = Adapter::PythonAsvJson
+            .convert(&shapes, Settings::new(None, BmfVersion::V1))
+            .unwrap();
         for (parameters, expected) in [
             (
                 r#"{"@param0":1,"@param1":"\"'quoted'\""}"#,
@@ -946,6 +958,41 @@ mod test_python_asv_v1 {
         assert_eq!(variants(&results), 13);
         assert_eq!(results.skipped.benchmarks, 2);
         assert_eq!(results.skipped.variants, 6);
+    }
+
+    /// Kills a table row whose parameters past the key cap are kept, or skipped uncounted.
+    #[test]
+    fn adapter_python_asv_text_v1_parameters_past_the_key_cap() {
+        const INDENT: &str = "             ";
+        for (count, skipped) in [(MAX_PARAMETER_KEYS, 0), (MAX_PARAMETER_KEYS + 1, 1)] {
+            let line = |parameter: &dyn Fn(usize) -> String, result: &str| {
+                (0..count)
+                    .map(|key| format!("{:^3}", parameter(key)))
+                    .chain([format!("{result:^10}")])
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            };
+            let rule = |character: char| {
+                line(
+                    &|_| character.to_string().repeat(3),
+                    &character.to_string().repeat(10),
+                )
+            };
+            let input = [
+                "[50.00%] \u{b7}\u{b7}\u{b7} benchmarks.time_many    ok".to_owned(),
+                format!("[50.00%] \u{b7}\u{b7}\u{b7} {}", rule('=')),
+                format!("{INDENT}{}", line(&|key| format!("k{key}"), "")),
+                format!("{INDENT}{}", rule('-')),
+                format!("{INDENT}{}", line(&|_| "1".to_owned(), "124\u{b1}9ns")),
+                format!("{INDENT}{}", rule('=')),
+            ]
+            .join("\n");
+            let results = Adapter::PythonAsvText
+                .convert(&input, Settings::new(None, BmfVersion::V1))
+                .expect("Failed to parse");
+            assert_eq!(results.skipped.variants, skipped, "{count} parameters");
+            assert_eq!(variants(&results), 1 - skipped, "{count} parameters");
+        }
     }
 
     /// Kills a benchmark a later commit's run repeats stored over the first, or left uncounted,

@@ -9,8 +9,8 @@ use serde::{
 };
 
 use crate::{
-    BenchmarkUuid, BranchUuid, MAX_METRIC_NAMES, MeasureUuid, ParameterFilter, ProjectUuid,
-    TestbedUuid,
+    BenchmarkUuid, BranchUuid, MAX_METRIC_NAMES, MeasureUuid, ParameterFilter,
+    ParameterFilterInput, ProjectUuid, TestbedUuid,
 };
 
 use super::perf::MAX_DIMENSION_ENTRIES;
@@ -73,7 +73,7 @@ pub struct JsonNewPlot {
     /// If not set, or set to an empty list, the plot includes every variant.
     /// At most 8 entries may be specified.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub parameters: Option<ParameterFilter>,
+    pub parameters: Option<ParameterFilterInput>,
     /// The measures to include in the plot.
     /// At least one measure must be specified, and at most 8.
     #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
@@ -204,7 +204,7 @@ pub struct JsonPlotPatch {
     /// Set to `null` or to an empty list to include every variant again.
     /// At most 8 entries may be specified.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub parameters: Option<ParameterFilter>,
+    pub parameters: Option<ParameterFilterInput>,
     /// The measures to include in the plot.
     /// Replaces the current measures for the plot.
     /// At least one measure must be specified, and at most 8.
@@ -251,7 +251,7 @@ pub struct JsonPlotPatchNull {
     #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub benchmarks: Option<Vec<BenchmarkUuid>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub parameters: Option<ParameterFilter>,
+    pub parameters: Option<ParameterFilterInput>,
     #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub measures: Option<Vec<MeasureUuid>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -358,7 +358,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                 let mut branches = None;
                 let mut testbeds = None;
                 let mut benchmarks = None;
-                let mut parameters: Option<Option<ParameterFilter>> = None;
+                let mut parameters: Option<Option<ParameterFilterInput>> = None;
                 let mut measures = None;
                 let mut metrics: Option<Option<MetricFilter>> = None;
                 let mut hidden: Option<Option<LineKeys>> = None;
@@ -986,9 +986,10 @@ mod view_db {
 #[cfg(all(test, any(feature = "server", feature = "client")))]
 mod tests {
     use super::{
-        JsonUpdatePlot, LineKey, LineKeys, MAX_HIDDEN_LINES, MetricFilter, PlotLayout, XAxis, YAxis,
+        JsonNewPlot, JsonUpdatePlot, LineKey, LineKeys, MAX_HIDDEN_LINES, MetricFilter, PlotLayout,
+        XAxis, YAxis,
     };
-    use crate::MAX_METRIC_NAMES;
+    use crate::{MAX_METRIC_NAMES, MAX_PARAMETER_KEYS, ParameterFilter};
 
     #[test]
     fn y_axis_serde_round_trip() {
@@ -1139,7 +1140,53 @@ mod tests {
                 panic!("expected Patch variant");
             };
             let parameters = patch.parameters.expect("parameters was written");
-            assert!(parameters.is_match_all(), "{body}");
+            assert!(ParameterFilter::from(parameters).is_match_all(), "{body}");
+        }
+    }
+
+    /// Kills a new plot or a patch, with or without a title, that reads its filter
+    /// without the input caps.
+    #[test]
+    fn deserialize_parameters_past_the_key_cap_errors() {
+        let keys = |count: usize| {
+            (0..count)
+                .map(|key| (format!("k{key}"), serde_json::Value::from(key)))
+                .collect::<serde_json::Map<_, _>>()
+        };
+        let with_parameters = |mut body: serde_json::Value, count: usize| {
+            body["parameters"] = serde_json::json!([keys(count)]);
+            body
+        };
+        let new_plot = serde_json::json!({
+            "lower_value": false,
+            "upper_value": false,
+            "lower_boundary": false,
+            "upper_boundary": false,
+            "x_axis": "date_time",
+            "window": 2_419_200,
+            "branches": [],
+            "testbeds": [],
+            "benchmarks": [],
+            "measures": [],
+        });
+        serde_json::from_value::<JsonNewPlot>(with_parameters(
+            new_plot.clone(),
+            MAX_PARAMETER_KEYS,
+        ))
+        .expect("Failed to read a new plot at the cap");
+        serde_json::from_value::<JsonNewPlot>(with_parameters(new_plot, MAX_PARAMETER_KEYS + 1))
+            .unwrap_err();
+        for patch in [serde_json::json!({}), serde_json::json!({ "title": null })] {
+            serde_json::from_value::<JsonUpdatePlot>(with_parameters(
+                patch.clone(),
+                MAX_PARAMETER_KEYS,
+            ))
+            .expect("Failed to read a patch at the cap");
+            serde_json::from_value::<JsonUpdatePlot>(with_parameters(
+                patch,
+                MAX_PARAMETER_KEYS + 1,
+            ))
+            .unwrap_err();
         }
     }
 
@@ -1157,7 +1204,10 @@ mod tests {
             panic!("expected Null variant");
         };
         let parameters = patch.parameters.expect("parameters was written");
-        assert_eq!(parameters.canonical(), r#"[{"size":1}]"#);
+        assert_eq!(
+            ParameterFilter::from(parameters).canonical(),
+            r#"[{"size":1}]"#
+        );
     }
 
     #[test]

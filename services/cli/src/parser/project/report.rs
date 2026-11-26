@@ -1,6 +1,6 @@
 use bencher_json::{
-    Boundary, BranchNameId, DateTime, GitHash, MeasureNameId, MetricName, ParameterSet,
-    ProjectResourceId, ReportUuid, SampleSize, TestbedNameId, Window,
+    BenchmarkPrefix, Boundary, BranchNameId, DateTime, GitHash, MeasureNameId, MetricName,
+    ParameterSetInput, ProjectResourceId, ReportUuid, SampleSize, TestbedNameId, Window,
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
@@ -118,6 +118,11 @@ pub struct CliReportCreate {
     #[clap(long)]
     pub measure: Vec<MeasureNameId>,
 
+    /// Put in front of every benchmark name, with no delimiter, so `--benchmark-prefix "api "` names `GET /users` as `api GET /users`.
+    /// Read at BMF version 1 only.
+    #[clap(long, value_name = "PREFIX")]
+    pub benchmark_prefix: Option<BenchmarkPrefix>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }
@@ -138,7 +143,7 @@ pub struct CliReportThresholds {
     /// Threshold parameters filter, as a JSON object of the parameters a variant must have (BMF version 1)
     /// To ignore this option when specifying multiple Thresholds, use an underscore (`_`).
     #[clap(long, requires = "threshold_test")]
-    pub threshold_parameters: Vec<ElidedOption<ParameterSet>>,
+    pub threshold_parameters: Vec<ElidedOption<ParameterSetInput>>,
 
     /// Threshold model test
     #[clap(value_enum, long, requires = "threshold_measure")]

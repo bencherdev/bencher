@@ -403,7 +403,6 @@ test.describe("a signed in member", () => {
 		request,
 	}) => {
 		const project = await createProject(request);
-		// Seven, as every line also has a size, under the eight keys a variant may have.
 		const constants = Object.fromEntries(
 			Array.from({ length: 7 }, (_, at) => [
 				`parameter_${at}`,
