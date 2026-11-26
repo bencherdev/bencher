@@ -8,7 +8,7 @@
 		"stylesheets": 1,
 		"cssBytes": 19949,
 		"deferredJsBytes": 112880,
-		"htmlBytes": 2650,
+		"htmlBytes": 2431,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -18,7 +18,7 @@
 		"cls": 0,
 		"jsBytes": 43628,
 		"stylesheets": 1,
-		"htmlBytes": 2650,
+		"htmlBytes": 2431,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -35,7 +35,7 @@
 		"jsBytes": 59920,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"htmlBytes": 2750,
+		"htmlBytes": 2533,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -72,7 +72,7 @@
 		"jsBytes": 59869,
 		"deferredJsBytes": 132786,
 		"stylesheets": 1,
-		"htmlBytes": 2770,
+		"htmlBytes": 2573,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -135,7 +135,7 @@
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19949,
-		"htmlBytes": 1970,
+		"htmlBytes": 1771,
 		"inlineScriptBytes": 910,
 		"lateModules": 0
 	},
@@ -153,7 +153,7 @@
 		"jsBytes": 63419,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"htmlBytes": 2760,
+		"htmlBytes": 2547,
 		"lateModules": 0
 	},
 	"branchColdLoad": {
@@ -164,7 +164,7 @@
 		"jsBytes": 63419,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"htmlBytes": 2760,
+		"htmlBytes": 2547,
 		"lateModules": 0
 	},
 	"reportColdLoad": {
@@ -175,7 +175,7 @@
 		"jsBytes": 76761,
 		"deferredJsBytes": 117952,
 		"stylesheets": 1,
-		"htmlBytes": 2861,
+		"htmlBytes": 2617,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -199,7 +199,7 @@
 		"jsBytes": 59587,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"htmlBytes": 2760,
+		"htmlBytes": 2535,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -211,7 +211,7 @@
 		"jsBytes": 82050,
 		"deferredJsBytes": 117931,
 		"stylesheets": 1,
-		"htmlBytes": 2840,
+		"htmlBytes": 2642,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -222,7 +222,7 @@
 		"cls": 0.00025,
 		"jsBytes": 118680,
 		"deferredJsBytes": 112880,
-		"htmlBytes": 2900,
+		"htmlBytes": 2702,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -258,7 +258,7 @@
 		"jsBytes": 80373,
 		"deferredJsBytes": 117968,
 		"stylesheets": 1,
-		"htmlBytes": 2840,
+		"htmlBytes": 2645,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -270,7 +270,7 @@
 		"jsBytes": 96539,
 		"deferredJsBytes": 115690,
 		"stylesheets": 1,
-		"htmlBytes": 2800,
+		"htmlBytes": 2604,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -301,7 +301,7 @@
 		"cls": 0.00025,
 		"jsBytes": 107701,
 		"deferredJsBytes": 112880,
-		"htmlBytes": 2850,
+		"htmlBytes": 2661,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -310,7 +310,7 @@
 		"jsBytes": 78534,
 		"deferredJsBytes": 112880,
 		"cssBytes": 13138,
-		"htmlBytes": 2980,
+		"htmlBytes": 2798,
 		"inlineScriptBytes": 700
 	},
 	"embedColdLoad": {
@@ -318,7 +318,7 @@
 		"jsBytes": 70024,
 		"deferredJsBytes": 112880,
 		"cssBytes": 11351,
-		"htmlBytes": 1560,
+		"htmlBytes": 1202,
 		"inlineScriptBytes": 390
 	},
 	"classicHelpColdLoad": {
@@ -341,7 +341,7 @@
 		"jsBytes": 59920,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"htmlBytes": 2750,
+		"htmlBytes": 2533,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -366,7 +366,7 @@
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19949,
-		"htmlBytes": 1760,
+		"htmlBytes": 1552,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
 	},
@@ -380,7 +380,7 @@
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19949,
-		"htmlBytes": 1890,
+		"htmlBytes": 1659,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
 	},
@@ -394,7 +394,7 @@
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19949,
-		"htmlBytes": 1820,
+		"htmlBytes": 1622,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
 	},
@@ -408,7 +408,7 @@
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19949,
-		"htmlBytes": 1870,
+		"htmlBytes": 1667,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
 	},
@@ -422,7 +422,7 @@
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19949,
-		"htmlBytes": 1900,
+		"htmlBytes": 1691,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
 	},
@@ -436,7 +436,7 @@
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19949,
-		"htmlBytes": 1830,
+		"htmlBytes": 1625,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
 	},
@@ -450,7 +450,7 @@
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19949,
-		"htmlBytes": 1910,
+		"htmlBytes": 1697,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
 	},
@@ -464,7 +464,7 @@
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19949,
-		"htmlBytes": 1950,
+		"htmlBytes": 1740,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
 	},
@@ -478,7 +478,7 @@
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19949,
-		"htmlBytes": 1925,
+		"htmlBytes": 1729,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
 	},
@@ -492,7 +492,7 @@
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19949,
-		"htmlBytes": 1900,
+		"htmlBytes": 1695,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
 	},
