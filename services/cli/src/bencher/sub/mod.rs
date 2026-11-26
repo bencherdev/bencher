@@ -92,7 +92,7 @@ impl TryFrom<CliSub> for Sub {
     fn try_from(sub: CliSub) -> Result<Self, Self::Error> {
         Ok(match sub {
             CliSub::Run(run) => Self::Run(Box::new((*run).try_into()?)),
-            CliSub::Mock(mock) => Self::Mock(mock.into()),
+            CliSub::Mock(mock) => Self::Mock(mock.try_into()?),
             CliSub::Noise(noise) => Self::Noise(noise.into()),
             CliSub::Archive(archive) => {
                 Self::Archive((archive, ArchiveAction::Archive).try_into()?)

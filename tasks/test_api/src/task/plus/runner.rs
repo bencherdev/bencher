@@ -191,6 +191,9 @@ impl RunnerTest {
                 .env("BENCHER_INIT_PATH", &init_path)
                 .status()?;
             anyhow::ensure!(build_status.success(), "Failed to build runner binary");
+
+            // Before the daemon tunes the host, which leaves this build few CPUs.
+            build_static_cli()?;
         } else {
             println!("Building runner (debug mode, no KVM)...");
             let build_status = Command::new("cargo")
@@ -666,28 +669,19 @@ pub fn run_runner_test(
     };
 
     let local_ref = format!("{registry}/{PROJECT_SLUG}:{IMAGE_TAG}");
-    if cfg!(target_os = "macos") {
-        // Build a local OCI image containing the macOS-native bencher binary
-        println!("Step 1: Building local Docker image from macOS bencher binary...");
-        docker_build_local_image(&local_ref)?;
-    } else {
-        // Pull the prebuilt Linux Docker image
-        println!("Step 1: Pulling Docker image {DOCKER_IMAGE}...");
-        docker_pull(DOCKER_IMAGE)?;
-        println!("Step 2: Tagging image as {local_ref}...");
-        docker_tag(DOCKER_IMAGE, &local_ref)?;
-    }
+    println!("Step 1: Building local Docker image from the bencher CLI under test...");
+    docker_build_local_image(&local_ref)?;
 
-    // Step 3: Log in to the local OCI registry
-    println!("Step 3: Logging in to {registry}...");
+    // Step 2: Log in to the local OCI registry
+    println!("Step 2: Logging in to {registry}...");
     docker_login(&registry, username, legacy_token.as_ref())?;
 
-    // Step 4: Push the image to the local registry
-    println!("Step 4: Pushing image to {registry}...");
+    // Step 3: Push the image to the local registry
+    println!("Step 3: Pushing image to {registry}...");
     docker_push(&local_ref)?;
 
-    // Step 5: Submit a job via `bencher run --image`
-    println!("Step 5: Submitting job via bencher run --image...");
+    // Step 4: Submit a job via `bencher run --image`
+    println!("Step 4: Submitting job via bencher run --image...");
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
     let args = [
@@ -715,6 +709,8 @@ pub fn run_runner_test(
         "1",
         "--exec",
         "mock",
+        "--bmf-version",
+        "0",
     ];
     cmd.args(args).current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -725,8 +721,8 @@ pub fn run_runner_test(
         String::from_utf8_lossy(&output.stderr)
     );
 
-    // Step 6: Verify the results
-    println!("Step 6: Verifying results...");
+    // Step 5: Verify the results
+    println!("Step 5: Verifying results...");
     let json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
     assert_eq!(json.project.slug.to_string(), PROJECT_SLUG);
     #[cfg(feature = "plus")]
@@ -777,6 +773,8 @@ fn run_build_time_runner_test(
         "1",
         "--exec",
         "mock",
+        "--bmf-version",
+        "0",
     ];
     cmd.args(args).current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -847,6 +845,8 @@ fn run_image_project_runner_test(url: &Url, token: &Jwt, spec: &str) -> anyhow::
         "1",
         "--exec",
         "mock",
+        "--bmf-version",
+        "0",
     ];
     cmd.args(args).current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -909,6 +909,8 @@ fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
         "1",
         "--exec",
         "mock",
+        "--bmf-version",
+        "0",
     ];
     cmd.args(args).current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -941,7 +943,7 @@ fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     println!("Running detach runner smoke test against: {host}");
 
     // Submit the job with --detach (returns immediately)
-    let json = submit_detached(host, token, &["--exec", "mock"])?;
+    let json = submit_detached(host, token, &["--exec", "mock", "--bmf-version", "0"])?;
     assert_eq!(json.project.slug.to_string(), PROJECT_SLUG);
     let job_uuid = json
         .job
@@ -1020,7 +1022,11 @@ fn run_detach_failed_attach_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
 
     println!("Running failed detach runner smoke test against: {host}");
 
-    let json = submit_detached(host, token, &["--exec", "mock", "--fail"])?;
+    let json = submit_detached(
+        host,
+        token,
+        &["--exec", "mock", "--bmf-version", "0", "--fail"],
+    )?;
     let job_uuid = json
         .job
         .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {json:?}"))?;
@@ -1147,7 +1153,11 @@ fn run_callback_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
 
 /// Submit a detached job with `callback`, and wait for it through the attach.
 fn submit_callback_job(host: &str, token: &Jwt, callback: &[&str]) -> anyhow::Result<JobUuid> {
-    let report = submit_detached(host, token, &[callback, &["--exec", "mock"]].concat())?;
+    let report = submit_detached(
+        host,
+        token,
+        &[callback, &["--exec", "mock", "--bmf-version", "0"]].concat(),
+    )?;
     let job_uuid = report
         .job
         .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {report:?}"))?;
@@ -1273,6 +1283,8 @@ fn run_user_key_runner_test(url: &Url, email: &str, token: &Jwt, spec: &str) -> 
         "1",
         "--exec",
         "mock",
+        "--bmf-version",
+        "0",
     ])
     .current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -1385,6 +1397,8 @@ fn run_project_key_runner_test(url: &Url, admin_token: &Jwt, spec: &str) -> anyh
         "1",
         "--exec",
         "mock",
+        "--bmf-version",
+        "0",
     ])
     .current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -1437,6 +1451,8 @@ fn run_project_key_runner_test(url: &Url, admin_token: &Jwt, spec: &str) -> anyh
         "1",
         "--exec",
         "mock",
+        "--bmf-version",
+        "0",
     ])
     .current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -1670,18 +1686,6 @@ fn registry_host(url: &str) -> anyhow::Result<String> {
     Ok(authority.to_owned())
 }
 
-fn docker_pull(image: &str) -> anyhow::Result<()> {
-    let status = Command::new("docker").args(["pull", image]).status()?;
-    anyhow::ensure!(status.success(), "docker pull {image} failed: {status}");
-    Ok(())
-}
-
-fn docker_tag(src: &str, dst: &str) -> anyhow::Result<()> {
-    let status = Command::new("docker").args(["tag", src, dst]).status()?;
-    anyhow::ensure!(status.success(), "docker tag {src} {dst} failed: {status}");
-    Ok(())
-}
-
 fn docker_login(registry: &str, username: &str, password: &str) -> anyhow::Result<()> {
     let output = Command::new("docker")
         .args(["login", registry, "-u", username, "--password-stdin"])
@@ -1712,7 +1716,7 @@ fn docker_push(image: &str) -> anyhow::Result<()> {
 
 /// Prepare an OCI image for unclaimed project testing.
 ///
-/// Resolves the registry for the given API URL, pulls/builds the Docker image,
+/// Resolves the registry for the given API URL, builds the Docker image,
 /// and tags it for the target registry under the given project slug.
 /// Returns `(host, local_ref)` for use by push-only or push+run tests.
 fn prepare_unclaimed_image(url: &Url, slug: &str) -> anyhow::Result<(String, String)> {
@@ -1733,22 +1737,15 @@ fn prepare_unclaimed_image(url: &Url, slug: &str) -> anyhow::Result<(String, Str
 
     let local_ref = format!("{registry}/{slug}:latest");
 
-    if cfg!(target_os = "macos") {
-        println!("Building local Docker image from macOS bencher binary...");
-        docker_build_local_image(&local_ref)?;
-    } else {
-        println!("Pulling Docker image {DOCKER_IMAGE}...");
-        docker_pull(DOCKER_IMAGE)?;
-        println!("Tagging as {local_ref}...");
-        docker_tag(DOCKER_IMAGE, &local_ref)?;
-    }
+    println!("Building local Docker image from the bencher CLI under test...");
+    docker_build_local_image(&local_ref)?;
 
     Ok((host, local_ref))
 }
 
 /// Push-only smoke test for unclaimed projects.
 ///
-/// Builds/pulls an image and pushes it without `docker login`.
+/// Builds an image and pushes it without `docker login`.
 /// Does NOT run `bencher run --image` — use `run_unclaimed_test` for the full
 /// push + run test (requires a running runner daemon).
 fn run_unclaimed_push_test(url: &Url) -> anyhow::Result<()> {
@@ -1766,7 +1763,7 @@ fn run_unclaimed_push_test(url: &Url) -> anyhow::Result<()> {
 
 /// Run the unclaimed project smoke test.
 ///
-/// Builds/pulls an image, pushes it without `docker login`, then runs
+/// Builds an image, pushes it without `docker login`, then runs
 /// `bencher run --image` without a token. Repeats the push + run sequence
 /// twice to verify the project stays unclaimed.
 fn run_unclaimed_test(url: &Url) -> anyhow::Result<()> {
@@ -1824,6 +1821,8 @@ fn run_unclaimed_push_and_run(
         "1",
         "--exec",
         "mock",
+        "--bmf-version",
+        "0",
     ];
     cmd.args(args).current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -1840,69 +1839,69 @@ fn run_unclaimed_push_and_run(
     Ok(())
 }
 
-/// Build a Docker image containing the locally-compiled bencher binary.
-///
-/// Creates a minimal `FROM scratch` image with the binary at `/usr/bin/bencher`,
-/// matching the production image layout. This allows macOS tests to use a native
-/// binary inside the OCI image instead of overriding the entrypoint.
 fn docker_build_local_image(tag: &str) -> anyhow::Result<()> {
-    let bencher_bin = assert_cmd::cargo::cargo_bin(BENCHER_CMD);
-    let build_context = bencher_bin.parent().expect("binary should have parent dir");
+    docker_build_cli_image(tag, r#"["/usr/bin/bencher"]"#)
+}
 
-    let dockerfile =
-        "FROM scratch\nCOPY bencher /usr/bin/bencher\nENTRYPOINT [\"/usr/bin/bencher\"]\n";
-    let dockerfile_path = std::env::temp_dir().join("Dockerfile.bencher-runner-test");
-    std::fs::write(&dockerfile_path, dockerfile)?;
+fn docker_build_mock_image(tag: &str) -> anyhow::Result<()> {
+    docker_build_cli_image(tag, r#"["/usr/bin/bencher", "mock", "--bmf-version", "0"]"#)
+}
+
+/// A Job runs this tree's CLI, and on Linux a static build so the host's glibc never matters.
+fn docker_build_cli_image(tag: &str, entrypoint: &str) -> anyhow::Result<()> {
+    let (base, bencher_bin) = if cfg!(target_os = "macos") {
+        ("scratch", assert_cmd::cargo::cargo_bin(BENCHER_CMD))
+    } else {
+        (DOCKER_IMAGE, build_static_cli()?)
+    };
+    // The binary alone, so the build never sends the rest of the target dir.
+    let build_context = std::env::temp_dir().join("bencher-runner-test-image");
+    drop(std::fs::remove_dir_all(&build_context));
+    std::fs::create_dir_all(&build_context)?;
+    std::fs::copy(&bencher_bin, build_context.join(BENCHER_CMD))?;
+    std::fs::write(
+        build_context.join("Dockerfile"),
+        format!("FROM {base}\nCOPY bencher /usr/bin/bencher\nENTRYPOINT {entrypoint}\n"),
+    )?;
 
     let status = Command::new("docker")
-        .args(["build", "-t", tag, "-f"])
-        .arg(&dockerfile_path)
-        .arg(build_context)
+        .args(["build", "-t", tag])
+        .arg(&build_context)
         .status()?;
 
-    drop(std::fs::remove_file(&dockerfile_path));
-    anyhow::ensure!(status.success(), "docker build failed");
+    drop(std::fs::remove_dir_all(&build_context));
+    anyhow::ensure!(status.success(), "docker build {tag} failed");
     Ok(())
 }
 
-/// Build a Docker image whose ENTRYPOINT runs `bencher mock`.
-///
-/// On macOS, builds from scratch with the local binary.
-/// On Linux, layers on top of the prebuilt Docker image.
-fn docker_build_mock_image(tag: &str) -> anyhow::Result<()> {
-    let dockerfile_path = std::env::temp_dir().join("Dockerfile.bencher-runner-mock-test");
+fn build_static_cli() -> anyhow::Result<std::path::PathBuf> {
+    let target_triple = musl_target_triple()?;
+    println!("Building bencher CLI ({target_triple})...");
+    let status = Command::new("cargo")
+        .args([
+            "build",
+            "--target",
+            target_triple,
+            "-p",
+            "bencher_cli",
+            "--bin",
+            BENCHER_CMD,
+        ])
+        .status()?;
+    anyhow::ensure!(
+        status.success(),
+        "Failed to build the bencher CLI for {target_triple}"
+    );
 
-    if cfg!(target_os = "macos") {
-        let bencher_bin = assert_cmd::cargo::cargo_bin(BENCHER_CMD);
-        let build_context = bencher_bin.parent().expect("binary should have parent dir");
-
-        let dockerfile = "FROM scratch\nCOPY bencher /usr/bin/bencher\nENTRYPOINT [\"/usr/bin/bencher\", \"mock\"]\n";
-        std::fs::write(&dockerfile_path, dockerfile)?;
-
-        let status = Command::new("docker")
-            .args(["build", "-t", tag, "-f"])
-            .arg(&dockerfile_path)
-            .arg(build_context)
-            .status()?;
-
-        drop(std::fs::remove_file(&dockerfile_path));
-        anyhow::ensure!(status.success(), "docker build (mock) failed");
-    } else {
-        let dockerfile =
-            format!("FROM {DOCKER_IMAGE}\nENTRYPOINT [\"/usr/bin/bencher\", \"mock\"]\n");
-        std::fs::write(&dockerfile_path, &dockerfile)?;
-
-        let status = Command::new("docker")
-            .args(["build", "-t", tag, "-f"])
-            .arg(&dockerfile_path)
-            .arg(".")
-            .status()?;
-
-        drop(std::fs::remove_file(&dockerfile_path));
-        anyhow::ensure!(status.success(), "docker build (mock) failed");
-    }
-
-    Ok(())
+    let host_bin = assert_cmd::cargo::cargo_bin(BENCHER_CMD);
+    let target_dir = host_bin
+        .parent()
+        .and_then(std::path::Path::parent)
+        .expect("binary should be in a profile dir of the target dir");
+    Ok(target_dir
+        .join(target_triple)
+        .join("debug")
+        .join(BENCHER_CMD))
 }
 
 /// Map `std::env::consts::ARCH` to Rust target triples for musl builds.

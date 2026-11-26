@@ -6,12 +6,13 @@ mod score;
 
 use std::time::Duration;
 
+use bencher_json::BmfVersion;
 use benchmark::{cache, compute, io};
 
 #[derive(Debug, Clone, Copy)]
 pub enum NoiseFormat {
     Human,
-    Json,
+    Json(BmfVersion),
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -24,6 +25,9 @@ pub enum NoiseError {
 
     #[error("Failed to parse measure name: {0}")]
     ParseMeasureName(bencher_json::ValidError),
+
+    #[error("Failed to parse metric name: {0}")]
+    ParseMetricName(bencher_json::ValidError),
 
     #[error("Failed to serialize noise results: {0}")]
     SerializeResults(serde_json::Error),
@@ -107,21 +111,66 @@ pub fn run_noise(
             );
             let _w = writeln!(stdout, "{output}");
         },
-        NoiseFormat::Json => {
-            let bmf_results = bmf::build_bmf(
-                &compute_result,
-                &cache_result,
-                &io_result,
-                &platform_metrics,
-                noise_score,
-            )?;
-            let _w = writeln!(
-                stdout,
-                "{}",
-                serde_json::to_string_pretty(&bmf_results).map_err(NoiseError::SerializeResults)?
-            );
+        NoiseFormat::Json(bmf_version) => {
+            let bmf_results = if bmf_version == BmfVersion::V1 {
+                serde_json::to_string_pretty(&bmf::build_bmf_v1(
+                    &compute_result,
+                    &cache_result,
+                    &io_result,
+                    &platform_metrics,
+                    noise_score,
+                )?)
+            } else {
+                serde_json::to_string_pretty(&bmf::build_bmf_v0(
+                    &compute_result,
+                    &cache_result,
+                    &io_result,
+                    &platform_metrics,
+                    noise_score,
+                )?)
+            }
+            .map_err(NoiseError::SerializeResults)?;
+            let _w = writeln!(stdout, "{bmf_results}");
         },
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_adapter::{Adaptable as _, Settings};
+    use bencher_json::{BmfVersion, project::report::Adapter};
+
+    use super::{NoiseFormat, run_noise};
+
+    /// Kills: `--format json` that writes one version whatever the version asked.
+    #[test]
+    fn run_noise_writes_the_bmf_version_asked() {
+        for bmf_version in [BmfVersion::V0, BmfVersion::V1] {
+            let mut stdout = Vec::new();
+            run_noise(
+                0,
+                NoiseFormat::Json(bmf_version),
+                true,
+                &mut stdout,
+                &mut Vec::new(),
+            )
+            .unwrap();
+            let json = String::from_utf8(stdout).unwrap();
+            for read_as in [BmfVersion::V0, BmfVersion::V1] {
+                let adapter = if read_as == BmfVersion::V1 {
+                    Adapter::JsonV1
+                } else {
+                    Adapter::JsonV0
+                };
+                let results = adapter.convert(&json, Settings::new(None, read_as));
+                assert_eq!(
+                    results.is_some(),
+                    read_as == bmf_version,
+                    "{bmf_version} read as {read_as}: {json}"
+                );
+            }
+        }
+    }
 }
