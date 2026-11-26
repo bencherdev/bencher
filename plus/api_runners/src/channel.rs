@@ -9,27 +9,29 @@ use bencher_billing::CustomerId;
 #[cfg(feature = "otel")]
 use bencher_json::runner::PauseReason;
 use bencher_json::{
-    DEFAULT_POLL_TIMEOUT, JobStatus, JobUuid, JsonClaimedJob, JsonSpec, MeteredPlanId, Priority,
-    RunnerResourceId,
+    DEFAULT_POLL_TIMEOUT, Iteration, JobStatus, JobUuid, JsonClaimedJob, JsonSpec, MeteredPlanId,
+    Priority, RunnerResourceId, Timeout,
     runner::{
-        CloseReason, JsonIterationOutput, JsonPaused, MAX_PAUSE_REASONS, RunnerMessage,
-        ServerMessage,
+        CloseReason, JsonIterationOutput, JsonJobOutput, JsonPaused, MAX_PAUSE_REASONS,
+        RunnerMessage, ServerMessage,
     },
 };
 use bencher_oci_storage::OciStorageError;
 use bencher_schema::{
     auth_conn,
     context::{ApiContext, CancellationToken},
-    error::{resource_conflict_err, resource_not_found_err},
+    error::resource_conflict_err,
     model::{
         organization::OrganizationId,
         runner::{
-            JobId, JobTimeout, QueryJob, QueryRunner, QueryRunnerStatus, RunnerId, RunnerReport,
-            StatusChange, UpdateJob,
+            ExecutionStatus, InsertJobExecution, JobExecutionId, JobExecutions, JobId, JobTimeout,
+            QueryJob, QueryJobExecution, QueryRunner, QueryRunnerStatus, RunnerId, RunnerReport,
+            StatusChange, UpdateJob, UpdateJobExecution, end_job, end_job_now, finish_failed_job,
+            job_execution::is_in_progress, settle_job, sync_job_status,
         },
         spec::QuerySpec,
     },
-    schema, write_conn,
+    schema, write_conn, write_transaction,
 };
 use bencher_token::OciAction;
 use diesel::{
@@ -51,26 +53,6 @@ use crate::runner_key::RunnerAuth;
 
 // --- WebSocket message handlers ---
 
-/// Compute the maximum allowed elapsed seconds for a job: timeout + grace period.
-fn job_timeout_limit(timeout: bencher_json::Timeout, grace: Duration) -> i64 {
-    let timeout_secs = i64::from(u32::from(timeout));
-    #[expect(clippy::cast_possible_wrap, reason = "grace period seconds fit in i64")]
-    let grace_secs = grace.as_secs() as i64;
-    timeout_secs.saturating_add(grace_secs)
-}
-
-/// Decide job status and close reason when a heartbeat times out.
-///
-/// If the job has run longer than its timeout limit, it is canceled (timeout exceeded).
-/// Otherwise its outcome is unknown (lost contact with runner).
-fn timeout_decision(elapsed_secs: i64, limit_secs: i64) -> (JobStatus, CloseReason) {
-    if elapsed_secs > limit_secs {
-        (JobStatus::Canceled, CloseReason::JobTimeoutExceeded)
-    } else {
-        (JobStatus::Unknown, CloseReason::HeartbeatTimeout)
-    }
-}
-
 /// Errors from WebSocket channel operations during runner job execution.
 #[derive(Debug, thiserror::Error)]
 enum ChannelError {
@@ -89,12 +71,18 @@ enum ChannelError {
     #[error("{0}")]
     Billing(#[from] bencher_billing::BillingError),
 
-    /// Job is in an unexpected state for the requested transition.
-    #[error("Invalid state transition to {target:?} for job {job_id:?}, found {current:?}")]
+    #[error("{0}")]
+    Storage(#[from] OciStorageError),
+
+    /// An execution is in an unexpected state for the requested transition.
+    #[error(
+        "Invalid state transition to {target:?} for execution {execution_id:?} of job {job_id:?}, found {current:?}"
+    )]
     InvalidStateTransition {
         job_id: JobId,
-        target: JobStatus,
-        current: JobStatus,
+        execution_id: JobExecutionId,
+        target: ExecutionStatus,
+        current: ExecutionStatus,
     },
 
     #[error("Failed to parse runner download URL: {0}")]
@@ -119,65 +107,57 @@ enum ChannelError {
     UpdateChecksum(bencher_json::ValidError),
 }
 
-/// Handle a heartbeat timeout by reading the job and deciding the right status.
+/// Handle a heartbeat timeout by reading the execution and its job and deciding the right status.
 ///
-/// If the job has exceeded its configured timeout + grace period, it is marked `Canceled`
-/// (ran too long). Otherwise it is marked `Unknown` (lost contact with runner).
+/// If the job's executions have run longer than its timeout plus the grace period, or this
+/// execution longer than its own budget plus the grace period, the job is marked `Canceled`
+/// (ran too long). Otherwise the execution is marked `Unknown` (lost contact with runner).
 /// Returns the [`CloseReason`] for the WebSocket close frame.
 async fn handle_timeout(
     log: &slog::Logger,
     context: &ApiContext,
-    job_id: JobId,
+    execution_id: JobExecutionId,
 ) -> Result<CloseReason, ChannelError> {
-    let job: QueryJob = schema::job::table
-        .filter(schema::job::id.eq(job_id))
-        .first(auth_conn!(context))?;
+    let grace_period = context.job_timeout_grace_period;
+    let conn = write_conn!(context);
+    let now = context.clock.now();
+    let execution = QueryJobExecution::get(conn, execution_id)?;
+    let job_executions = JobExecutions::get(conn, execution.job_id)?;
+    let job_id = execution.job_id;
 
-    if job.status.has_run() {
-        slog::info!(log, "Heartbeat timeout: job already in terminal state"; "job_id" => ?job_id);
+    if !execution.status.is_in_flight() || !is_in_progress(job_executions.job.status) {
+        slog::info!(log, "Heartbeat timeout: execution already in terminal state"; "execution_id" => ?execution_id, "job_id" => ?job_id);
         return Ok(CloseReason::HeartbeatTimeout);
     }
 
-    let now = context.clock.now();
-
-    let (status, reason) = if let Some(start) = job.deadline_start() {
-        let elapsed = (now.timestamp() - start.timestamp()).max(0);
-        let limit = job_timeout_limit(job.timeout, context.job_timeout_grace_period);
-        timeout_decision(elapsed, limit)
-    } else {
-        (JobStatus::Unknown, CloseReason::HeartbeatTimeout)
-    };
-
-    slog::warn!(log, "Marking job"; "job_id" => ?job_id, "status" => ?status, "reason" => ?reason);
-    let updated = if status == JobStatus::Unknown {
-        let updated = UpdateJob::set_status(status, now).execute_if_either_status(
-            write_conn!(context),
-            job_id,
-            JobStatus::Claimed,
-            JobStatus::Running,
-        )?;
-        #[cfg(feature = "otel")]
-        if updated > 0 {
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-                bencher_otel::JobStatusKind::Unknown,
-            ));
-        }
-        updated
-    } else {
-        let updated = UpdateJob::terminate(status, now).execute_if_any_status(
-            write_conn!(context),
-            job_id,
-            &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
-        )?;
-        if updated > 0 {
+    if job_executions.is_past_deadline(now, grace_period)
+        || execution.is_past_deadline(now, grace_period)
+    {
+        slog::warn!(log, "Marking job"; "job_id" => ?job_id, "status" => ?JobStatus::Canceled, "reason" => ?CloseReason::JobTimeoutExceeded);
+        if end_job(conn, job_id, JobStatus::Canceled, now)? {
             context.callbacks.fire(log, job_id);
+        } else {
+            slog::info!(log, "Timeout: job already changed state"; "job_id" => ?job_id);
         }
-        updated
-    };
-    if updated == 0 {
-        slog::info!(log, "Timeout: job already changed state"; "job_id" => ?job_id);
+        return Ok(CloseReason::JobTimeoutExceeded);
     }
-    Ok(reason)
+
+    slog::warn!(log, "Marking execution"; "execution_id" => ?execution_id, "job_id" => ?job_id, "status" => ?ExecutionStatus::Unknown, "reason" => ?CloseReason::HeartbeatTimeout);
+    let updated = UpdateJobExecution::set_status(ExecutionStatus::Unknown).execute_if_any_status(
+        conn,
+        execution_id,
+        &[ExecutionStatus::Sent, ExecutionStatus::Running],
+    )?;
+    if updated > 0 {
+        sync_job_status(conn, job_id, now)?;
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+            bencher_otel::JobStatusKind::Unknown,
+        ));
+    } else {
+        slog::info!(log, "Timeout: execution already changed state"; "execution_id" => ?execution_id);
+    }
+    Ok(CloseReason::HeartbeatTimeout)
 }
 
 /// Handle a message from the runner and return the appropriate response
@@ -185,170 +165,166 @@ async fn handle_timeout(
 async fn handle_runner_message(
     log: &slog::Logger,
     context: &ApiContext,
-    job: &QueryJob,
+    execution: &QueryJobExecution,
     msg: RunnerMessage,
     billing_state: &mut BillingState,
 ) -> Result<(ServerMessage, Option<CloseReason>), ChannelError> {
-    match msg {
+    let ack = ServerMessage::Ack {
+        job: Some(execution.uuid),
+    };
+    let (result, close_reason) = match msg {
         RunnerMessage::Ready(_) | RunnerMessage::Paused(_) => {
-            slog::warn!(log, "Unexpected Ready or Paused message during job execution"; "job_id" => ?job.id);
-            // Ack is the only safe response — Cancel would terminate the job.
+            slog::warn!(log, "Unexpected Ready or Paused message during job execution"; "job_id" => ?execution.job_id);
+            // Ack is the only safe response: Cancel would terminate the job.
             // The heartbeat timer is NOT reset for Ready or Paused (handled by caller).
+            return Ok((ack, None));
         },
         RunnerMessage::Running => {
-            slog::info!(log, "Job running"; "job_id" => ?job.id);
-            if let Some(cancel) = handle_running(log, context, job.id).await? {
+            slog::info!(log, "Job running"; "job_id" => ?execution.job_id, "execution_id" => ?execution.id);
+            if let Some(cancel) = handle_running(log, context, execution.id).await? {
                 return Ok((cancel, Some(CloseReason::JobCanceled)));
             }
+            return Ok((ack, None));
         },
         RunnerMessage::Heartbeat => {
-            slog::debug!(log, "Job heartbeat"; "job_id" => ?job.id);
-            if let Some(cancel) = handle_heartbeat(log, context, job.id, billing_state).await? {
+            slog::debug!(log, "Job heartbeat"; "job_id" => ?execution.job_id, "execution_id" => ?execution.id);
+            if let Some(cancel) =
+                handle_heartbeat(log, context, execution.id, billing_state).await?
+            {
                 return Ok((cancel, Some(CloseReason::JobCanceled)));
             }
+            return Ok((ack, None));
         },
-        RunnerMessage::Completed {
-            job: msg_job_uuid,
-            results,
-        } => {
-            if msg_job_uuid != job.uuid {
-                slog::warn!(log, "Completed message job UUID mismatch"; "expected" => %job.uuid, "got" => %msg_job_uuid);
-            }
-            slog::info!(log, "Job completed"; "job_id" => ?job.id, "iterations" => results.len());
-            handle_completed(log, context, job, results).await?;
-            bill_final_minutes(log, context, job.id, billing_state).await;
-            return Ok((
-                ServerMessage::Ack {
-                    job: Some(job.uuid),
-                },
-                Some(CloseReason::JobCompleted),
-            ));
+        RunnerMessage::Completed { job, results } => {
+            warn_if_mismatched(log, "Completed", execution, job);
+            slog::info!(log, "Execution completed"; "job_id" => ?execution.job_id, "execution_id" => ?execution.id, "iterations" => results.len());
+            (RunResult::Completed(results), CloseReason::JobCompleted)
         },
         RunnerMessage::Failed {
-            job: msg_job_uuid,
+            job,
             results,
             error,
         } => {
-            if msg_job_uuid != job.uuid {
-                slog::warn!(log, "Failed message job UUID mismatch"; "expected" => %job.uuid, "got" => %msg_job_uuid);
-            }
-            slog::warn!(log, "Job failed"; "job_id" => ?job.id, "error" => &error);
-            handle_failed(log, context, job, results, error).await?;
-            bill_final_minutes(log, context, job.id, billing_state).await;
-            return Ok((
-                ServerMessage::Ack {
-                    job: Some(job.uuid),
-                },
-                Some(CloseReason::JobFailed),
-            ));
+            warn_if_mismatched(log, "Failed", execution, job);
+            slog::warn!(log, "Execution failed"; "job_id" => ?execution.job_id, "execution_id" => ?execution.id, "error" => &error);
+            (RunResult::Failed { results, error }, CloseReason::JobFailed)
         },
-        RunnerMessage::Canceled { job: msg_job_uuid } => {
-            if msg_job_uuid != job.uuid {
-                slog::warn!(log, "Canceled message job UUID mismatch"; "expected" => %job.uuid, "got" => %msg_job_uuid);
-            }
-            slog::info!(log, "Job cancellation acknowledged"; "job_id" => ?job.id);
-            handle_canceled(log, context, job.id).await?;
-            bill_final_minutes(log, context, job.id, billing_state).await;
-            return Ok((
-                ServerMessage::Ack {
-                    job: Some(job.uuid),
-                },
-                Some(CloseReason::JobCanceledByRunner),
-            ));
+        RunnerMessage::Canceled { job } => {
+            warn_if_mismatched(log, "Canceled", execution, job);
+            slog::info!(log, "Job cancellation acknowledged"; "job_id" => ?execution.job_id, "execution_id" => ?execution.id);
+            (RunResult::Canceled, CloseReason::JobCanceledByRunner)
         },
-    }
-
-    Ok((
-        ServerMessage::Ack {
-            job: Some(job.uuid),
-        },
-        None,
-    ))
+    };
+    handle_result(log, context, execution.id, result).await?;
+    bill_final_minutes(log, context, execution.job_id, billing_state).await;
+    Ok((ack, Some(close_reason)))
 }
 
-/// Handle a Running message: transition job from Claimed to Running,
-/// or update heartbeat if already Running (reconnection case).
+/// A runner names the execution it reports on, which on its own channel is always the one it
+/// was sent there.
+fn warn_if_mismatched(
+    log: &slog::Logger,
+    message: &str,
+    execution: &QueryJobExecution,
+    named: JobUuid,
+) {
+    if named != execution.uuid {
+        slog::warn!(log, "Message execution UUID mismatch"; "message" => message, "expected" => %execution.uuid, "got" => %named);
+    }
+}
+
+/// Handle a Running message: transition the execution from Sent to Running, and its job from
+/// Claimed to Running on its first execution, or update the heartbeat if the execution is already
+/// Running (reconnection case). An execution whose job already has its outcome gets `Cancel`.
 ///
 /// Uses conditional UPDATEs with status filters to avoid TOCTOU races.
 async fn handle_running(
     log: &slog::Logger,
     context: &ApiContext,
-    job_id: JobId,
+    execution_id: JobExecutionId,
 ) -> Result<Option<ServerMessage>, ChannelError> {
     let now = context.clock.now();
+    let conn = write_conn!(context);
+    let execution = QueryJobExecution::get(conn, execution_id)?;
+    let job = QueryJob::get(conn, execution.job_id)?;
 
-    // Try reconnection case first: already Running, just update heartbeat
-    let reconnect_update = UpdateJob::heartbeat(now);
-    let updated =
-        reconnect_update.execute_if_status(write_conn!(context), job_id, JobStatus::Running)?;
-
-    if updated > 0 {
-        slog::info!(log, "Runner reconnected to running job"; "job_id" => ?job_id);
-        return Ok(None);
-    }
-
-    // Try normal transition: Claimed -> Running
-    let transition_update = UpdateJob::start(now);
-    let updated =
-        transition_update.execute_if_status(write_conn!(context), job_id, JobStatus::Claimed)?;
-
-    if updated > 0 {
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-            bencher_otel::JobStatusKind::Running,
-        ));
-        return Ok(None);
-    }
-
-    // Neither matched — check if job was canceled
-    let current_job: QueryJob = schema::job::table
-        .filter(schema::job::id.eq(job_id))
-        .first(auth_conn!(context))?;
-    if current_job.status == JobStatus::Canceled {
-        slog::info!(log, "Job was canceled before Running transition"; "job_id" => ?job_id);
+    if execution.status == ExecutionStatus::Canceled || job.status.has_run() {
+        slog::info!(log, "Job has its outcome before the Running transition"; "job_id" => ?job.id, "status" => ?job.status);
         return Ok(Some(ServerMessage::Cancel));
     }
-    slog::warn!(log, "Unexpected job state during Running transition"; "job_id" => ?job_id, "status" => ?current_job.status);
+
+    match execution.status {
+        ExecutionStatus::Running => {
+            UpdateJobExecution::heartbeat(now).execute_if_any_status(
+                conn,
+                execution_id,
+                &[ExecutionStatus::Running],
+            )?;
+            UpdateJob::heartbeat(now).execute_if_status(conn, job.id, JobStatus::Running)?;
+            slog::info!(log, "Runner reconnected to running job"; "job_id" => ?job.id);
+        },
+        ExecutionStatus::Sent => {
+            UpdateJobExecution::start(now).execute_if_any_status(
+                conn,
+                execution_id,
+                &[ExecutionStatus::Sent],
+            )?;
+            // The job starts with its first execution.
+            let started =
+                UpdateJob::start(now).execute_if_status(conn, job.id, JobStatus::Claimed)?;
+            if started > 0 {
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+                    bencher_otel::JobStatusKind::Running,
+                ));
+            } else {
+                UpdateJob::heartbeat(now).execute_if_status(conn, job.id, JobStatus::Running)?;
+            }
+        },
+        ExecutionStatus::Completed
+        | ExecutionStatus::Failed
+        | ExecutionStatus::Canceled
+        | ExecutionStatus::Unknown => {
+            slog::warn!(log, "Unexpected execution state during Running transition"; "job_id" => ?job.id, "status" => ?execution.status);
+        },
+    }
     Ok(None)
 }
 
-/// Handle a Heartbeat message: update `last_heartbeat` and check for cancellation and timeout.
+/// Handle a Heartbeat message: update the execution's `last_heartbeat` and check for
+/// cancellation and timeout.
 ///
 /// Uses atomic read+write under `write_conn!` to prevent TOCTOU billing races.
 /// Stripe is called best-effort after releasing the write lock.
 async fn handle_heartbeat(
     log: &slog::Logger,
     context: &ApiContext,
-    job_id: JobId,
+    execution_id: JobExecutionId,
     billing_state: &mut BillingState,
 ) -> Result<Option<ServerMessage>, ChannelError> {
     let now = context.clock.now();
+    let grace_period = context.job_timeout_grace_period;
 
-    let job: QueryJob = schema::job::table
-        .filter(schema::job::id.eq(job_id))
-        .first(auth_conn!(context))
-        .map_err(resource_not_found_err!(Job, job_id))?;
+    // Hold the write lock for both read and write to prevent a concurrent
+    // call from advancing last_billed_minute between our read and write.
+    let bill_info = {
+        let conn = write_conn!(context);
+        let execution = QueryJobExecution::get(conn, execution_id)?;
+        let job_executions = JobExecutions::get(conn, execution.job_id)?;
+        let job = &job_executions.job;
 
-    // Check if job was canceled
-    if job.status == JobStatus::Canceled {
-        return Ok(Some(ServerMessage::Cancel));
-    }
+        // The job has its outcome, from this execution or another
+        if execution.status == ExecutionStatus::Canceled || job.status.has_run() {
+            return Ok(Some(ServerMessage::Cancel));
+        }
 
-    // Check if job has exceeded its timeout
-    if let Some(start) = job.deadline_start() {
-        let elapsed = (now.timestamp() - start.timestamp()).max(0);
-        let limit = job_timeout_limit(job.timeout, context.job_timeout_grace_period);
-        let (status, _reason) = timeout_decision(elapsed, limit);
-        if status == JobStatus::Canceled {
-            slog::warn!(log, "Job timeout exceeded during heartbeat"; "job_id" => ?job_id, "elapsed" => elapsed, "limit" => limit);
-            let cancel_update = UpdateJob::terminate(JobStatus::Canceled, now);
-            let updated = cancel_update.execute_if_any_status(
-                write_conn!(context),
-                job_id,
-                &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
-            )?;
-            if updated > 0 {
-                context.callbacks.fire(log, job_id);
+        // The job's executions have run past its timeout
+        if job_executions.is_past_deadline(now, grace_period)
+            || execution.is_past_deadline(now, grace_period)
+        {
+            slog::warn!(log, "Job timeout exceeded during heartbeat"; "job_id" => ?job.id, "used" => job_executions.used_secs(now), "timeout" => u32::from(job.timeout));
+            if end_job(conn, job.id, JobStatus::Canceled, now)? {
+                context.callbacks.fire(log, job.id);
                 #[cfg(feature = "otel")]
                 bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
                     bencher_otel::JobStatusKind::Canceled,
@@ -356,39 +332,34 @@ async fn handle_heartbeat(
             }
             return Ok(Some(ServerMessage::Cancel));
         }
-    }
 
-    // Hold the write lock for both read and write to prevent a concurrent
-    // call from advancing last_billed_minute between our read and write.
-    let bill_info = {
-        let conn = write_conn!(context);
-        let job = QueryJob::get(conn, job_id)?;
+        UpdateJobExecution::heartbeat(now).execute_if_any_status(
+            conn,
+            execution_id,
+            &ExecutionStatus::IN_FLIGHT,
+        )?;
 
-        let billing = BillingDelta::new(&job, now);
-
+        let billing = BillingDelta::new(job, job_executions.used_secs(now));
         let update = match &billing {
             Some(b) => UpdateJob::heartbeat_with_billing(now, b.minutes),
             None => UpdateJob::heartbeat(now),
         };
-
         update.execute_if_any_status(
             conn,
-            job_id,
+            job.id,
             &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
         )?;
 
-        if let Some(runner_id) = job.runner_id
-            && let Err(e) = QueryRunner::record_heartbeat(conn, runner_id, now)
-        {
+        if let Err(e) = QueryRunner::record_heartbeat(conn, execution.runner_id, now) {
             slog::warn!(log, "Failed to record runner heartbeat"; "error" => %e);
         }
 
-        billing
+        billing.map(|billing| (job.id, billing))
     };
     // write lock released here
 
-    // Bill Stripe best-effort — the delta is already claimed in the DB.
-    if let Some(billing) = bill_info {
+    // Bill Stripe best-effort: the delta is already claimed in the DB.
+    if let Some((job_id, billing)) = bill_info {
         bill_stripe_best_effort(
             log,
             context,
@@ -432,11 +403,11 @@ struct BillingDelta {
 }
 
 impl BillingDelta {
-    /// Calculate the billing delta between elapsed minutes and last billed minute.
+    /// Calculate the billing delta between the minutes of the job's executions, `elapsed_secs`,
+    /// and the last billed minute.
     /// Returns `None` if the job hasn't started or no new minutes need billing.
-    fn new(job: &QueryJob, now: bencher_json::DateTime) -> Option<Self> {
-        let started = job.started?;
-        let elapsed_secs = now.timestamp() - started.timestamp();
+    fn new(job: &QueryJob, elapsed_secs: i64) -> Option<Self> {
+        job.started?;
         let minutes = elapsed_minutes(elapsed_secs);
         let last_billed = job.last_billed_minute.unwrap_or(0);
         if minutes <= last_billed {
@@ -569,11 +540,13 @@ impl BillingState {
     }
 }
 
-/// Final billing call for terminal job states.
+/// Final billing call when an execution ends.
 ///
-/// Re-reads the job from the database to get the latest `last_billed_minute`
-/// (which may have been updated by prior heartbeats), bills any remaining
-/// partial-minute delta, and persists the new `last_billed_minute`.
+/// Re-reads the job and its executions from the database to get the latest
+/// `last_billed_minute` (which may have been updated by prior heartbeats or another
+/// execution's end), bills any remaining partial-minute delta of the executions' summed
+/// seconds, and persists the new `last_billed_minute`. Executions that end close together
+/// bill once, since each reads the minute the other wrote.
 ///
 /// This ensures that if a job completes mid-minute (e.g., at 90 seconds),
 /// the final partial minute is billed even when no heartbeat fires between
@@ -606,9 +579,10 @@ async fn bill_final_minutes_inner(
     // heartbeat from advancing last_billed_minute between our read and write.
     let bill_info = {
         let conn = write_conn!(context);
-        let job = QueryJob::get(conn, job_id)?;
+        let job_executions = JobExecutions::get(conn, job_id)?;
 
-        let Some(billing) = BillingDelta::new(&job, now) else {
+        let Some(billing) = BillingDelta::new(&job_executions.job, job_executions.used_secs(now))
+        else {
             return Ok(());
         };
 
@@ -639,167 +613,199 @@ async fn bill_final_minutes_inner(
     Ok(())
 }
 
-/// Handle a Completed message: transition job from Running or Unknown to Completed,
-/// store output, and process benchmark results into the report.
+/// What a runner reports about an execution.
+enum RunResult {
+    Completed(Vec<JsonIterationOutput>),
+    Failed {
+        results: Vec<JsonIterationOutput>,
+        error: String,
+    },
+    Canceled,
+}
+
+/// Handle a runner's result for an execution, from its channel or resent after a reconnect.
 ///
-/// Uses a status filter on the UPDATE to avoid TOCTOU races.
-async fn handle_completed(
+/// A run that completed has its output stored as the execution's own blob at once, and its job
+/// goes on: to its next execution, or to its outcome once every iteration has one. A `Failed`
+/// fails its job. A completed run that failed fails its job too, unless the job allows failure, in
+/// which case its iteration is a gap. A runner that acknowledges a cancel ends the execution, and
+/// the job if it has no outcome yet.
+/// A result for an execution or job that already has its outcome is acknowledged and discarded.
+///
+/// Uses status filters on the UPDATEs to avoid TOCTOU races.
+async fn handle_result(
     log: &slog::Logger,
     context: &ApiContext,
-    job: &QueryJob,
-    results: Vec<JsonIterationOutput>,
+    execution_id: JobExecutionId,
+    result: RunResult,
 ) -> Result<(), ChannelError> {
     let now = context.clock.now();
-
-    let update = UpdateJob::terminate(JobStatus::Completed, now);
-
-    let updated = update.execute_if_either_status(
-        write_conn!(context),
-        job.id,
-        JobStatus::Running,
-        JobStatus::Unknown,
-    )?;
-
-    // Re-read job to get fresh timestamps (started, claimed) set during execution.
-    // The in-memory QueryJob was loaded at claim time before these fields were set.
-    let job = QueryJob::get(auth_conn!(context), job.id)?;
-
-    if updated == 0 {
-        if matches!(job.status, JobStatus::Completed | JobStatus::Processed) {
-            slog::debug!(log, "Job already completed (idempotent duplicate)"; "job_id" => ?job.id);
-            return Ok(());
-        }
-        if matches!(job.status, JobStatus::Failed | JobStatus::Canceled) {
-            discard_late_result(log, job.id, job.status);
-            return Ok(());
-        }
-        return Err(ChannelError::InvalidStateTransition {
-            job_id: job.id,
-            target: JobStatus::Completed,
-            current: job.status,
-        });
-    }
-
-    #[cfg(feature = "otel")]
-    {
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-            bencher_otel::JobStatusKind::Completed,
-        ));
-
-        let duration_secs = job.created.elapsed_secs(now);
-        bencher_otel::ApiMeter::record(
-            bencher_otel::ApiHistogram::JobCompleteDuration(job.priority),
-            duration_secs,
-        );
-    }
-
-    // Store output in blob storage (best-effort)
-    let job_output = bencher_json::runner::JsonJobOutput {
-        results,
-        error: None,
+    let grace_period = context.job_timeout_grace_period;
+    let (execution, job_executions) = {
+        let conn = auth_conn!(context);
+        let execution = QueryJobExecution::get(conn, execution_id)?;
+        let job_executions = JobExecutions::get(conn, execution.job_id)?;
+        (execution, job_executions)
     };
-    if let Err(e) = store_job_output(context, &job, &job_output).await {
-        slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);
-    }
+    let job = &job_executions.job;
 
-    let bencher_json::runner::JsonJobOutput { results, error: _ } = job_output;
-
-    // Process benchmark results into the report
-    if let Err(e) = job.process_results(log, context, results, now).await {
-        slog::error!(log, "Failed to process job results"; "job_id" => ?job.id, "error" => %e);
-        // Transition to Failed so startup recovery doesn't retry forever
-        let failed_update = UpdateJob::set_status(JobStatus::Failed, now);
-        if failed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed)? > 0
-        {
-            context.callbacks.fire(log, job.id);
+    if !execution.status.is_in_flight() || !is_in_progress(job.status) {
+        let duplicate = match &result {
+            RunResult::Completed(_) => execution.status == ExecutionStatus::Completed,
+            RunResult::Failed { .. } => execution.status == ExecutionStatus::Failed,
+            RunResult::Canceled => execution.status == ExecutionStatus::Canceled,
+        };
+        if duplicate {
+            slog::debug!(log, "Execution already has this result (idempotent duplicate)"; "job_id" => ?job.id, "execution_id" => ?execution_id);
+        } else {
+            discard_late_result(log, job.id, job.status);
         }
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-            bencher_otel::JobStatusKind::Failed,
-        ));
         return Ok(());
     }
 
-    // Transition to Processed on success
-    let processed_update = UpdateJob::set_status(JobStatus::Processed, now);
-    let updated =
-        processed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed)?;
-    if updated == 0 {
-        slog::info!(log, "Job already changed state during Processed transition"; "job_id" => ?job.id);
-    } else {
-        context.callbacks.fire(log, job.id);
-    }
-
-    #[cfg(feature = "otel")]
-    if updated > 0 {
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-            bencher_otel::JobStatusKind::Processed,
-        ));
-    }
-
-    Ok(())
-}
-
-/// Handle a Failed message: transition job from Claimed, Running, or Unknown to Failed.
-///
-/// Uses a status filter on the UPDATE to avoid TOCTOU races.
-async fn handle_failed(
-    log: &slog::Logger,
-    context: &ApiContext,
-    job: &QueryJob,
-    results: Vec<JsonIterationOutput>,
-    error: String,
-) -> Result<(), ChannelError> {
-    let now = context.clock.now();
-
-    let update = UpdateJob::terminate(JobStatus::Failed, now);
-
-    let updated = update.execute_if_any_status(
-        write_conn!(context),
-        job.id,
-        &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
-    )?;
-
-    if updated == 0 {
-        // Re-read the job to determine what happened
-        let current_job: QueryJob = schema::job::table
-            .filter(schema::job::id.eq(job.id))
-            .first(auth_conn!(context))
-            .map_err(resource_not_found_err!(Job, job.id))?;
-
-        if current_job.status == JobStatus::Failed {
-            slog::debug!(log, "Job already failed (idempotent duplicate)"; "job_id" => ?job.id);
-            return Ok(());
-        }
-        if current_job.status.has_run() {
-            discard_late_result(log, job.id, current_job.status);
-            return Ok(());
-        }
+    if matches!(result, RunResult::Completed(_)) && execution.status == ExecutionStatus::Sent {
         return Err(ChannelError::InvalidStateTransition {
             job_id: job.id,
-            target: JobStatus::Failed,
-            current: current_job.status,
+            execution_id,
+            target: ExecutionStatus::Completed,
+            current: execution.status,
         });
     }
 
-    #[cfg(feature = "otel")]
-    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-        bencher_otel::JobStatusKind::Failed,
-    ));
-
-    // Store output in blob storage (best-effort)
-    let job_output = bencher_json::runner::JsonJobOutput {
-        results,
-        error: Some(error),
-    };
-    if let Err(e) = store_job_output(context, job, &job_output).await {
-        slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);
+    // A silent execution's result is taken until its budget and the grace period run out.
+    if execution.status == ExecutionStatus::Unknown
+        && (execution.is_past_deadline(now, grace_period)
+            || job_executions.is_past_deadline(now, grace_period))
+    {
+        if end_job_now(context, job.id, JobStatus::Canceled).await? {
+            context.callbacks.fire(log, job.id);
+        }
+        discard_late_result(log, job.id, JobStatus::Canceled);
+        return Ok(());
     }
 
-    // Fired after the output is stored, so a receiver that reads the job finds it.
-    context.callbacks.fire(log, job.id);
+    // A `Failed` fails the job whatever `allow_failure` says, so a run that never started, ran out
+    // of time, or lost its runner is never a gap.
+    let (results, failure, fails_job) = match result {
+        RunResult::Canceled => {
+            return handle_canceled(log, context, execution_id, job.id).await;
+        },
+        RunResult::Completed(results) => {
+            let failure = run_failure(&results);
+            let fails_job = !job.config.allow_failure.unwrap_or_default();
+            (results, failure, fails_job)
+        },
+        RunResult::Failed { results, error } => (results, Some(error), true),
+    };
 
+    // Stored before the execution has its outcome, so a restart that finds it finds its output.
+    let output = JsonJobOutput {
+        results,
+        error: failure.clone(),
+    };
+    context
+        .oci_storage()
+        .job_output()
+        .put_execution(job.config.project, execution.uuid, &output)
+        .await?;
+
+    let status = if failure.is_some() {
+        ExecutionStatus::Failed
+    } else {
+        ExecutionStatus::Completed
+    };
+    // 1 transaction, so neither a claim nor a restart finds a failed execution whose job has an
+    // iteration to send.
+    let recorded = write_transaction!(context, |conn| {
+        // Read after the store, under the lock, so a heartbeat of another execution of the job
+        // never bills to a later time than this execution's end.
+        let now = context.clock.now();
+        let updated = UpdateJobExecution::end(status, now).execute_if_any_status(
+            conn,
+            execution_id,
+            &ExecutionStatus::IN_FLIGHT,
+        )?;
+        Ok::<_, diesel::result::Error>(if updated == 0 {
+            Recorded::Late
+        } else if let Some(error) = failure.filter(|_| fails_job) {
+            if end_job(conn, job.id, JobStatus::Failed, now)? {
+                Recorded::JobFailed(Box::new(JobExecutions::get(conn, job.id)?), error)
+            } else {
+                Recorded::JobEnded
+            }
+        } else {
+            sync_job_status(conn, job.id, now)?;
+            Recorded::Ended
+        })
+    })?;
+
+    match recorded {
+        Recorded::Late => discard_late_result(log, job.id, job.status),
+        Recorded::JobFailed(job_executions, error) => {
+            finish_failed_job(log, context, &job_executions, error).await;
+        },
+        Recorded::JobEnded => {
+            slog::info!(log, "Job already has its outcome"; "job_id" => ?job.id);
+        },
+        Recorded::Ended => settle_job(log, context, job.id).await?,
+    }
     Ok(())
+}
+
+/// What recording an execution's result did.
+enum Recorded {
+    /// The execution was no longer in flight, so its result is late.
+    Late,
+    /// The execution ended, and its job goes on or has its outcome.
+    Ended,
+    /// The execution failed its job, with this error.
+    JobFailed(Box<JobExecutions>, String),
+    /// The execution failed, and its job already had its outcome.
+    JobEnded,
+}
+
+/// A runner that acknowledges a cancel ends its execution, and its job if the job has no outcome
+/// yet.
+async fn handle_canceled(
+    log: &slog::Logger,
+    context: &ApiContext,
+    execution_id: JobExecutionId,
+    job_id: JobId,
+) -> Result<(), ChannelError> {
+    let ended = write_transaction!(context, |conn| {
+        let now = context.clock.now();
+        UpdateJobExecution::end(ExecutionStatus::Canceled, now).execute_if_any_status(
+            conn,
+            execution_id,
+            &ExecutionStatus::IN_FLIGHT,
+        )?;
+        end_job(conn, job_id, JobStatus::Canceled, now)
+    })?;
+    if ended {
+        context.callbacks.fire(log, job_id);
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+            bencher_otel::JobStatusKind::Canceled,
+        ));
+    }
+    Ok(())
+}
+
+/// Why a run the runner reported as completed failed, if it did: it has no result, or it exited
+/// non-zero, which a runner reports as completed under `allow_failure`.
+fn run_failure(results: &[JsonIterationOutput]) -> Option<String> {
+    if results.is_empty() {
+        return Some("The runner reported no result for the run".to_owned());
+    }
+    results
+        .iter()
+        .find(|result| result.exit_code != 0)
+        .map(|result| {
+            format!(
+                "Benchmark exited with non-zero exit code: {}",
+                result.exit_code
+            )
+        })
 }
 
 /// A runner result for a job that already has an outcome is acknowledged,
@@ -808,73 +814,6 @@ fn discard_late_result(log: &slog::Logger, job_id: JobId, status: JobStatus) {
     slog::warn!(log, "Discarding late runner result"; "job_id" => ?job_id, "status" => %status);
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerLateResultDiscarded);
-}
-
-/// Store job output in blob storage.
-async fn store_job_output(
-    context: &ApiContext,
-    job: &QueryJob,
-    job_output: &bencher_json::runner::JsonJobOutput,
-) -> Result<(), OciStorageError> {
-    let project_uuid = job.config.project;
-    context
-        .oci_storage()
-        .job_output()
-        .put(project_uuid, job.uuid, job_output)
-        .await
-}
-
-/// Handle a Canceled message: runner acknowledges cancellation, ensure job is in Canceled state.
-///
-/// Uses a status filter on the UPDATE to avoid TOCTOU races. If zero rows updated,
-/// re-reads to check whether the job is already Canceled (idempotent success)
-/// or already has another outcome (acknowledged and discarded).
-async fn handle_canceled(
-    log: &slog::Logger,
-    context: &ApiContext,
-    job_id: JobId,
-) -> Result<(), ChannelError> {
-    let now = context.clock.now();
-
-    // Try to transition from Claimed, Running, or Unknown to Canceled
-    let update = UpdateJob::terminate(JobStatus::Canceled, now);
-
-    let updated = update.execute_if_any_status(
-        write_conn!(context),
-        job_id,
-        &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
-    )?;
-
-    if updated > 0 {
-        context.callbacks.fire(log, job_id);
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-            bencher_otel::JobStatusKind::Canceled,
-        ));
-        return Ok(());
-    }
-
-    // Zero rows updated — check if already Canceled (idempotent) or invalid state
-    let job: QueryJob = schema::job::table
-        .filter(schema::job::id.eq(job_id))
-        .first(auth_conn!(context))
-        .map_err(resource_not_found_err!(Job, job_id))?;
-
-    if job.status == JobStatus::Canceled {
-        slog::debug!(log, "Job already canceled"; "job_id" => ?job_id);
-        return Ok(());
-    }
-    if job.status.has_run() {
-        discard_late_result(log, job_id, job.status);
-        return Ok(());
-    }
-
-    slog::warn!(log, "Invalid state transition to Canceled (concurrent state change)"; "job_id" => ?job_id, "current_status" => ?job.status);
-    Err(ChannelError::InvalidStateTransition {
-        job_id,
-        target: JobStatus::Canceled,
-        current: job.status,
-    })
 }
 
 // --- Job claiming ---
@@ -888,28 +827,116 @@ diesel::alias!(schema::job as job_ip: JobIp);
 /// Poll interval for long-polling (1 second)
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
 
-/// Attempt to claim a pending job with tier-based concurrency limits.
+/// OCI registry token TTL: 10 minutes (enough for image pull, short enough to limit exposure)
+const OCI_RUNNER_TOKEN_TTL: u32 = 600;
+
+/// A job's iteration sent to a runner as 1 execution.
+struct Claimed {
+    job: QueryJob,
+    execution: QueryJobExecution,
+    message: JsonClaimedJob,
+}
+
+/// Attempt to claim the next execution of a job with tier-based concurrency limits.
+///
+/// A job is eligible while it still has an iteration to send, none of its executions is in flight
+/// (`Sent`, `Running`, or `Unknown`), it has time left, and its spec is one of the runner's. Its
+/// iterations may go to different runners, one after another.
 ///
 /// Priority tiers:
 /// - Plus: Unlimited concurrent jobs
 /// - Free: 1 concurrent job per organization
 /// - Unclaimed: 1 concurrent job per source IP
 ///
-/// Returns `Ok(Some(job))` if a job was claimed, `Ok(None)` if no eligible jobs available.
-/// OCI registry token TTL: 10 minutes (enough for image pull, short enough to limit exposure)
-const OCI_RUNNER_TOKEN_TTL: u32 = 600;
-
+/// A job between its iterations is still in progress, so it holds its organization or address.
+/// Among eligible jobs, the highest tier goes first, then the job whose last execution went out
+/// longest ago, with a job that has none counting as the oldest, then the oldest job.
+///
+/// Returns `Ok(Some(claimed))` if an execution was claimed, `Ok(None)` if no eligible jobs available.
 async fn try_claim_job(
+    log: &slog::Logger,
     context: &ApiContext,
     runner_key: &RunnerAuth,
-) -> Result<Option<(QueryJob, JsonClaimedJob)>, HttpError> {
-    use schema::job::dsl::{created, id, organization_id, priority, source_ip, status};
+) -> Result<Option<Claimed>, HttpError> {
+    let now = context.clock.now();
+    // Jobs out of time are passed over, and fail once the lock is released.
+    let mut out_of_time = Vec::new();
+
+    // Acquire write lock for the entire read-check-update to prevent TOCTOU races
+    // where concurrent runners could bypass concurrency limits.
+    // Scoped so the lock is released before doing non-DB work (OCI token generation).
+    let claimed = {
+        let conn = write_conn!(context);
+        loop {
+            let next_job =
+                next_eligible_job(conn, runner_key.runner_id, &out_of_time).map_err(|e| {
+                    HttpError::for_internal_error(format!("Failed to query pending jobs: {e}"))
+                })?;
+            let Some(job) = next_job else {
+                break None;
+            };
+
+            let executions = QueryJobExecution::of_job(conn, job.id)
+                .map_err(resource_conflict_err!(Job, job))?;
+            let job_executions = JobExecutions { job, executions };
+            let budget = job_executions.budget_secs(now);
+            let Some(budget) = u32::try_from(budget)
+                .ok()
+                .and_then(|budget| Timeout::try_from(budget).ok())
+            else {
+                out_of_time.push(job_executions.job.id);
+                continue;
+            };
+            let JobExecutions { job, executions } = job_executions;
+
+            let execution = claim_execution(conn, &job, executions.len(), runner_key, budget, now)
+                .map_err(resource_conflict_err!(Job, job))?;
+            let json_spec = QuerySpec::get(conn, job.spec_id).map(QuerySpec::into_json)?;
+            break Some((job, execution, json_spec));
+        }
+    };
+
+    for job_id in out_of_time {
+        if let Err(e) = settle_job(log, context, job_id).await {
+            slog::error!(log, "Failed to end a job out of time"; "job_id" => ?job_id, "error" => %e);
+        }
+    }
+
+    let Some((job, execution, json_spec)) = claimed else {
+        return Ok(None);
+    };
+    let message = build_claimed_job(context, &job, &execution, runner_key, json_spec)?;
+    Ok(Some(Claimed {
+        job,
+        execution,
+        message,
+    }))
+}
+
+/// The next job with an iteration for the runner, other than those `passed_over`.
+fn next_eligible_job(
+    conn: &mut bencher_schema::context::DbConnection,
+    runner_id: RunnerId,
+    passed_over: &[JobId],
+) -> diesel::QueryResult<Option<QueryJob>> {
+    use diesel::{
+        NullableExpressionMethods as _,
+        dsl::{max, sql},
+    };
+    use schema::job::dsl::{claimed, created, id, organization_id, priority, source_ip, status};
+
+    // A job between its iterations is still Claimed or Running.
+    let in_progress = status
+        .eq(JobStatus::Pending)
+        .or(status.eq(JobStatus::Claimed))
+        .or(status.eq(JobStatus::Running));
 
     // Tier 1: Plus (priority >= 200) - no concurrency limit
     let tier_unlimited = priority.ge(Priority::Plus);
 
     // Tier 2: Free (priority 100-199) - one concurrent job per organization
-    // Block if the same org already has a Claimed or Running job
+    // Block a pending job if another job of the same org is Claimed or Running, and a job in
+    // progress only if one of them was claimed before it, so the first claimed always goes on.
     let tier_free_eligible = priority
         .ge(Priority::Free)
         .and(priority.lt(Priority::Plus))
@@ -921,11 +948,23 @@ async fn try_claim_job(
                         .eq(JobStatus::Claimed)
                         .or(job_org.field(status).eq(JobStatus::Running)),
                 )
-                .filter(job_org.field(organization_id).eq(organization_id)),
+                .filter(job_org.field(organization_id).eq(organization_id))
+                .filter(job_org.field(id).ne(id))
+                .filter(
+                    status.eq(JobStatus::Pending).or(job_org
+                        .field(claimed)
+                        .assume_not_null()
+                        .lt(claimed.assume_not_null())
+                        .or(job_org
+                            .field(claimed)
+                            .assume_not_null()
+                            .eq(claimed.assume_not_null())
+                            .and(job_org.field(id).lt(id)))),
+                ),
         )));
 
     // Tier 3: Unclaimed (priority < 100) - one concurrent job per source IP
-    // Block if the same source_ip already has a Claimed or Running job
+    // Block as for Free, by the jobs of the same source_ip.
     let tier_unclaimed_eligible = priority.lt(Priority::Free).and(not(exists(
         job_ip
             .filter(
@@ -934,7 +973,19 @@ async fn try_claim_job(
                     .eq(JobStatus::Claimed)
                     .or(job_ip.field(status).eq(JobStatus::Running)),
             )
-            .filter(job_ip.field(source_ip).eq(source_ip)),
+            .filter(job_ip.field(source_ip).eq(source_ip))
+            .filter(job_ip.field(id).ne(id))
+            .filter(
+                status.eq(JobStatus::Pending).or(job_ip
+                    .field(claimed)
+                    .assume_not_null()
+                    .lt(claimed.assume_not_null())
+                    .or(job_ip
+                        .field(claimed)
+                        .assume_not_null()
+                        .eq(claimed.assume_not_null())
+                        .and(job_ip.field(id).lt(id)))),
+            ),
     )));
 
     // Combined eligibility: any tier condition passes
@@ -945,62 +996,103 @@ async fn try_claim_job(
     // Spec filter: only claim jobs whose spec_id matches one of the runner's specs
     let spec_filter = schema::job::spec_id.eq_any(
         schema::runner_spec::table
-            .filter(schema::runner_spec::runner_id.eq(runner_key.runner_id))
+            .filter(schema::runner_spec::runner_id.eq(runner_id))
             .select(schema::runner_spec::spec_id),
     );
 
-    // Acquire write lock for the entire read-check-update to prevent TOCTOU races
-    // where concurrent runners could bypass concurrency limits.
-    // Scoped so the lock is released before doing non-DB work (OCI token generation).
-    let (query_job, json_spec) = {
-        let conn = write_conn!(context);
+    // The job still has an iteration to send: fewer executions than `iter`, at least 1.
+    let has_iteration_left = schema::job_execution::table
+        .filter(schema::job_execution::job_id.eq(id))
+        .count()
+        .single_value()
+        .assume_not_null()
+        .lt(sql::<diesel::sql_types::BigInt>(
+            "MAX(COALESCE(json_extract(job.config, '$.iter'), 1), 1)",
+        ));
 
-        // Find the highest-priority eligible pending job matching this runner's specs
-        let pending_job: Option<QueryJob> = schema::job::table
-            .filter(status.eq(JobStatus::Pending))
-            .filter(eligible)
-            .filter(spec_filter)
-            .order((priority.desc(), created.asc(), id.asc()))
-            .first(conn)
-            .optional()
-            .map_err(|e| {
-                HttpError::for_internal_error(format!("Failed to query pending jobs: {e}"))
-            })?;
+    // A job has at most 1 execution in flight, and nothing more is sent while one is silent.
+    let none_in_flight = not(exists(
+        schema::job_execution::table
+            .filter(schema::job_execution::job_id.eq(id))
+            .filter(schema::job_execution::status.eq_any(ExecutionStatus::IN_FLIGHT)),
+    ));
 
-        let Some(query_job) = pending_job else {
-            return Ok(None);
-        };
+    // Nothing more is sent for a job that an older server sent whole, under its own UUID.
+    let not_sent_whole = not(exists(
+        schema::job_execution::table
+            .filter(schema::job_execution::job_id.eq(id))
+            .filter(schema::job_execution::uuid.eq(schema::job::uuid)),
+    ));
 
-        // Claim the job under the same lock
-        let now = context.clock.now();
-        let update_job = UpdateJob::claim(runner_key.runner_id, now);
+    // When the job's last execution went out; a job with none sorts first.
+    let last_sent = schema::job_execution::table
+        .filter(schema::job_execution::job_id.eq(id))
+        .select(max(schema::job_execution::sent))
+        .single_value();
 
-        let updated = update_job
-            .execute_if_status(conn, query_job.id, JobStatus::Pending)
-            .map_err(resource_conflict_err!(Job, query_job))?;
-
-        // Look up the spec before releasing the lock
-        let json_spec = (updated > 0)
-            .then(|| QuerySpec::get(conn, query_job.spec_id).map(QuerySpec::into_json))
-            .transpose()?;
-
-        (query_job, json_spec)
-    };
-
-    if let Some(json_spec) = json_spec {
-        let claimed_job = build_claimed_job(context, query_job.clone(), runner_key, json_spec)?;
-        Ok(Some((query_job, claimed_job)))
-    } else {
-        // Defensive: the UPDATE matched 0 rows despite SELECT finding a pending job.
-        // Under the current single-writer lock this should not happen, but we
-        // handle it gracefully by returning None (no job claimed this iteration).
-        Ok(None)
-    }
+    schema::job::table
+        .filter(in_progress)
+        .filter(eligible)
+        .filter(spec_filter)
+        .filter(has_iteration_left)
+        .filter(none_in_flight)
+        .filter(not_sent_whole)
+        .filter(id.ne_all(passed_over))
+        .order((priority.desc(), last_sent.asc(), created.asc(), id.asc()))
+        .first(conn)
+        .optional()
 }
 
+/// Record the next iteration of `job` as an execution sent to the runner, and the runner as the
+/// job's latest. The job's first execution claims it.
+fn claim_execution(
+    conn: &mut bencher_schema::context::DbConnection,
+    job: &QueryJob,
+    iteration: usize,
+    runner_key: &RunnerAuth,
+    budget: Timeout,
+    now: bencher_json::DateTime,
+) -> diesel::QueryResult<QueryJobExecution> {
+    let insert = InsertJobExecution {
+        uuid: JobUuid::new(),
+        job_id: job.id,
+        report_id: job.report_id,
+        iteration: i32::try_from(iteration).unwrap_or(i32::MAX),
+        runner_id: runner_key.runner_id,
+        timeout: budget,
+        status: ExecutionStatus::Sent,
+        sent: now,
+        started: None,
+        last_heartbeat: now,
+    };
+    diesel::insert_into(schema::job_execution::table)
+        .values(&insert)
+        .execute(conn)?;
+    if job.status == JobStatus::Pending {
+        UpdateJob::claim(runner_key.runner_id, now).execute_if_status(
+            conn,
+            job.id,
+            JobStatus::Pending,
+        )?;
+    } else {
+        UpdateJob {
+            runner_id: Some(Some(runner_key.runner_id)),
+            modified: Some(now),
+            ..Default::default()
+        }
+        .execute(conn, job.id)?;
+    }
+    schema::job_execution::table
+        .filter(schema::job_execution::uuid.eq(insert.uuid))
+        .first(conn)
+}
+
+/// The `Job` message for 1 execution: the job's config as 1 iteration, with what is left of the
+/// job's timeout as its timeout, under the execution's UUID, and with a pull token of its own.
 fn build_claimed_job(
     context: &ApiContext,
-    query_job: QueryJob,
+    job: &QueryJob,
+    execution: &QueryJobExecution,
     runner_key: &RunnerAuth,
     json_spec: JsonSpec,
 ) -> Result<JsonClaimedJob, HttpError> {
@@ -1010,33 +1102,35 @@ fn build_claimed_job(
 
         // Record queue duration (time from creation to claim)
         let now = context.clock.now();
-        let queue_duration_secs = query_job.created.elapsed_secs(now);
+        let queue_duration_secs = job.created.elapsed_secs(now);
         bencher_otel::ApiMeter::record(
-            bencher_otel::ApiHistogram::JobQueueDuration(query_job.priority),
+            bencher_otel::ApiHistogram::JobQueueDuration(job.priority),
             queue_duration_secs,
         );
     }
 
-    let timeout = query_job.config.timeout;
     let oci_token = context
         .token_key
         .new_oci_runner(
             runner_key.runner_uuid,
             OCI_RUNNER_TOKEN_TTL,
-            Some(query_job.config.project.to_string()),
+            Some(job.config.project.to_string()),
             vec![OciAction::Pull],
         )
         .map_err(|e| {
             HttpError::for_internal_error(format!("Failed to generate OCI runner token: {e}"))
         })?;
 
+    let mut config = job.config.clone();
+    config.iter = Some(Iteration(1));
+    config.timeout = execution.timeout;
     Ok(JsonClaimedJob {
-        uuid: query_job.uuid,
+        uuid: execution.uuid,
         spec: json_spec,
-        config: query_job.config,
+        config,
         oci_token,
-        timeout,
-        created: query_job.created,
+        timeout: execution.timeout,
+        created: job.created,
     })
 }
 
@@ -1052,19 +1146,20 @@ enum ExecuteResult {
     ShuttingDown,
 }
 
-/// Spawn a heartbeat timeout for a job whose channel ended (client disconnect, execute error, or
-/// server shutdown) before the job finished, so the in-flight job is not orphaned: the runner can
-/// reconnect to another instance and resume within the grace period. `reason` is logged for context.
+/// Spawn a heartbeat timeout for an execution whose channel ended (client disconnect, execute
+/// error, or server shutdown) before it finished, so the execution in flight is not orphaned: the
+/// runner can reconnect to another instance and resume within the grace period. `reason` is
+/// logged for context.
 async fn spawn_inflight_heartbeat_timeout(
     log: &slog::Logger,
     context: &ApiContext,
     heartbeat_timeout: Duration,
-    job_id: JobId,
+    execution_id: JobExecutionId,
     reason: &str,
 ) -> Result<(), ChannelError> {
-    let job = QueryJob::get(auth_conn!(context), job_id)?;
-    if !job.status.has_run() {
-        slog::info!(log, "Channel ended ({reason}) for in-flight job, spawning heartbeat timeout"; "job_id" => ?job.id);
+    let execution = QueryJobExecution::get(auth_conn!(context), execution_id)?;
+    if execution.status.is_in_flight() {
+        slog::info!(log, "Channel ended ({reason}) for in-flight execution, spawning heartbeat timeout"; "job_id" => ?execution.job_id, "execution_id" => ?execution.id);
         JobTimeout {
             heartbeat: heartbeat_timeout,
             grace_period: context.job_timeout_grace_period,
@@ -1072,7 +1167,7 @@ async fn spawn_inflight_heartbeat_timeout(
         .spawn(
             log.clone(),
             context.database.connection.clone(),
-            job.id,
+            execution.id,
             &context.heartbeat_tasks,
             context.clock.clone(),
             context.callbacks.clone(),
@@ -1217,9 +1312,13 @@ pub async fn runner_channel(
 
         match claimed_job {
             Ok(PollOutcome::Claimed(claimed)) => {
-                let (query_job, claimed_job) = *claimed;
+                let Claimed {
+                    job: query_job,
+                    execution,
+                    message,
+                } = *claimed;
                 // Send Job to runner
-                let job_msg = ServerMessage::Job(Box::new(claimed_job));
+                let job_msg = ServerMessage::Job(Box::new(message));
                 let text = serde_json::to_string(&job_msg)
                     .map_err(|e| HttpError::for_internal_error(e.to_string()))?;
                 if tx.send(Message::Text(text.into())).await.is_err() {
@@ -1235,7 +1334,7 @@ pub async fn runner_channel(
                 match execute_loop(
                     &log,
                     context,
-                    &query_job,
+                    &execution,
                     &mut tx,
                     &mut rx,
                     heartbeat_timeout,
@@ -1256,7 +1355,7 @@ pub async fn runner_channel(
                             &log,
                             context,
                             heartbeat_timeout,
-                            query_job.id,
+                            execution.id,
                             "client disconnect",
                         )
                         .await?;
@@ -1282,7 +1381,7 @@ pub async fn runner_channel(
                             &log,
                             context,
                             heartbeat_timeout,
-                            query_job.id,
+                            execution.id,
                             "execute error",
                         )
                         .await?;
@@ -1556,6 +1655,8 @@ async fn notify_admins(
 
 /// Handle a terminal message (Completed/Failed/Canceled) received during Idle,
 /// which occurs when a runner reconnects with a pending result that was not acknowledged.
+/// The message names its execution, which lands the result on its own iteration even after the
+/// job's next execution went out, to this runner or another.
 async fn handle_idle_terminal<S>(
     log: &slog::Logger,
     context: &ApiContext,
@@ -1566,34 +1667,27 @@ async fn handle_idle_terminal<S>(
 where
     S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
 {
-    let job_uuid = match terminal_msg {
+    let (execution_uuid, result) = match terminal_msg {
         RunnerMessage::Completed {
-            job: job_uuid,
+            job: execution_uuid,
             results,
         } => {
-            slog::info!(log, "Received Completed during Idle (retry after reconnect)"; "job_uuid" => %job_uuid);
-            if let Some(job) = lookup_runner_job(log, context, runner_id, job_uuid).await? {
-                handle_completed(log, context, &job, results).await?;
-            }
-            job_uuid
+            slog::info!(log, "Received Completed during Idle (retry after reconnect)"; "job_uuid" => %execution_uuid);
+            (execution_uuid, RunResult::Completed(results))
         },
         RunnerMessage::Failed {
-            job: job_uuid,
+            job: execution_uuid,
             results,
             error,
         } => {
-            slog::info!(log, "Received Failed during Idle (retry after reconnect)"; "job_uuid" => %job_uuid, "error" => &error);
-            if let Some(job) = lookup_runner_job(log, context, runner_id, job_uuid).await? {
-                handle_failed(log, context, &job, results, error).await?;
-            }
-            job_uuid
+            slog::info!(log, "Received Failed during Idle (retry after reconnect)"; "job_uuid" => %execution_uuid, "error" => &error);
+            (execution_uuid, RunResult::Failed { results, error })
         },
-        RunnerMessage::Canceled { job: job_uuid } => {
-            slog::info!(log, "Received Canceled during Idle (retry after reconnect)"; "job_uuid" => %job_uuid);
-            if let Some(job) = lookup_runner_job(log, context, runner_id, job_uuid).await? {
-                handle_canceled(log, context, job.id).await?;
-            }
-            job_uuid
+        RunnerMessage::Canceled {
+            job: execution_uuid,
+        } => {
+            slog::info!(log, "Received Canceled during Idle (retry after reconnect)"; "job_uuid" => %execution_uuid);
+            (execution_uuid, RunResult::Canceled)
         },
         // Non-terminal messages are never passed in by the caller.
         RunnerMessage::Ready(_)
@@ -1604,8 +1698,15 @@ where
         },
     };
 
+    if let Some(execution) =
+        lookup_runner_execution(log, context, runner_id, execution_uuid).await?
+    {
+        handle_result(log, context, execution.id, result).await?;
+        bill_final_minutes(log, context, execution.job_id, &mut BillingState::new()).await;
+    }
+
     let ack = serde_json::to_string(&ServerMessage::Ack {
-        job: Some(job_uuid),
+        job: Some(execution_uuid),
     })?;
     tx.send(Message::Text(ack.into())).await?;
     Ok(())
@@ -1853,38 +1954,33 @@ fn update_channel_kind(channel: bencher_json::UpdateChannel) -> bencher_otel::Up
     }
 }
 
-/// Look up a job by UUID and verify it belongs to the given runner.
+/// Look up an execution by UUID and verify it was sent to the given runner.
 ///
-/// Returns `Ok(Some(job))` if found and owned by this runner,
-/// `Ok(None)` if not found or owned by a different runner (with a warning log).
-async fn lookup_runner_job(
+/// Returns `Ok(Some(execution))` if found and sent to this runner,
+/// `Ok(None)` if not found or sent to a different runner (with a warning log).
+async fn lookup_runner_execution(
     log: &slog::Logger,
     context: &ApiContext,
     runner_id: RunnerId,
-    job_uuid: JobUuid,
-) -> Result<Option<QueryJob>, ChannelError> {
-    let job: Option<QueryJob> = schema::job::table
-        .filter(schema::job::uuid.eq(job_uuid))
-        .first(auth_conn!(context))
-        .optional()?;
-
-    let Some(job) = job else {
-        slog::warn!(log, "Terminal message for unknown job during Idle"; "job_uuid" => %job_uuid);
+    execution_uuid: JobUuid,
+) -> Result<Option<QueryJobExecution>, ChannelError> {
+    let Some(execution) = QueryJobExecution::from_uuid(auth_conn!(context), execution_uuid)? else {
+        slog::warn!(log, "Terminal message for unknown job during Idle"; "job_uuid" => %execution_uuid);
         return Ok(None);
     };
 
-    if job.runner_id != Some(runner_id) {
-        slog::warn!(log, "Terminal message for job not owned by this runner"; "job_uuid" => %job_uuid);
+    if execution.runner_id != runner_id {
+        slog::warn!(log, "Terminal message for job not owned by this runner"; "job_uuid" => %execution_uuid);
         return Ok(None);
     }
 
-    Ok(Some(job))
+    Ok(Some(execution))
 }
 
 /// Outcome of polling for a job during the idle state.
 enum PollOutcome {
-    /// A job was claimed for this runner.
-    Claimed(Box<(QueryJob, JsonClaimedJob)>),
+    /// An execution of a job was claimed for this runner.
+    Claimed(Box<Claimed>),
     /// The poll deadline elapsed without claiming a job.
     Deadline,
     /// The server is shutting down; close the channel so `server.close()` can complete.
@@ -1940,9 +2036,9 @@ where
 {
     loop {
         if let Some((context, runner_key)) = claimant {
-            match try_claim_job(context, runner_key).await {
-                Ok(Some((query_job, claimed_job))) => {
-                    return Ok(PollOutcome::Claimed(Box::new((query_job, claimed_job))));
+            match try_claim_job(log, context, runner_key).await {
+                Ok(Some(claimed)) => {
+                    return Ok(PollOutcome::Claimed(Box::new(claimed)));
                 },
                 Ok(None) => {},
                 Err(e) => {
@@ -1984,14 +2080,14 @@ where
     }
 }
 
-/// Execute a job on the channel: handle messages until terminal or disconnect.
+/// Run an execution on the channel: handle messages until terminal or disconnect.
 ///
 /// Similar to the per-job WS handler but does not send close frames on terminal
-/// messages — the connection stays open for the next job cycle.
+/// messages: the connection stays open for the next execution.
 async fn execute_loop<S, R>(
     log: &slog::Logger,
     context: &ApiContext,
-    job: &QueryJob,
+    execution: &QueryJobExecution,
     tx: &mut S,
     rx: &mut R,
     heartbeat_timeout: Duration,
@@ -2025,13 +2121,13 @@ where
             Some(Ok(Some(msg_result))) => msg_result,
             Some(Ok(None)) => {
                 // Stream ended (client disconnected) — best-effort bill any remaining partial minute
-                bill_final_minutes(log, context, job.id, &mut billing_state).await;
+                bill_final_minutes(log, context, execution.job_id, &mut billing_state).await;
                 return Ok(ExecuteResult::Disconnected);
             },
             Some(Err(_elapsed)) => {
                 // Heartbeat timeout — best-effort bill any remaining partial minute before marking job
-                bill_final_minutes(log, context, job.id, &mut billing_state).await;
-                let reason = handle_timeout(log, context, job.id).await?;
+                bill_final_minutes(log, context, execution.job_id, &mut billing_state).await;
+                let reason = handle_timeout(log, context, execution.id).await?;
                 let reason_json = serde_json::to_string(&reason)?;
                 let close_frame = CloseFrame {
                     code: CloseCode::Normal,
@@ -2046,7 +2142,7 @@ where
             Ok(msg) => msg,
             Err(e) => {
                 slog::warn!(log, "WebSocket error during execution"; "error" => %e);
-                bill_final_minutes(log, context, job.id, &mut billing_state).await;
+                bill_final_minutes(log, context, execution.job_id, &mut billing_state).await;
                 return Ok(ExecuteResult::Disconnected);
             },
         };
@@ -2071,7 +2167,7 @@ where
                 );
 
                 let (response, close_reason) =
-                    handle_runner_message(log, context, job, runner_msg, &mut billing_state)
+                    handle_runner_message(log, context, execution, runner_msg, &mut billing_state)
                         .await?;
 
                 if !is_idle {
@@ -2089,7 +2185,7 @@ where
             },
             Message::Close(_) => {
                 slog::info!(log, "Channel closed by client during execution");
-                bill_final_minutes(log, context, job.id, &mut billing_state).await;
+                bill_final_minutes(log, context, execution.job_id, &mut billing_state).await;
                 return Ok(ExecuteResult::Disconnected);
             },
             Message::Ping(data) => {
@@ -2146,27 +2242,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn timeout_exceeded_cancels_job() {
-        let (status, reason) = timeout_decision(301, 300);
-        assert_eq!(status, JobStatus::Canceled);
-        assert_eq!(reason, CloseReason::JobTimeoutExceeded);
-    }
-
-    #[test]
-    fn within_timeout_marks_job_unknown() {
-        let (status, reason) = timeout_decision(100, 300);
-        assert_eq!(status, JobStatus::Unknown);
-        assert_eq!(reason, CloseReason::HeartbeatTimeout);
-    }
-
-    #[test]
-    fn exactly_at_limit_marks_job_unknown() {
-        let (status, reason) = timeout_decision(300, 300);
-        assert_eq!(status, JobStatus::Unknown);
-        assert_eq!(reason, CloseReason::HeartbeatTimeout);
-    }
-
     // --- elapsed_minutes tests (ceil division) ---
 
     #[test]
@@ -2221,15 +2296,15 @@ mod tests {
     fn billing_delta_not_started() {
         let mut job = test_job();
         job.started = None;
-        assert_eq!(BillingDelta::new(&job, DateTime::TEST), None);
+        assert_eq!(BillingDelta::new(&job, 0), None);
     }
 
     #[test]
     fn billing_delta_first_minute() {
-        // 0 elapsed seconds → 1 minute (ceiling), no last_billed → delta = 1
+        // 0 seconds of executions → 1 minute (ceiling), no last_billed → delta = 1
         let job = test_job();
         assert_eq!(
-            BillingDelta::new(&job, DateTime::TEST),
+            BillingDelta::new(&job, 0),
             Some(BillingDelta {
                 delta: 1,
                 minutes: 1,
@@ -2243,16 +2318,15 @@ mod tests {
         // Already billed minute 1, still in minute 1 → None
         let mut job = test_job();
         job.last_billed_minute = Some(1);
-        assert_eq!(BillingDelta::new(&job, DateTime::TEST), None);
+        assert_eq!(BillingDelta::new(&job, 0), None);
     }
 
     #[test]
     fn billing_delta_exactly_one_minute() {
         // 60 seconds → minute 1, last_billed = None (0) → delta = 1
         let job = test_job();
-        let now = DateTime::try_from(DateTime::TEST.timestamp() + 60).unwrap();
         assert_eq!(
-            BillingDelta::new(&job, now),
+            BillingDelta::new(&job, 60),
             Some(BillingDelta {
                 delta: 1,
                 minutes: 1,
@@ -2265,9 +2339,8 @@ mod tests {
     fn billing_delta_into_second_minute() {
         // 61 seconds → minute 2, last_billed = None (0) → delta = 2
         let job = test_job();
-        let now = DateTime::try_from(DateTime::TEST.timestamp() + 61).unwrap();
         assert_eq!(
-            BillingDelta::new(&job, now),
+            BillingDelta::new(&job, 61),
             Some(BillingDelta {
                 delta: 2,
                 minutes: 2,
@@ -2281,9 +2354,8 @@ mod tests {
         // 180 seconds → minute 3, last_billed = 1 → delta = 2
         let mut job = test_job();
         job.last_billed_minute = Some(1);
-        let now = DateTime::try_from(DateTime::TEST.timestamp() + 180).unwrap();
         assert_eq!(
-            BillingDelta::new(&job, now),
+            BillingDelta::new(&job, 180),
             Some(BillingDelta {
                 delta: 2,
                 minutes: 3,
@@ -2297,8 +2369,7 @@ mod tests {
         // 120 seconds → minute 2, last_billed = 2 → None
         let mut job = test_job();
         job.last_billed_minute = Some(2);
-        let now = DateTime::try_from(DateTime::TEST.timestamp() + 120).unwrap();
-        assert_eq!(BillingDelta::new(&job, now), None);
+        assert_eq!(BillingDelta::new(&job, 120), None);
     }
 
     #[test]
@@ -2307,8 +2378,7 @@ mod tests {
         // (can happen if clock skew or final billing already ran)
         let mut job = test_job();
         job.last_billed_minute = Some(5);
-        let now = DateTime::try_from(DateTime::TEST.timestamp() + 120).unwrap();
-        assert_eq!(BillingDelta::new(&job, now), None);
+        assert_eq!(BillingDelta::new(&job, 120), None);
     }
 
     #[test]
@@ -2316,7 +2386,7 @@ mod tests {
         let mut job = test_job();
         job.organization_id = OrganizationId::try_from_raw(42).unwrap();
         assert_eq!(
-            BillingDelta::new(&job, DateTime::TEST),
+            BillingDelta::new(&job, 0),
             Some(BillingDelta {
                 delta: 1,
                 minutes: 1,
@@ -2330,9 +2400,8 @@ mod tests {
         // 1 hour = 3600 seconds → minute 60, last_billed = 58 → delta = 2
         let mut job = test_job();
         job.last_billed_minute = Some(58);
-        let now = DateTime::try_from(DateTime::TEST.timestamp() + 3600).unwrap();
         assert_eq!(
-            BillingDelta::new(&job, now),
+            BillingDelta::new(&job, 3600),
             Some(BillingDelta {
                 delta: 2,
                 minutes: 60,

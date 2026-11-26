@@ -8,6 +8,10 @@ Runner からサーバーに送信されるメッセージ。
 | `paused`    | Runner はアイドル状態だが、一時停止の理由が解消するまで Job を受け付けない。サーバーはポーリングを保持し `no_job` で応答する | `reasons` (それぞれ `kind` は `raid` または `maintenance`)、`since`、および `ready` のすべてのフィールド |
 | `running`   | Job のセットアップが完了し、ベンチマークが開始する  | なし                                                                    |
 | `heartbeat` | 定期的な生存シグナル (約 1 秒に 1 回)             | なし                                                                    |
-| `completed` | ベンチマークが正常に完了した                      | `job` (Job UUID) と `results` (反復ごとの出力)                          |
-| `failed`    | ベンチマークが失敗した                            | `job` (Job UUID)、`results`、`error`                                    |
-| `canceled`  | サーバーからのキャンセルを確認応答する            | `job` (Job UUID)                                                        |
+| `completed` | ベンチマークが正常に完了した                      | `job` (`job` メッセージの UUID) と `results` (その実行の出力)           |
+| `failed`    | ベンチマークが失敗した                            | `job` (`job` メッセージの UUID)、`results`、`error`                     |
+| `canceled`  | サーバーからのキャンセルを確認応答する            | `job` (`job` メッセージの UUID)                                         |
+
+`job` メッセージの UUID は、Job ではなくその実行を指します。
+Runner はそれをそのまま返すため、結果はその実行を正確に指し示します。
+これは、同じ Job の別の実行が送信された後に結果が再送された場合でも同じです。

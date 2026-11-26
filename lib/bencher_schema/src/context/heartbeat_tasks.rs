@@ -3,13 +3,13 @@ use std::sync::Arc;
 use dashmap::DashMap;
 use tokio::task::AbortHandle;
 
-use crate::model::runner::JobId;
+use crate::model::runner::JobExecutionId;
 
-/// Tracks spawned heartbeat timeout tasks so they can be canceled
-/// when a runner reconnects or a job reaches a terminal state.
+/// Tracks spawned heartbeat timeout tasks, one per execution in flight, so they can be canceled
+/// when a runner reconnects or an execution reaches a terminal state.
 #[derive(Clone, Default)]
 pub struct HeartbeatTasks {
-    inner: Arc<DashMap<JobId, AbortHandle>>,
+    inner: Arc<DashMap<JobExecutionId, AbortHandle>>,
 }
 
 impl HeartbeatTasks {
@@ -17,24 +17,24 @@ impl HeartbeatTasks {
         Self::default()
     }
 
-    /// Cancel any existing timeout for this job, remove finished entries,
+    /// Cancel any existing timeout for this execution, remove finished entries,
     /// and insert the new abort handle.
-    pub fn insert(&self, job_id: JobId, handle: AbortHandle) {
-        // Cancel the previous timeout for this job, if any.
-        self.cancel(&job_id);
+    pub fn insert(&self, execution_id: JobExecutionId, handle: AbortHandle) {
+        // Cancel the previous timeout for this execution, if any.
+        self.cancel(&execution_id);
 
         // Opportunistically clean up finished tasks to prevent unbounded growth.
         // DashMap is unordered (HashMap-based), so we cannot short-circuit the
         // retain scan. This is acceptable because the map is expected to be small
-        // (one entry per active job on this server).
+        // (one entry per execution in flight on this server).
         self.inner.retain(|_, h| !h.is_finished());
 
-        self.inner.insert(job_id, handle);
+        self.inner.insert(execution_id, handle);
     }
 
-    /// Cancel a specific job's timeout (e.g., when the job reaches a terminal state).
-    pub fn cancel(&self, job_id: &JobId) {
-        if let Some((_, handle)) = self.inner.remove(job_id) {
+    /// Cancel a specific execution's timeout.
+    pub fn cancel(&self, execution_id: &JobExecutionId) {
+        if let Some((_, handle)) = self.inner.remove(execution_id) {
             handle.abort();
         }
     }
@@ -44,12 +44,12 @@ impl HeartbeatTasks {
 mod tests {
     use super::*;
 
-    fn job_id(raw: i32) -> JobId {
-        JobId::from_raw(raw)
+    fn execution_id(raw: i32) -> JobExecutionId {
+        JobExecutionId::from_raw(raw)
     }
 
     /// Spawn a task that sleeps forever and register it in the tracker.
-    fn spawn_sleeper(tasks: &HeartbeatTasks, id: JobId) -> AbortHandle {
+    fn spawn_sleeper(tasks: &HeartbeatTasks, id: JobExecutionId) -> AbortHandle {
         let handle = tokio::spawn(async {
             tokio::time::sleep(std::time::Duration::from_hours(1)).await;
         });
@@ -59,12 +59,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn insert_cancels_previous_task_for_same_job() {
+    async fn insert_cancels_previous_task_for_same_execution() {
         let tasks = HeartbeatTasks::new();
-        let id = job_id(1);
+        let id = execution_id(1);
 
         let first_handle = spawn_sleeper(&tasks, id);
-        // Insert a new task for the same job — should abort the first one.
+        // Insert a new task for the same execution: it aborts the first one.
         let _second_handle = spawn_sleeper(&tasks, id);
 
         // Give tokio a moment to propagate the abort.
@@ -78,7 +78,7 @@ mod tests {
     #[tokio::test]
     async fn cancel_aborts_task() {
         let tasks = HeartbeatTasks::new();
-        let id = job_id(2);
+        let id = execution_id(2);
 
         let handle = spawn_sleeper(&tasks, id);
         assert!(
@@ -97,14 +97,14 @@ mod tests {
         let tasks = HeartbeatTasks::new();
 
         // Insert a task that finishes immediately, then manually put its handle in the map.
-        let finished_id = job_id(10);
+        let finished_id = execution_id(10);
         let finished_handle = tokio::spawn(async {});
         let abort = finished_handle.abort_handle();
         finished_handle.await.expect("task should finish");
         tasks.inner.insert(finished_id, abort);
 
-        // Insert a live task for a different job — triggers cleanup.
-        let live_id = job_id(11);
+        // Insert a live task for a different execution, which triggers cleanup.
+        let live_id = execution_id(11);
         let _live_handle = spawn_sleeper(&tasks, live_id);
 
         // The finished entry should have been cleaned up.

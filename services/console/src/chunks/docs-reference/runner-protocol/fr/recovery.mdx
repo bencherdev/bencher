@@ -9,25 +9,36 @@ Tant que la connexion est ouverte, un délai d'attente de lecture détecte un Ru
 Seuls les messages de protocole valides réinitialisent le minuteur ;
 le JSON invalide, les trames ping/pong et les messages binaires ne le font pas.
 À l'expiration, un Job qui s'est exécuté plus longtemps que son délai d'attente plus un délai de grâce est marqué `canceled`,
-et sinon marqué `unknown` (le contact avec le Runner a été perdu).
+et sinon l'exécution est marquée `unknown` (le contact avec le Runner a été perdu).
+Aucune autre exécution du Job n'est envoyée tant qu'une exécution est `unknown`,
+et le Job est `unknown` tant qu'il n'a aucune autre exécution en cours.
 
 ### Délai d'attente strict du Job
 
 Le serveur impose une durée d'exécution maximale stricte, indépendante du comportement du Runner,
 de sorte qu'un Runner bogué ou compromis ne puisse pas s'exécuter indéfiniment en envoyant des heartbeats.
-Lorsque la limite (le délai d'attente du Job plus un délai de grâce) est dépassée,
-le Job est marqué `canceled` et le Runner reçoit un message `cancel`.
-La limite court à partir du démarrage du Job, ou de sa réclamation s'il n'a jamais démarré, et s'applique aussi à un Job `unknown`.
+Le délai d'attente du Job borne le temps passé dans les propres exécutions du Job, additionné :
+chaque exécution compte de son `running` jusqu'à son résultat,
+et le temps entre les exécutions, pendant lequel d'autres Jobs s'exécutent, ne compte pas.
+Chaque message `job` porte ce qui reste du délai d'attente du Job comme son délai d'attente.
+Lorsque la somme dépasse la limite (le délai d'attente du Job plus un délai de grâce),
+le Job est marqué `canceled` et son Runner reçoit un message `cancel`.
+Un Job dont le temps s'écoule avant sa dernière itération est marqué `failed`,
+avec une erreur qui indique combien de ses itérations ont été exécutées.
+Définissez `--job-timeout` pour un Job de nombreuses itérations.
 
 ### Récupération après déconnexion
 
-Si la connexion tombe alors qu'un Job est encore en cours,
+Si la connexion tombe alors qu'une exécution est encore en cours,
 le serveur planifie une vérification après le délai d'attente du heartbeat.
-Si le Runner s'est reconnecté et a repris ses heartbeats, le Job continue ;
-sinon, le Job est marqué `unknown`, ou `canceled` s'il avait dépassé le délai d'attente strict.
-Le serveur vérifie à nouveau un Job `unknown` à son échéance.
-Au démarrage, le serveur marque également les Jobs `claimed` orphelins comme `unknown`,
-replanifie les délais d'attente des Jobs en cours et `unknown`,
+Si le Runner s'est reconnecté et a repris ses heartbeats, l'exécution continue ;
+sinon, l'exécution est marquée `unknown`, ou le Job `canceled` s'il avait dépassé le délai d'attente strict.
+Le serveur vérifie à nouveau une exécution `unknown` à son échéance :
+le temps avec lequel elle a été envoyée plus le délai de grâce, compté à partir de son démarrage.
+Une exécution n'est jamais renvoyée à un autre Runner.
+Au démarrage, le serveur marque également comme `unknown` les exécutions orphelines envoyées mais jamais démarrées,
+replanifie les délais d'attente des exécutions en cours,
+laisse un Job entre ses exécutions en `running` pour sa prochaine exécution,
 et retraite les Jobs `completed` dont les résultats ont été stockés mais pas encore analysés ;
 un Job `completed` dont les résultats ont été perdus est marqué `unknown` afin que le Runner puisse les renvoyer.
 
@@ -36,10 +47,10 @@ un Job `completed` dont les résultats ont été perdus est marqué `unknown` af
 La reconnexion est prise en charge et idempotente.
 Renvoyer `running` pour un Job déjà en cours ne fait que rafraîchir sa vivacité,
 et renvoyer un message terminal `completed`, `failed` ou `canceled` est toujours sûr.
-Les messages terminaux transportent l'UUID du Job et reçoivent un `ack` ;
+Les messages terminaux transportent l'UUID de l'exécution et reçoivent un `ack` ;
 si la connexion tombe avant l'arrivée de l'`ack`,
 le Runner stocke le résultat et le renvoie lors de la prochaine connexion avant de redevenir inactif.
-Le résultat d'un Runner résout un Job `unknown`.
+Le résultat d'un Runner résout une exécution `unknown` jusqu'à son échéance, et son Job continue.
 Un Job `failed` ou `canceled` ne change plus jamais d'état : un résultat tardif est acquitté, pour que le Runner cesse de le renvoyer, puis ignoré.
 
 ### Aucune nouvelle tentative automatique

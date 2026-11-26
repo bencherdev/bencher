@@ -110,11 +110,19 @@ Glossary of terms for Bencher concepts.
   It can end failed or canceled instead, and it is unknown while the server has lost contact with its Runner.
   A completed Job's results are processed into a Report.
   Processed, failed, and canceled are terminal.
+- **Execution**:
+  One run of one Image in one fresh microVM on one Runner, and the unit a Runner is given.
+  A Job's iteration is 1 Execution.
+- **Iteration**:
+  What `--iter` counts.
+  For a Job, 1 Execution.
+  Different iterations of one Job may run on different Runners of the same Spec.
 - **Unknown**:
-  The Job state in which the server has lost contact with the Runner and does not yet know the outcome.
-  It resolves when the Runner speaks again or when the Job's deadline passes.
+  The state in which the server has lost contact with the Runner of an Execution and does not yet know its outcome.
+  A Job is unknown while it has an unknown Execution and no other Execution in flight.
+  It resolves when the Runner speaks again or when the Execution's deadline passes.
 - **Claim**:
-  A Runner claims a pending Job.
+  A Runner claims the next Execution of a Job.
   A Job declares the Spec it needs, and a Runner only claims Jobs for Specs it supports.
 - **Image**:
   An OCI container image of benchmark code and its dependencies.

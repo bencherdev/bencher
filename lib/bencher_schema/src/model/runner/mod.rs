@@ -27,17 +27,25 @@ const LAST_HEARTBEAT_INTERVAL_SECS: i64 = 300;
 
 pub mod job;
 pub mod job_callback;
+pub mod job_execution;
+pub mod job_outcome;
 pub mod runner_spec;
 mod source_ip;
 pub mod status;
 
 pub use job::{
     InsertJob, JobId, JobTimeout, PendingInsertJob, QueryJob, UpdateJob, check_minted_dispatch,
-    in_flight_jobs, mark_orphaned_claimed_jobs_unknown, reprocess_completed_jobs,
+    reprocess_completed_jobs,
 };
 pub use job_callback::{
     CallbackOutcome, HttpStatus, InsertJobCallback, QueryJobCallback, QueryJobCallbackView,
 };
+pub use job_execution::{
+    ExecutionStatus, InsertJobExecution, JobExecutionId, JobExecutions, QueryJobExecution,
+    UpdateJobExecution, end_job, end_job_now, in_flight_executions, jobs_between_executions,
+    mark_orphaned_sent_executions_unknown, sync_job_status,
+};
+pub use job_outcome::{finish_failed_job, settle_job};
 pub use runner_spec::{InsertRunnerSpec, QueryRunnerSpec, RunnerSpecId};
 pub use source_ip::SourceIp;
 pub use status::{PAUSE_NOTICE_HOURS, QueryRunnerStatus, RunnerNotice, RunnerReport, StatusChange};
