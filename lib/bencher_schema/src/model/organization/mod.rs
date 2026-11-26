@@ -84,15 +84,18 @@ impl QueryOrganization {
     ) -> Result<Self, HttpError> {
         // The user's organization should be created with the user's UUID.
         let user_uuid = auth_user.user.uuid;
-        if let Ok(query_organization) =
-            Self::find_user_organization(context, auth_user, user_uuid).await
+        let organization_uuid = OrganizationUuid::from(user_uuid);
+        let found = Self::from_uuid(auth_conn!(context), organization_uuid);
+        if let Ok(query_organization) = found
+            && query_organization
+                .try_allowed(&context.rbac, auth_user, Permission::View)
+                .is_ok()
         {
             return Ok(query_organization);
         }
 
         // The lookup, the creation limit, and the insert share one write transaction,
         // so only the request that creates the organization counts toward the limit.
-        let organization_uuid = OrganizationUuid::from(user_uuid);
         let user_id = auth_user.id;
         let inserted = write_transaction!(context, |conn| {
             let existing = schema::organization::table
@@ -137,24 +140,6 @@ impl QueryOrganization {
             .try_allowed(&context.rbac, &auth_user, Permission::View)
             .map_err(|e| {
                 resource_conflict_error(BencherResource::Organization, organization_uuid, e)
-            })?;
-        Ok(query_organization)
-    }
-
-    async fn find_user_organization(
-        context: &ApiContext,
-        auth_user: &AuthUser,
-        user_uuid: bencher_json::UserUuid,
-    ) -> Result<Self, HttpError> {
-        let query_organization = Self::from_uuid(auth_conn!(context), user_uuid.into())?;
-        query_organization
-            .try_allowed(&context.rbac, auth_user, Permission::View)
-            .map_err(|err| {
-                issue_error(
-                    "User cannot view own organization",
-                    &format!("User ({user_uuid}) cannot view own organization."),
-                    err,
-                )
             })?;
         Ok(query_organization)
     }
@@ -323,24 +308,76 @@ impl QueryOrganization {
         query_user: &QueryUser,
     ) -> Result<(), HttpError> {
         if self.is_claimed(auth_conn!(context))? {
-            return Err(unauthorized_error(format!(
-                "This organization ({}) has already been claimed.",
-                self.uuid
-            )));
+            return Err(self.already_claimed_error());
         }
+        if let Claim::Taken = self.try_claim(log, context, query_user).await? {
+            return Err(self.already_claimed_error());
+        }
+        Ok(())
+    }
 
-        Self::join(context, self.uuid, query_user).await?;
+    /// Claim the organization for the user, unless another user claimed it first.
+    /// The check for a claim and the user's `Leader` role share one write transaction,
+    /// so only one request claims the organization.
+    pub async fn try_claim(
+        &self,
+        log: &slog::Logger,
+        context: &ApiContext,
+        query_user: &QueryUser,
+    ) -> Result<Claim, HttpError> {
+        let organization_id = self.id;
+        let user_id = query_user.id;
+        let (claim, inserted) = write_transaction!(context, |conn| {
+            if QueryOrganizationRole::count_query(conn, organization_id)? == 0 {
+                let timestamp = DateTime::now();
+                diesel::insert_into(schema::organization_role::table)
+                    .values(&InsertOrganizationRole {
+                        user_id,
+                        organization_id,
+                        role: OrganizationRole::Leader,
+                        created: timestamp,
+                        modified: timestamp,
+                    })
+                    .execute(conn)?;
+                return Ok((Claim::Leader, true));
+            }
+            let role = schema::organization_role::table
+                .filter(schema::organization_role::organization_id.eq(organization_id))
+                .filter(schema::organization_role::user_id.eq(user_id))
+                .select(schema::organization_role::role)
+                .first::<OrganizationRole>(conn)
+                .optional()?;
+            let claim = if role == Some(OrganizationRole::Leader) {
+                Claim::Leader
+            } else {
+                Claim::Taken
+            };
+            Ok::<_, diesel::result::Error>((claim, false))
+        })
+        .map_err(resource_conflict_err!(
+            OrganizationRole,
+            (self.uuid, query_user.uuid)
+        ))?;
 
-        // Upgrade any pending Unclaimed jobs for this organization to Free priority
-        #[cfg(feature = "plus")]
-        self.upgrade_pending_jobs(log, context).await?;
+        if inserted {
+            // Upgrade any pending Unclaimed jobs for this organization to Free priority
+            #[cfg(feature = "plus")]
+            self.upgrade_pending_jobs(log, context).await?;
+
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserClaim);
+        }
         #[cfg(not(feature = "plus"))]
         let _ = log;
 
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserClaim);
+        Ok(claim)
+    }
 
-        Ok(())
+    fn already_claimed_error(&self) -> HttpError {
+        unauthorized_error(format!(
+            "This organization ({}) has already been claimed.",
+            self.uuid
+        ))
     }
 
     /// When an organization is claimed, upgrade all of its pending jobs
@@ -578,6 +615,16 @@ impl QueryOrganization {
             claimed,
         }
     }
+}
+
+/// How a claim of an organization ended.
+#[derive(Debug, Clone, Copy)]
+pub enum Claim {
+    /// The user is the `Leader` of the organization: this request claimed it,
+    /// or a concurrent request by the same user claimed it first.
+    Leader,
+    /// Another user claimed the organization first.
+    Taken,
 }
 
 pub(crate) enum GetOrInsertOrganization {

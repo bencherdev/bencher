@@ -23,6 +23,8 @@ use tokio::sync::Mutex;
 const ISSUER: &str = "http://localhost:3000";
 /// How long a connection waits out another's lock, as the server's own connections do.
 const BUSY_TIMEOUT_MS: u32 = 5_000;
+/// Long enough for a request to pass its reads and queue on the API's writer.
+const QUEUE: std::time::Duration = std::time::Duration::from_secs(1);
 
 /// A test server for running API integration tests.
 #[expect(
@@ -457,6 +459,40 @@ impl TestServer {
     /// Get the shared API context for direct access (e.g. OCI storage, clock).
     pub fn context(&self) -> &ApiContext {
         self.server.app_private()
+    }
+
+    /// Send each request while holding the API's writer, each batch once the batch before it has
+    /// queued on the writer, then let the writer go, and return each status and body in order.
+    /// The writer is a FIFO lock, so the requests write in the order of their batches.
+    #[expect(clippy::expect_used, reason = "test helper sending requests")]
+    pub async fn send_behind_the_writer(
+        &self,
+        batches: Vec<Vec<reqwest::RequestBuilder>>,
+    ) -> Vec<(reqwest::StatusCode, String)> {
+        let writer = Arc::clone(&self.context().database.connection)
+            .lock_owned()
+            .await;
+        let mut sends = tokio::task::JoinSet::new();
+        let mut i = 0;
+        for batch in batches {
+            for request in batch {
+                sends.spawn(async move {
+                    let resp = request.send().await.expect("Request failed");
+                    let status = resp.status();
+                    let body = resp.text().await.expect("Failed to read response");
+                    (i, status, body)
+                });
+                i += 1;
+            }
+            tokio::time::sleep(QUEUE).await;
+        }
+        drop(writer);
+        let mut responses = sends.join_all().await;
+        responses.sort_by_key(|(i, _, _)| *i);
+        responses
+            .into_iter()
+            .map(|(_, status, body)| (status, body))
+            .collect()
     }
 
     /// Get a database connection for test setup.
