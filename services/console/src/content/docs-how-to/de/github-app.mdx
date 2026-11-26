@@ -3,7 +3,7 @@ title: "Selbst gehostete GitHub App"
 description: "Erstellen Sie eine GitHub App, um Bencher Self-Hosted die Authentifizierung mit GitHub zu ermöglichen"
 heading: "So erstellen Sie eine selbst gehostete GitHub App"
 published: "2023-10-27T08:40:00Z"
-modified: "2026-10-28T05:53:42Z"
+modified: "2026-11-18T19:27:03Z"
 sortOrder: 9
 ---
 
@@ -56,7 +56,7 @@ Fügen Sie die `client_id` und das `client_secret` zu [dem `plus.github` Abschni
 
 ## Verknüpfte Repositorys
 
-Aktualisieren Sie den Bencher Self-Hosted API-Server und die Console auf `v0.6.16` oder neuer, bevor Sie diese Einstellungen ändern.
+Diese Einstellungen erfordern den Bencher Self-Hosted API-Server und die Console in `v0.6.18` oder neuer.
 
 Damit ein Projekt für seine abgelösten Läufe [ein GitHub-Repository verknüpfen][linked repository] kann,
 setzen Sie zusätzlich diese Einstellungen für die GitHub App:
@@ -76,12 +76,22 @@ setzen Sie zusätzlich diese Einstellungen für die GitHub App:
     - Geben Sie ein zufälliges Geheimnis ein und notieren Sie es (z.B. `0123456789abcdef0123456789abcdef`)
 - Berechtigungen
   - Repository-Berechtigungen
-    - Inhalte: `Lesen und Schreiben`
+    - Checks: `Lesen und Schreiben`
+    - Inhalte: `Nur lesen`
+    - Pull Requests: `Lesen und Schreiben`
   - Ereignisse abonnieren
     - Lassen Sie jedes Ereignis deaktiviert
 - Notieren Sie den Slug der App, den letzten Teil der URL ihrer öffentlichen Seite (z.B. `my-bencher-app` in `https://github.com/apps/my-bencher-app`)
 
 Fügen Sie den Slug, den privaten Schlüssel und das Webhook-Geheimnis als `app` zu [dem `plus.github` Abschnitt der Serverkonfiguration](/de/docs/reference/server-config/#plusgithub) hinzu.
+
+So aktualisieren Sie eine App, die eine frühere Version mit Inhalte: `Lesen und Schreiben` eingerichtet hat:
+
+1. Fügen Sie Checks und Pull Requests vor dem Upgrade hinzu.
+   GitHub bittet den Besitzer jeder Installation, sie zu genehmigen.
+2. Aktualisieren Sie den API-Server und die Console auf `v0.6.18` oder neuer.
+   Nach dem Upgrade kann ein Repository, dessen Installation die neuen Berechtigungen nicht genehmigt hat, nicht verknüpft werden, und Bencher kann darin nichts veröffentlichen.
+3. Ändern Sie Inhalte auf `Nur lesen`, als separate Änderung.
 
 [linked repository]: /de/docs/how-to/github-actions/#pull-requests-auf-dedizierter-hardware
 

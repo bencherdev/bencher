@@ -3,7 +3,7 @@ title: "셀프 호스팅 GitHub 앱"
 description: "Bencher Self-Hosted가 GitHub과 인증하도록 허용하는 GitHub 앱 생성"
 heading: "셀프 호스팅 GitHub 앱 생성 방법"
 published: "2023-10-27T08:40:00Z"
-modified: "2026-10-28T05:53:42Z"
+modified: "2026-11-18T19:27:03Z"
 sortOrder: 9
 ---
 
@@ -55,7 +55,7 @@ Bencher Self-Hosted를 사용하려면 [Bencher Plus Enterprise 요금제][bench
 
 ## 연결된 저장소
 
-이 설정을 변경하기 전에 Bencher Self-Hosted API 서버와 콘솔을 `v0.6.16` 이상으로 업그레이드하세요.
+이 설정에는 `v0.6.18` 이상의 Bencher Self-Hosted API 서버와 콘솔이 필요합니다.
 
 프로젝트가 분리된 실행을 위해 [GitHub 저장소를 연결][linked repository]할 수 있게 하려면 GitHub 앱에 다음도 설정합니다.
 
@@ -74,12 +74,22 @@ Bencher Self-Hosted를 사용하려면 [Bencher Plus Enterprise 요금제][bench
     - 임의의 시크릿을 입력하고 기재해 두세요 (예: `0123456789abcdef0123456789abcdef`)
 - 권한
   - 저장소 권한
-    - 콘텐츠: `읽기 및 쓰기`
+    - Checks: `읽기 및 쓰기`
+    - 콘텐츠: `읽기 전용`
+    - Pull requests: `읽기 및 쓰기`
   - 이벤트 구독
     - 모든 이벤트를 체크하지 않은 상태로 두기
 - 앱의 슬러그, 즉 공개 페이지 URL의 마지막 부분을 기재해 두세요 (예: `https://github.com/apps/my-bencher-app`의 `my-bencher-app`)
 
 슬러그, 비공개 키, 웹훅 시크릿을 [서버 구성의 `plus.github` 섹션](/ko/docs/reference/server-config/#plusgithub)에 `app`으로 추가합니다.
+
+이전 버전에서 콘텐츠: `읽기 및 쓰기`로 설정한 앱을 업데이트하려면:
+
+1. 업그레이드 전에 Checks와 Pull requests를 추가합니다.
+   GitHub는 각 설치의 소유자에게 이를 승인하도록 요청합니다.
+2. API 서버와 콘솔을 `v0.6.18` 이상으로 업그레이드합니다.
+   업그레이드 후, 설치가 새 권한을 승인하지 않은 저장소는 연결할 수 없으며, Bencher는 그 저장소에 게시할 수 없습니다.
+3. 별도의 변경으로 콘텐츠를 `읽기 전용`으로 변경합니다.
 
 [linked repository]: /ko/docs/how-to/github-actions/#베어-메탈에서의-pull-requests
 

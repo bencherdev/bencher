@@ -19,7 +19,11 @@ les résultats seront également ajoutés à la pull request en tant que comment
 Tous les travaux d'un Projet sur la pull request partagent ce seul commentaire, avec une ligne de Rapport pour chaque travail.
 Cela nécessite que le jeton ait [le scope `pull-requests` avec les permissions `write`][github token permissions].
 Les résultats seront également toujours ajoutés au résumé du travail.
-Avec [le drapeau `--detach`](/fr/docs/explanation/images/#--detach), l'exécution détachée ne publie aucun commentaire et n'écrit aucun résumé du travail, et [le rattachement avec `--job`](/fr/docs/explanation/images/#--job-uuid) complète la vérification GitHub qu'elle a démarrée (voir [l'option `--ci-callback-token`](#--ci-callback-token-token)).
+Avec [le drapeau `--detach`](/fr/docs/explanation/images/#--detach), le workflow ne publie rien, n'écrit aucun résumé du travail et n'a besoin d'aucune permission pour le jeton.
+À la place, `bencher run` envoie la pull request avec le Job,
+et Bencher publie la vérification GitHub et le commentaire dans le [dépôt lié](/fr/docs/how-to/github-actions/#pull-requests-sur-matériel-dédié) du Projet avec sa propre application GitHub.
+Les travaux détachés d'un Projet sur une pull request partagent un commentaire de l'application GitHub de Bencher,
+distinct du commentaire des travaux sans `--detach`.
 
 Avec deux lignes ou plus, le commentaire affiche un tableau de résumé de chaque Rapport avec chacun de sa Branche, de son Banc d'essai et de son Adaptateur qui diffère entre les Rapports, et son statut (`Pending`, le nombre d'Alertes, `No Alerts` ou `Failed`).
 Les lignes sont dans l'ordre de démarrage des Rapports, numérotées à partir de 1, comme la Console liste les Rapports d'une exécution.

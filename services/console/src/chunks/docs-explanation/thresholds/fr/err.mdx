@@ -4,6 +4,8 @@
 
 Optionnellement, génère une erreur lorsqu'une Alerte est déclenchée.
 Une Alerte est générée lorsqu'une nouvelle [Métrique][metric] est en dessous d'une Limite Inférieure ou au-dessus d'une Limite Supérieure.
+Ce drapeau entre en conflit avec [le drapeau `--detach`][detach], car une exécution détachée se termine avant que son Rapport existe.
+Avec [l'option `--github-actions`][github actions], une Alerte dans une exécution détachée fait plutôt échouer sa vérification GitHub.
 
 ### Suppression des Alertes
 Parfois, il peut être utile de supprimer les Alertes pour un Benchmark particulier.
@@ -23,3 +25,5 @@ Si vous retirez le suffixe et revenez au nom original du Benchmark,
 alors les choses reprendront là où vous vous étiez arrêté.
 
 [metric]: /fr/docs/explanation/benchmarking/#metric
+[detach]: /fr/docs/explanation/images/#--detach
+[github actions]: /fr/docs/explanation/bencher-run/#--github-actions-github_token

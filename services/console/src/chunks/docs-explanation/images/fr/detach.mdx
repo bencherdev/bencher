@@ -3,9 +3,19 @@
 <br />
 
 Se détache après avoir soumis le [Job sur matériel dédié][job], sans attendre sa complétion.
+Avec [l'option `--github-actions`][github actions], Bencher publie la vérification GitHub et le commentaire de pull request
+dans le [dépôt lié][linked repository] du Projet lorsque le Job se termine.
+Pour envoyer toute autre requête lorsque le Job se termine, utilisez [l'option `--callback-url`][callback url].
 Cette option nécessite que [l'option `--image`][image] soit définie.
-Cette option entre en conflit avec [l'option `--job-poll-interval`][job poll interval].
+Cette option entre en conflit avec [l'option `--job-poll-interval`][job poll interval]
+et [le drapeau `--error-on-alert`][error on alert].
+Une exécution détachée se termine avant que son Rapport existe,
+et avec `--github-actions`, une Alerte fait échouer la vérification GitHub.
 
 [job]: /fr/docs/explanation/bare-metal/#job
+[github actions]: /fr/docs/explanation/bencher-run/#--github-actions-github_token
+[linked repository]: /fr/docs/how-to/github-actions/#pull-requests-sur-matériel-dédié
+[callback url]: #--callback-url-url
 [image]: #--image-image
 [job poll interval]: #--job-poll-interval-seconds
+[error on alert]: /fr/docs/explanation/thresholds/#--error-on-alert

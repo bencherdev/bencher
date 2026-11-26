@@ -69,7 +69,7 @@ pub struct JsonProjectGitHub {
     pub linked_repository: Option<JsonLinkedRepository>,
 }
 
-/// A project's linked repository, which its dispatches go to.
+/// A project's linked repository, which Bencher posts a detached run's check and comment to.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

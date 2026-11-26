@@ -4,6 +4,8 @@
 
 Opcionalmente, apresente erro quando um Alerta for gerado./de/
 Um Alerta é gerado quando uma nova [Métrica][metric] está abaixo de um Limite de Limite Inferior ou acima de um Limite de Limite Superior.
+Esta flag entra em conflito com [a flag `--detach`][detach], porque uma execução desanexada termina antes de seu Relatório existir.
+Com [a opção `--github-actions`][github actions], um Alerta em uma execução desanexada faz falhar a sua Verificação do GitHub em vez disso.
 
 ### Suprimindo Alertas
 Às vezes, pode ser útil suprimir Alertas para um Benchmark específico./de/
@@ -23,3 +25,5 @@ Se você remover o sufixo e retornar ao nome original do Benchmark,/de/
 então tudo continuará de onde parou.
 
 [metric]: /pt/docs/explanation/benchmarking/#metric
+[detach]: /pt/docs/explanation/images/#--detach
+[github actions]: /pt/docs/explanation/bencher-run/#--github-actions-github_token

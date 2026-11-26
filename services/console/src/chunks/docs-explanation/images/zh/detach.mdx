@@ -3,9 +3,16 @@
 <br />
 
 在提交裸机 [Job][job] 后分离，而不等待其完成。
+使用 [`--github-actions` 选项][github actions]时，Job 完成后，Bencher 会将 GitHub 检查和拉取请求评论发布到项目的[关联仓库][linked repository]。
+要在 Job 完成时发送任何其他请求，请使用 [`--callback-url` 选项][callback url]。
 此选项要求设置 [`--image` 选项][image]。
-此选项与 [`--job-poll-interval` 选项][job poll interval]冲突。
+此选项与 [`--job-poll-interval` 选项][job poll interval]和 [`--error-on-alert` 标志][error on alert]冲突。
+分离的运行会在其报告存在之前退出，而使用 `--github-actions` 时，警报会使 GitHub 检查失败。
 
 [job]: /zh/docs/explanation/bare-metal/#job
+[github actions]: /zh/docs/explanation/bencher-run/#--github-actions-github_token
+[linked repository]: /zh/docs/how-to/github-actions/#裸机上的-pull-requests
+[callback url]: #--callback-url-url
 [image]: #--image-image
 [job poll interval]: #--job-poll-interval-seconds
+[error on alert]: /zh/docs/explanation/thresholds/#--error-on-alert

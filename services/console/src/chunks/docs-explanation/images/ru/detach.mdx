@@ -3,9 +3,19 @@
 <br />
 
 Отсоединиться после отправки [Job на выделенном оборудовании][job], не ожидая его завершения.
+С [опцией `--github-actions`][github actions] Bencher публикует проверку GitHub и комментарий к запросу на вытягивание
+в [связанный репозиторий][linked repository] Проекта, когда Job завершается.
+Чтобы отправить любой другой запрос при завершении Job, используйте [опцию `--callback-url`][callback url].
 Эта опция требует, чтобы была задана [опция `--image`][image].
-Эта опция конфликтует с [опцией `--job-poll-interval`][job poll interval].
+Эта опция конфликтует с [опцией `--job-poll-interval`][job poll interval]
+и [флагом `--error-on-alert`][error on alert].
+Отсоединенный запуск завершается до того, как появится его Отчет,
+и с `--github-actions` предупреждение приводит к неудаче проверки GitHub.
 
 [job]: /ru/docs/explanation/bare-metal/#job
+[github actions]: /ru/docs/explanation/bencher-run/#--github-actions-github_token
+[linked repository]: /ru/docs/how-to/github-actions/#pull-requests-на-выделенном-оборудовании
+[callback url]: #--callback-url-url
 [image]: #--image-image
 [job poll interval]: #--job-poll-interval-seconds
+[error on alert]: /ru/docs/explanation/thresholds/#--error-on-alert

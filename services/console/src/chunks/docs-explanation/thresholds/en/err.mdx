@@ -4,6 +4,8 @@
 
 Optionally error when an Alert is generated.
 An Alert is generated when a new [Metric][metric] is below a Lower Boundary Limit or above an Upper Boundary Limit.
+This flag conflicts with [the `--detach` flag][detach], because a detached run exits before its Report exists.
+With [the `--github-actions` option][github actions], an Alert in a detached run fails its GitHub Check instead.
 
 ### Suppressing Alerts
 Sometimes it can be useful to suppress Alerts for a particular Benchmark.
@@ -23,3 +25,5 @@ If you remove the suffix and return to the original Benchmark name,
 then things will pick right back up where you left off.
 
 [metric]: /docs/explanation/benchmarking/#metric
+[detach]: /docs/explanation/images/#--detach
+[github actions]: /docs/explanation/bencher-run/#--github-actions-github_token

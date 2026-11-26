@@ -3,7 +3,7 @@ title: "自托管的GitHub应用"
 description: "创建一个GitHub应用，使Bencher自托管能进行GitHub身份验证"
 heading: "如何创建一个自托管的GitHub应用"
 published: "2023-10-27T08:40:00Z"
-modified: "2026-10-28T05:53:42Z"
+modified: "2026-11-18T19:27:03Z"
 sortOrder: 9
 ---
 
@@ -55,7 +55,7 @@ sortOrder: 9
 
 ## 关联的仓库
 
-在更改这些设置之前，请先将 Bencher 自托管 API 服务器和控制台升级到 `v0.6.16` 或更高版本。
+这些设置需要 `v0.6.18` 或更高版本的 Bencher 自托管 API 服务器和控制台。
 
 要让项目能为其分离的运行[关联 GitHub 仓库][linked repository]，还需为 GitHub 应用设置以下内容：
 
@@ -74,12 +74,22 @@ sortOrder: 9
     - 输入一个随机密钥并记下它（例如：`0123456789abcdef0123456789abcdef`）
 - 权限
   - 仓库权限
-    - 内容：`读写`
+    - 检查：`读写`
+    - 内容：`只读`
+    - 拉取请求：`读写`
   - 订阅事件
     - 不勾选任何事件
 - 记下应用的 slug，即其公开页面URL的最后一部分（例如：`https://github.com/apps/my-bencher-app` 中的 `my-bencher-app`）
 
 在服务器配置的[`plus.github`部分](/zh/docs/reference/server-config/#plusgithub)，将 slug、私人钥匙和 webhook 密钥添加为 `app`。
+
+要更新由早期版本设置为 内容：`读写` 的应用：
+
+1. 在升级之前添加检查和拉取请求权限。
+   GitHub 会请求每个安装的所有者批准它们。
+2. 将 API 服务器和控制台升级到 `v0.6.18` 或更高版本。
+   升级之后，安装尚未批准新权限的仓库无法关联，Bencher 也无法向其发布。
+3. 将内容更改为 `只读`，作为一次单独的更改。
 
 [linked repository]: /zh/docs/how-to/github-actions/#裸机上的-pull-requests
 

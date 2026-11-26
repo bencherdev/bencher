@@ -19,7 +19,9 @@ GitHub Check를 생성할 수 없는 경우, `bencher run`은 경고를 기록�
 pull request에서 프로젝트의 모든 작업은 이 하나의 댓글을 공유하며, 각 작업마다 하나의 보고서 행이 있습니다.
 이 경우 토큰에 [`write` 권한을 가진 `pull-requests` 범위가 필요합니다][github token permissions].
 결과는 항상 작업 요약에도 추가됩니다.
-[`--detach` 플래그](/ko/docs/explanation/images/#--detach)를 사용하면 분리된 실행은 댓글을 게시하지 않고 작업 요약도 작성하지 않으며, [`--job` 연결](/ko/docs/explanation/images/#--job-uuid)이 시작된 GitHub Check를 완료합니다([`--ci-callback-token` 옵션](#--ci-callback-token-token) 참조).
+[`--detach` 플래그](/ko/docs/explanation/images/#--detach)를 사용하면 워크플로는 아무것도 게시하지 않고 작업 요약도 작성하지 않으며 토큰 권한도 필요하지 않습니다.
+대신 `bencher run`이 pull request를 Job과 함께 보내고, Bencher가 자체 GitHub 앱으로 프로젝트의 [연결된 저장소](/ko/docs/how-to/github-actions/#베어-메탈에서의-pull-requests)에 GitHub Check와 댓글을 게시합니다.
+pull request에서 프로젝트의 분리된 작업은 Bencher의 GitHub 앱이 작성한 하나의 댓글을 공유하며, 이 댓글은 `--detach` 없이 실행한 작업의 댓글과 별개입니다.
 
 행이 두 개 이상이면, 댓글에는 각 보고서와, 보고서마다 다른 브랜치, 테스트베드, 어댑터, 그리고 상태(`Pending`, 경고 수, `No Alerts` 또는 `Failed`)를 보여주는 요약 표가 표시됩니다.
 행은 보고서가 시작된 순서대로 정렬되며, 콘솔이 실행의 보고서를 나열하는 것처럼 1부터 번호가 매겨집니다.

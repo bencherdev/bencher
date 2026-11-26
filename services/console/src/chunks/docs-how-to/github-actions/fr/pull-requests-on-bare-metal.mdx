@@ -1,5 +1,4 @@
 import PullRequestsOnBareMetalSubmitCode from "../pull-requests-on-bare-metal-submit-code.mdx";
-import PullRequestsOnBareMetalAttachCode from "../pull-requests-on-bare-metal-attach-code.mdx";
 
 ## Pull Requests sur matériel dédié
 
@@ -12,8 +11,9 @@ alors que le GitHub Actions Runner ne le fait pas.
 
 Une fois que vous êtes passé à Bencher Bare Metal,
 vous ne voulez pas qu'un job GitHub Actions tourne pendant qu'il attend Bencher.
-Pour résoudre ce problème, Bencher utilise un workflow scindé afin que GitHub Actions
-puisse attendre les Jobs Bencher Bare Metal de manière asynchrone.
+Pour résoudre ce problème, le workflow soumet le Job Bencher Bare Metal et se termine.
+Lorsque le Job se termine, Bencher lui-même complète la vérification GitHub
+et publie les résultats en tant que commentaire sur la Pull Request.
 
 L'exemple suivant est destiné aux branches au sein du **même** dépôt.
 Utilisez ce modèle conjointement avec
@@ -31,17 +31,21 @@ Tout d'abord, liez le dépôt au Projet, une seule fois :
    puis rouvrez `Connections` et cliquez sur `Link repository`.
 
 Lier un dépôt nécessite le rôle Maintainer sur le Projet, que détiennent les Leaders de l'Organisation et les administrateurs du serveur, et l'accès en push au dépôt.
-L'application GitHub de Bencher a besoin d'un accès en lecture et en écriture au contenu du dépôt,
-car `repository_dispatch` n'accepte rien de moins.
-Lorsqu'un Job se termine, Bencher crée un jeton pour le dépôt lié
-et envoie l'événement `repository_dispatch` avec ce jeton.
+L'application GitHub de Bencher a besoin d'un accès en lecture et en écriture aux checks et aux pull requests du dépôt,
+et d'un accès en lecture à son contenu, elle ne peut donc pas pousser dans le dépôt.
+Bencher crée un jeton pour le dépôt lié
+et publie avec ce jeton la vérification GitHub et le commentaire sur la Pull Request.
 Si la carte GitHub affiche `Disconnected`, cliquez sur `Install on GitHub` et redonnez à l'application l'accès au dépôt,
 ou levez la suspension de son installation, et le lien se rétablit.
-Pour Bencher Self-Hosted, le serveur a besoin de [sa propre application GitHub][github app] et de la version `v0.6.16` ou ultérieure.
+Pour Bencher Self-Hosted, le serveur a besoin de [sa propre application GitHub][github app] et de la version `v0.6.18` ou ultérieure.
+
+> 🐰 Quiconque possède la clé d'API du Projet peut faire publier par Bencher une vérification GitHub ou un commentaire de Pull Request
+> dans le dépôt lié, sur n'importe quel commit ou Pull Request de ce dépôt.
+> Gardez le `BENCHER_API_KEY` secret comme tout autre secret.
 
 <PullRequestsOnBareMetalSubmitCode />
 
-1. Créez un premier fichier `workflow` GitHub Actions.
+1. Créez un fichier `workflow` GitHub Actions.
    (ex : `.github/workflows/pr_bare_metal_benchmarks.yml`)
 2. Nommez ce workflow.
    (ex : `name: Bare Metal PR Benchmarks with Bencher`)
@@ -54,9 +58,9 @@ Pour Bencher Self-Hosted, le serveur a besoin de [sa propre application GitHub][
    Pour gérer les PRs de Forks, voir [Pull Requests depuis des Forks][pull requests from forks] ci-dessus.
    (ex : `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
 6. Définissez [les permissions pour le `GITHUB_TOKEN`][github token permissions]
-   sur `write` pour les `checks`.
-   Le premier workflow démarre la vérification GitHub et ne publie aucun commentaire.
-   (ex : `permissions: checks: write`)
+   sur `read` pour `contents`.
+   Bencher publie la vérification GitHub et le commentaire, donc le workflow n'a besoin d'aucun accès en écriture.
+   (ex : `permissions: contents: read`)
 7. Définissez le type de machine sur laquelle le job s'exécutera.
    Il ne fait que soumettre le Job, donc une petite machine suffit.
    (ex : `runs-on: ubuntu-latest`)
@@ -93,8 +97,9 @@ Pour Bencher Self-Hosted, le serveur a besoin de [sa propre application GitHub][
 18. Définissez le drapeau `--detach` pour vous terminer dès que le Job est soumis.
     Voir [la documentation `--detach`][detach option] pour plus de détails.
     (ex : `--detach`)
-19. Définissez l'option `--github-actions` sur le token d'authentification de l'API GitHub pour démarrer la vérification GitHub en utilisant
-    [la variable d'environnement `GITHUB_TOKEN` de GitHub Actions][github token].
+19. Définissez l'option `--github-actions` sur [la variable d'environnement `GITHUB_TOKEN` de GitHub Actions][github token].
+    Avec `--detach`, `bencher run` envoie le dépôt, le commit de tête et le numéro de la Pull Request
+    depuis l'événement GitHub Actions avec le Job, et ne fait aucune requête à GitHub avec le token.
     Voir [la documentation `--github-actions`][github actions option] pour plus de détails.
     (ex : `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
 20. Spécifiez la commande de benchmark à exécuter dans l'image.
@@ -102,75 +107,40 @@ Pour Bencher Self-Hosted, le serveur a besoin de [sa propre application GitHub][
     Voir [la commande de benchmark][command argument] pour un aperçu complet.
     (ex : `bencher mock`)
 
-Sur GitHub Enterprise Server, ou pour garder votre propre jeton, définissez l'option `--ci-callback-token`
-sur un [jeton d'accès personnel à granularité fine][github fine-grained token]
-avec un accès en lecture et en écriture au contenu du dépôt, enregistré comme secret du **dépôt** `BENCHER_CALLBACK_TOKEN`.
-Bencher envoie l'événement `repository_dispatch` avec ce jeton, que le Projet ait un dépôt lié ou non.
-Voir [la documentation `--ci-callback-token`][ci callback token option] pour plus de détails.
-(ex : `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
+Bencher refuse de soumettre le Job s'il ne peut pas publier les résultats :
+le serveur n'a pas d'application GitHub, le Projet n'est pas réclamé,
+ou le Projet n'a pas de dépôt lié et connecté pour le dépôt du workflow.
+Après la soumission, Bencher démarre la vérification GitHub sur le commit de tête.
+Lorsque le Job se termine, Bencher complète la vérification GitHub puis écrit le commentaire sur la Pull Request,
+comme le décrit [l'option `--github-actions`][github actions option].
+La vérification GitHub se conclut en échec si le Rapport a une Alerte ou si le Job échoue,
+donc [le drapeau `--error-on-alert`][alert err] n'est pas nécessaire, et il est en conflit avec `--detach`.
+Les options qui décident de la façon dont les résultats sont publiés, comme `--ci-only-on-alert` et `--ci-id`, vont dans la même commande,
+et Bencher les conserve avec le Job.
 
-<PullRequestsOnBareMetalAttachCode />
+La vérification GitHub appartient à l'application GitHub de Bencher, pas à GitHub Actions.
+Si une règle de protection de branche ou un ensemble de règles [exige la vérification GitHub][github required status checks],
+définissez l'application GitHub de Bencher comme sa source.
+Sinon, GitHub attend une vérification GitHub de GitHub Actions qui ne vient jamais.
 
-1. Créez un second fichier `workflow` GitHub Actions sur votre branche par défaut.
-   GitHub n'exécute un workflow `repository_dispatch` que depuis la branche par défaut,
-   donc tant que ce fichier n'y est pas, la vérification GitHub que démarre le premier workflow reste en cours.
-   (ex : `.github/workflows/pr_bare_metal_benchmarks_attach.yml`)
-2. Nommez ce workflow.
-   (ex : `name: Attach Bare Metal PR Benchmarks with Bencher`)
-3. Exécutez sur des événements `repository_dispatch` du type `bencher_run`.
-   Consultez la [documentation de GitHub Actions `on`][github actions on]
-   et la [documentation de GitHub Actions `repository_dispatch`][github repository_dispatch] pour un aperçu complet.
-   (ex : `on: repository_dispatch: types: [bencher_run]`)
-4. Créez un `job` GitHub Actions.
-   (ex : `jobs: attach_pr_benchmarks`)
-5. Définissez [les permissions pour le `GITHUB_TOKEN`][github token permissions]
-   sur `write` pour les `checks` et `pull-requests`.
-   (ex : `permissions: checks: write pull-requests: write`)
-6. Définissez le type de machine sur laquelle le job s'exécutera.
-   Le Job est déjà terminé, donc ce job ne fait que publier les résultats.
-   (ex : `runs-on: ubuntu-latest`)
-7. Installez le Bencher CLI en utilisant [l'Action GitHub][bencher cli github action].
-   Aucun checkout n'est nécessaire.
-   (ex : `uses: bencherdev/bencher@main`)
-8. Transmettez l'UUID du Job de l'événement par [une variable d'environnement intermédiaire][github intermediate environment variable],
-   jamais directement dans `run:`, comme le recommandent les consignes de GitHub contre l'injection de script.
-   (ex : `env: JOB_UUID: ${{ github.event.client_payload.bencher.job }}`)
-9. Utilisez la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
-   pour vous rattacher au Job.
-   Voir [la sous-commande CLI `bencher run`][bencher run] pour un aperçu complet.
-   (ex : `bencher run`)
-10. Définissez l'option `--project` sur le slug du projet.
-    Si le dépôt a plus d'un Projet, transmettez `github.event.client_payload.bencher.project` de la même façon par une variable d'environnement
-    et mettez-la entre guillemets (ex : `--project "$PROJECT_SLUG"`).
-    Voir [la documentation `--project`][project option] pour plus de détails.
-    (ex : `--project project-abc4567-wxyz123456789`)
-11. Définissez l'option `--key` sur le secret du **dépôt** `BENCHER_API_KEY`.
-    Voir [la documentation `--key`][key option] pour plus de détails.
-    (ex : `--key '${{ secrets.BENCHER_API_KEY }}'`)
-12. Définissez l'option `--job` sur l'UUID du Job entre guillemets.
-    Voir [la documentation `--job`][job option] pour un aperçu complet.
-    (ex : `--job "$JOB_UUID"`)
-13. Définissez le drapeau `--error-on-alert` pour échouer la commande si une Alerte est générée.
-    L'événement ne transporte que des données, donc les options qui décident de la façon dont les résultats sont publiés, comme `--ci-only-on-alert` et `--ci-public-links`, vont aussi ici, dans le second workflow.
-    Voir [la documentation `--error-on-alert`][alert err] pour un aperçu complet.
-    (ex : `--error-on-alert`)
-14. Définissez l'option `--github-actions` sur le token d'authentification de l'API GitHub pour poster les résultats en tant que vérification GitHub et commentaire sur la Pull Request en utilisant
-    [la variable d'environnement `GITHUB_TOKEN` de GitHub Actions][github token].
-    Un `--ci-number` ou un `--ci-id` explicite ici a priorité sur l'événement.
-    Voir [la documentation `--github-actions`][github actions option] pour plus de détails.
-    (ex : `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+Si l'installation de l'application GitHub de Bencher n'a pas approuvé ses nouvelles permissions, Bencher ne peut pas publier les résultats.
+Le Job enregistre l'échec avec un lien pour les approuver,
+et `bencher run` affiche le lien s'il voit l'échec avant de se terminer.
+Une fois les permissions approuvées, l'exécution suivante publie ses résultats.
+
+Un Job sans Pull Request, par exemple issu d'un événement `push`, obtient une vérification GitHub et aucun commentaire.
+Il en va de même pour un Job dont le commit n'est plus la tête de la Pull Request.
+Si la Pull Request a aussi des exécutions du Projet sans `--detach`,
+elle reçoit pour elles un second commentaire, du bot GitHub Actions.
 
 [github actions runner]: https://github.com/actions/runner
 [github self-hosted runners]: https://docs.github.com/fr/actions/reference/runners/self-hosted-runners
 
-[github actions on]: https://docs.github.com/fr/actions/using-workflows/workflow-syntax-for-github-actions#on
-[github repository_dispatch]: https://docs.github.com/fr/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
 [github token permissions]: https://docs.github.com/fr/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
-[github fine-grained token]: https://docs.github.com/fr/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+[github required status checks]: https://docs.github.com/fr/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github default environment variables]: https://docs.github.com/fr/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 [github token]: https://docs.github.com/fr/actions/security-guides/automatic-token-authentication
-[github intermediate environment variable]: https://docs.github.com/fr/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
 
 [bare metal]: /fr/docs/explanation/bare-metal/
 [github app]: /fr/docs/how-to/github-app/
@@ -187,8 +157,6 @@ Voir [la documentation `--ci-callback-token`][ci callback token option] pour plu
 [entrypoint option]: /fr/docs/explanation/images/#--entrypoint-entrypoint
 [detach option]: /fr/docs/explanation/images/#--detach
 [github actions option]: /fr/docs/explanation/bencher-run/#--github-actions-github_token
-[ci callback token option]: /fr/docs/explanation/bencher-run/#--ci-callback-token-token
-[job option]: /fr/docs/explanation/images/#--job-uuid
 [alert err]: /fr/docs/explanation/thresholds/#--error-on-alert
 [command argument]: /fr/docs/explanation/bencher-run/#commande-de-benchmark
 

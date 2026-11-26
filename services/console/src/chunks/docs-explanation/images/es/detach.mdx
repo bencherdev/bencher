@@ -3,9 +3,19 @@
 <br />
 
 Se desacopla después de enviar el [Job en hardware dedicado][job], sin esperar a su finalización.
+Con [la opción `--github-actions`][github actions], Bencher publica la Verificación de GitHub y el comentario en la solicitud de extracción
+en el [repositorio vinculado][linked repository] del Proyecto cuando el Job termina.
+Para enviar cualquier otra petición cuando el Job termine, use [la opción `--callback-url`][callback url].
 Esta opción requiere que [la opción `--image`][image] esté establecida.
-Esta opción entra en conflicto con [la opción `--job-poll-interval`][job poll interval].
+Esta opción entra en conflicto con [la opción `--job-poll-interval`][job poll interval]
+y [la bandera `--error-on-alert`][error on alert].
+Una ejecución desacoplada termina antes de que exista su Informe,
+y con `--github-actions`, una Alerta hace fallar la Verificación de GitHub.
 
 [job]: /es/docs/explanation/bare-metal/#job
+[github actions]: /es/docs/explanation/bencher-run/#--github-actions-github_token
+[linked repository]: /es/docs/how-to/github-actions/#pull-requests-en-hardware-dedicado
+[callback url]: #--callback-url-url
 [image]: #--image-image
 [job poll interval]: #--job-poll-interval-seconds
+[error on alert]: /es/docs/explanation/thresholds/#--error-on-alert

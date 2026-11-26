@@ -1939,7 +1939,7 @@ export interface JsonPubUser {
 	slug: Slug;
 }
 
-/** A project's linked repository, which its dispatches go to. */
+/** A project's linked repository, which Bencher posts a detached run's check and comment to. */
 export interface JsonLinkedRepository {
 	full_name: string;
 	status: LinkedRepositoryStatus;
