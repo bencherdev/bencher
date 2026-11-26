@@ -37,11 +37,6 @@ pub enum RunError {
         POSTING_VERSION = super::POSTING_VERSION
     )]
     DetachNeedsPostingServer(String),
-    #[cfg(feature = "plus")]
-    #[error(
-        "`--detach` with `--github-actions` gets its GitHub Check and pull request comment from Bencher only on github.com. On GitHub Enterprise Server, drop `--github-actions` and send a callback with `--callback-url`, `--callback-header`, and `--callback-body`."
-    )]
-    DetachNeedsGitHubCom,
 
     #[error("{0}")]
     Branch(#[from] super::branch::BranchError),

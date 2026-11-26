@@ -3,7 +3,7 @@
 use std::{path::Path, sync::Arc};
 
 use bencher_billing::Biller;
-use bencher_github_client::{GitHubApp, GitHubClient};
+use bencher_github_client::{GitHubApp, GitHubClient, GitHubHost};
 use bencher_google_client::GoogleClient;
 use bencher_json::{
     is_bencher_cloud,
@@ -38,6 +38,10 @@ pub enum PlusError {
     LicenseSelfHosted(bencher_license::LicenseError),
     #[error("Failed to handle Bencher Cloud licensing: {0}")]
     LicenseCloud(bencher_license::LicenseError),
+    #[error("Invalid GitHub server URL: {0}")]
+    GitHubServerUrl(bencher_json::ValidError),
+    #[error("The GitHub server URL must not hold a user name or a password")]
+    GitHubServerUrlCredentials,
     #[error("Failed to set up the GitHub App: {0}")]
     GitHubApp(bencher_github_client::GitHubAppError),
     #[error("Failed to create Google OAuth redirect URL: {0}")]
@@ -208,6 +212,7 @@ fn github(
     github: Option<JsonGitHub>,
 ) -> Result<(Option<GitHubClient>, Option<Arc<GitHubApp>>), PlusError> {
     let Some(JsonGitHub {
+        server_url,
         client_id,
         client_secret,
         app,
@@ -215,6 +220,12 @@ fn github(
     else {
         return Ok((None, None));
     };
+    let host = server_url
+        .map(|url| url.try_into().map_err(PlusError::GitHubServerUrl))
+        .transpose()?
+        .map(github_host)
+        .transpose()?
+        .unwrap_or_default();
     let github_app = app
         .map(
             |JsonGitHubApp {
@@ -222,21 +233,44 @@ fn github(
                  private_key,
                  webhook_secret,
              }| {
-                GitHubApp::new(client_id.clone(), slug, &private_key, webhook_secret).map(Arc::new)
+                GitHubApp::new_with_host(
+                    client_id.clone(),
+                    slug,
+                    &private_key,
+                    webhook_secret,
+                    host.clone(),
+                )
+                .map(Arc::new)
             },
         )
         .transpose()
         .map_err(PlusError::GitHubApp)?;
     Ok((
-        Some(GitHubClient::new(client_id, client_secret)),
+        Some(GitHubClient::new_with_host(client_id, client_secret, &host)),
         github_app,
     ))
 }
 
+/// A server URL with a user name or a password would put the credential in every GitHub URL,
+/// message, and log line.
+fn github_host(server_url: Url) -> Result<GitHubHost, PlusError> {
+    if server_url.username().is_empty() && server_url.password().is_none() {
+        Ok(GitHubHost::new(server_url))
+    } else {
+        Err(PlusError::GitHubServerUrlCredentials)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use bencher_github_client::test_server::{app_key, install_crypto_provider};
-    use bencher_json::system::config::{JsonGitHub, JsonGitHubApp};
+    use bencher_github_client::{
+        GitHubHost,
+        test_server::{app_key, install_crypto_provider},
+    };
+    use bencher_json::{
+        Jwt,
+        system::config::{JsonGitHub, JsonGitHubApp},
+    };
 
     use super::{PlusError, github};
 
@@ -244,6 +278,7 @@ mod tests {
 
     fn config(private_key: &str) -> JsonGitHub {
         JsonGitHub {
+            server_url: None,
             client_id: "Iv1.0123456789abcdef".parse().unwrap(),
             client_secret: "client-secret".parse().unwrap(),
             app: Some(JsonGitHubApp {
@@ -267,5 +302,58 @@ mod tests {
         assert!(client.is_some());
         assert_eq!(app.unwrap().webhook_secret().as_ref(), WEBHOOK_SECRET);
         assert!(matches!(error, PlusError::GitHubApp(_)), "{error}");
+    }
+
+    // Kills a config that takes a server URL with a user name or a password, which every GitHub URL,
+    // message, and log line would then carry, and a refusal that repeats either.
+    #[test]
+    fn the_config_refuses_a_server_url_with_credentials() {
+        install_crypto_provider();
+        let (private_key, _public_key) = app_key();
+        for server_url in [
+            "https://muriel@github.example.com",
+            "https://muriel:hunter2@github.example.com",
+            "https://:hunter2@github.example.com",
+        ] {
+            let mut config = config(private_key.as_ref());
+            config.server_url = Some(server_url.parse().unwrap());
+
+            let error = github(Some(config)).unwrap_err();
+
+            assert!(
+                matches!(error, PlusError::GitHubServerUrlCredentials),
+                "{server_url}: {error}"
+            );
+            let message = error.to_string();
+            assert!(
+                !message.contains("muriel") && !message.contains("hunter2"),
+                "{message}"
+            );
+        }
+    }
+
+    // Kills a config that drops the server URL, or that hands it to the app or to sign-in alone.
+    #[test]
+    fn the_config_puts_the_app_and_sign_in_on_the_server_url() {
+        install_crypto_provider();
+        let (private_key, _public_key) = app_key();
+        let enterprise = GitHubHost::new("https://github.example.com".parse().unwrap());
+        for (server_url, expected) in [
+            (None, GitHubHost::default()),
+            (Some("https://github.example.com/"), enterprise),
+        ] {
+            let mut config = config(private_key.as_ref());
+            config.server_url = server_url.map(|url| url.parse().unwrap());
+
+            let (client, app) = github(Some(config)).unwrap();
+
+            assert_eq!(app.unwrap().host(), &expected, "{server_url:?}");
+            let authorize = client.unwrap().auth_url(Jwt::test_token());
+            assert_eq!(
+                authorize.as_str().split('?').next(),
+                Some(expected.authorize().as_str()),
+                "{server_url:?}"
+            );
+        }
     }
 }

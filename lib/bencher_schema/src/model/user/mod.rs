@@ -320,6 +320,21 @@ impl InsertUser {
         invited: bool,
         method: &str,
     ) -> Result<(), HttpError> {
+        self.notify_with_github(log, conn, messenger, console_url, invited, method, None)
+    }
+
+    /// With the user's profile on the server's GitHub, for a user who signed up with GitHub.
+    #[expect(clippy::too_many_arguments, reason = "notify plus the GitHub profile")]
+    pub fn notify_with_github(
+        &self,
+        log: &Logger,
+        conn: &mut DbConnection,
+        messenger: &Messenger,
+        console_url: &Url,
+        invited: bool,
+        method: &str,
+        github: Option<&Url>,
+    ) -> Result<(), HttpError> {
         if !self.admin {
             let admins = QueryUser::get_admins(conn)?;
             for admin in admins {
@@ -334,6 +349,7 @@ impl InsertUser {
                         email: self.email.clone().into(),
                         invited,
                         method: method.to_owned(),
+                        github: github.cloned(),
                     })),
                 };
                 messenger.send(log, message);

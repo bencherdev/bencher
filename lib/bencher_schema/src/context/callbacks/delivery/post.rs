@@ -26,6 +26,7 @@ use super::{
 };
 use crate::{
     model::{
+        organization::license::any_valid_license,
         project::{ProjectId, linked_repository::QueryLinkedRepository, report::QueryReport},
         runner::{JobId, PostOutcome, QueryJobGitHub},
     },
@@ -62,6 +63,9 @@ impl Poster<'_> {
         let Some((post, report)) = self.load(log, job_id, kind).await else {
             return;
         };
+        if !self.licensed(log, &post).await {
+            return;
+        }
         if let Some(finish) = post.finish {
             self.post(log, post, finish, report).await;
         } else if post.github.check_run_id.is_none() {
@@ -179,10 +183,42 @@ impl Poster<'_> {
         Ok(Some((post, report)))
     }
 
+    /// Whether the server may post to its GitHub. An unlicensed post stays pending, so a restart
+    /// with the license back posts it.
+    async fn licensed(&self, log: &Logger, post: &Post) -> bool {
+        let Some(github) = self.0.github.as_ref() else {
+            return true;
+        };
+        let host = github.app.host();
+        if host.is_github_com() {
+            return true;
+        }
+        let job = post.claim.job_uuid;
+        let Some(mut conn) = self
+            .0
+            .shutdown
+            .run_until_cancelled(self.0.read_connection(log, job))
+            .await
+        else {
+            return false;
+        };
+        match any_valid_license(&mut conn, &github.licensor, self.0.clock.now()) {
+            Ok(true) => true,
+            Ok(false) => {
+                slog::warn!(log, "GitHub post skipped: a GitHub Enterprise Server needs a Bencher Plus Enterprise license"; "job" => %job, "host" => %host);
+                false
+            },
+            Err(e) => {
+                slog::error!(log, "GitHub post skipped: failed to read the server's licenses"; "job" => %job, "error" => %e);
+                false
+            },
+        }
+    }
+
     /// Create the job's check in progress. A start that fails leaves the post to create the check
     /// with its conclusion, unless no post could ever succeed.
     async fn start(&self, log: &Logger, post: &Post) {
-        let Some(app) = self.0.github_app.as_deref() else {
+        let Some(app) = self.0.github_app() else {
             return;
         };
         let link = match self.post_link(log, post).await {
@@ -235,7 +271,7 @@ impl Poster<'_> {
     /// completed is not completed again by the next, and a report that one attempt could not read
     /// is read again by the next.
     async fn post(&self, log: &Logger, mut post: Post, finish: Finish, report: QueryReport) {
-        let Some(app) = self.0.github_app.clone() else {
+        let Some(app) = self.0.github_app().cloned() else {
             self.settle(
                 log,
                 &post,

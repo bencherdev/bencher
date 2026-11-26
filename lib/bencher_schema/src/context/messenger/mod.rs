@@ -10,9 +10,6 @@ pub use email::Email;
 pub use message::Message;
 use slog::{Logger, info};
 
-#[cfg(feature = "plus")]
-pub const GITHUB_OAUTH2: &str = "GitHub OAuth2";
-
 #[derive(Debug, Clone, Default)]
 pub enum Messenger {
     #[default]

@@ -210,7 +210,10 @@ export const commitBootstrap = (
 	},
 	...(fields.repository === undefined
 		? {}
-		: { github_repository: fields.repository }),
+		: {
+				github_repository: fields.repository,
+				github_repository_url: `https://github.com/${fields.repository}`,
+			}),
 	organization: { uuid: "org-uuid", name: "Pompeii LLC", slug: "pompeii-llc" },
 	permissions: {
 		view: true,

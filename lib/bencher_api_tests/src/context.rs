@@ -182,6 +182,25 @@ impl TestServer {
         .await
     }
 
+    /// Create a new test server whose GitHub App is on a GitHub Enterprise Server with its root at
+    /// `root`, with an injectable clock that logs to `log`.
+    #[cfg(feature = "plus")]
+    pub async fn new_with_github_enterprise(
+        root: url::Url,
+        clock: bencher_json::Clock,
+        log: slog::Logger,
+    ) -> Self {
+        let host = bencher_github_client::GitHubHost::new(root);
+        Self::new_with_options(TestServerOptions {
+            clock: Some(clock),
+            log: Some(log),
+            github_client: Some(crate::helpers::github_client_on(&host)),
+            github_app: Some(Arc::new(crate::github::app_on(host))),
+            ..TestServerOptions::default()
+        })
+        .await
+    }
+
     #[cfg(feature = "plus")]
     async fn build(
         upload_timeout: Option<u64>,
@@ -510,8 +529,9 @@ impl TestServer {
     }
 }
 
-/// The tasks a test server runs, each with the server's GitHub App if it has one: callbacks to
-/// the recording sender, and the commit title task.
+/// The tasks a test server runs, each with the server's GitHub App if it has one, and the licensor
+/// that reads whether a GitHub Enterprise Server may be used: callbacks to the recording sender,
+/// and the commit title task.
 #[cfg(feature = "plus")]
 fn background_tasks(
     log: &slog::Logger,
@@ -525,22 +545,36 @@ fn background_tasks(
     bencher_schema::context::Callbacks,
     bencher_schema::context::CommitTitles,
 ) {
-    let callbacks = bencher_schema::context::Callbacks::new_with_github_app(
+    // Test builds trust the test license key, which always loads.
+    let github = github_app.zip(bencher_license::Licensor::self_hosted().ok());
+    let callbacks = bencher_schema::context::Callbacks::new_with_github_posts(
         Arc::clone(&database.connection),
         database.auth_pool.clone(),
         callback_key.clone(),
         callback_sender.clone(),
         shutdown.clone(),
         clock.clone(),
-        github_app.cloned(),
+        github
+            .clone()
+            .map(|(app, licensor)| bencher_schema::context::GitHubPosts {
+                app: Arc::clone(app),
+                console_url: bencher_json::BENCHER_URL.clone(),
+                licensor,
+            }),
     );
-    let commit_titles = bencher_schema::context::CommitTitles::spawn(
-        log.clone(),
-        Arc::clone(&database.connection),
-        database.auth_pool.clone(),
-        shutdown.clone(),
-        clock.clone(),
-        github_app.cloned(),
+    let commit_titles = github.map_or_else(
+        bencher_schema::context::CommitTitles::none,
+        |(app, licensor)| {
+            bencher_schema::context::CommitTitles::spawn(
+                log.clone(),
+                Arc::clone(&database.connection),
+                database.auth_pool.clone(),
+                shutdown.clone(),
+                clock.clone(),
+                Some(Arc::clone(app)),
+                licensor,
+            )
+        },
     );
     (callbacks, commit_titles)
 }

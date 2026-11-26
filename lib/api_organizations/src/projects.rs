@@ -146,8 +146,8 @@ pub async fn get_ls_inner(
     ))?;
 
     // Drop connection lock before iterating
-    let github = context.github_linking();
     let json_projects = auth_conn!(context, |conn| {
+        let github = context.github_linking(conn)?;
         projects
             .into_iter()
             .map(|project| project.into_json_for_organization(conn, &query_organization, github))
@@ -286,7 +286,10 @@ async fn post_inner(
     let insert_project =
         InsertProject::from_json(auth_conn!(context), &query_organization, json_project);
 
-    QueryProject::create(log, context, auth_user, &query_organization, insert_project)
-        .await?
-        .into_json(auth_conn!(context), context.github_linking())
+    let query_project =
+        QueryProject::create(log, context, auth_user, &query_organization, insert_project).await?;
+    auth_conn!(context, |conn| {
+        let github = context.github_linking(conn)?;
+        query_project.into_json(conn, github)
+    })
 }

@@ -224,9 +224,9 @@ test.describe("on a short screen", () => {
 });
 
 // Kills a run page whose commit row has no link to its commit from the linked
-// repository, one that opens it by its short hash, a Maintainer never asked to
-// reconnect GitHub, or asked toward anywhere but Connections, and a row that
-// fails axe in either theme.
+// repository on the server's GitHub, one that opens it by its short hash, a
+// Maintainer never asked to reconnect GitHub, or asked toward anywhere but
+// Connections, and a row that fails axe in either theme.
 test("a linked run opens its commit, and a disconnected link asks its Maintainer to reconnect", async ({
 	page,
 }) => {
@@ -244,6 +244,7 @@ test("a linked run opens its commit, and a disconnected link asks its Maintainer
 				json: {
 					...bootstrap,
 					github_repository: "pompeii-llc/rosti",
+					github_repository_url: "https://github.example.com/pompeii-llc/rosti",
 					project: {
 						...bootstrap.project,
 						github_link: GitHubLinkStatus.Disconnected,
@@ -261,7 +262,7 @@ test("a linked run opens its commit, and a disconnected link asks its Maintainer
 	await expect(commit).toHaveAttribute(
 		"href",
 		new RegExp(
-			`^https://github\\.com/pompeii-llc/rosti/commit/${seed.last_main_hash}[0-9a-f]{33}$`,
+			`^https://github\\.example\\.com/pompeii-llc/rosti/commit/${seed.last_main_hash}[0-9a-f]{33}$`,
 		),
 	);
 	await axeInBothThemes(page, page.url(), async () => {

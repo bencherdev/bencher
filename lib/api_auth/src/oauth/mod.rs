@@ -2,12 +2,12 @@
 
 use std::fmt;
 
-use bencher_json::{Email, JsonAuthUser, JsonOAuthUser, JsonSignup, PlanLevel, UserName};
+use bencher_json::{Email, JsonAuthUser, JsonOAuthUser, JsonSignup, UserName};
 use bencher_schema::{
     ApiContext, auth_conn,
     error::{issue_error, payment_required_error},
     model::{
-        organization::{QueryOrganization, plan::LicenseUsage, sso::QuerySso},
+        organization::{QueryOrganization, license::any_valid_license, sso::QuerySso},
         user::{InsertUser, QueryUser},
     },
     public_conn, write_conn,
@@ -47,12 +47,11 @@ impl fmt::Display for OAuthProvider {
 async fn is_allowed_oauth(context: &ApiContext) -> Result<(), HttpError> {
     // Either the server is Bencher Cloud, or at least one organization must have a valid Bencher Plus license
     let is_allowed = context.is_bencher_cloud
-        || !LicenseUsage::get_for_server(
+        || any_valid_license(
             public_conn!(context),
             &context.licensor,
-            Some(PlanLevel::Enterprise),
-        )?
-        .is_empty();
+            context.clock.now(),
+        )?;
 
     if is_allowed {
         Ok(())
@@ -94,6 +93,7 @@ async fn handle_oauth_user(
         }
         (query_user, AuthAction::Login)
     } else {
+        let github = provider.github_profile(context, &name);
         let json_signup = JsonSignup {
             name,
             slug: None,
@@ -111,13 +111,14 @@ async fn handle_oauth_user(
             InsertUser::from_json(write_conn!(context), &context.token_key, &json_signup)?;
         insert_user.rate_limit_auth(context)?;
 
-        insert_user.notify(
+        insert_user.notify_with_github(
             log,
             public_conn!(context),
             &context.messenger,
             &context.console_url,
             invited,
             provider.as_ref(),
+            github.as_ref(),
         )?;
 
         let query_user = QueryUser::get_with_email(public_conn!(context), &email)?;
@@ -182,6 +183,19 @@ async fn handle_oauth_user(
         plan: oauth_state.plan(),
         authorization: oauth_state.authorization(),
     })
+}
+
+impl OAuthProvider {
+    /// The user's profile on the server's GitHub, for a user who signs in with GitHub.
+    fn github_profile(self, context: &ApiContext, name: &UserName) -> Option<url::Url> {
+        match self {
+            Self::GitHub => context
+                .github_client
+                .as_ref()
+                .map(|github_client| github_client.host().user(name)),
+            Self::Google => None,
+        }
+    }
 }
 
 enum AuthAction {

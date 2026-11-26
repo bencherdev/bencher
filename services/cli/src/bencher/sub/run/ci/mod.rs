@@ -9,9 +9,8 @@ use crate::parser::run::CliRunCi;
 mod github_actions;
 
 pub(crate) use github_actions::github_api_url;
-pub use github_actions::is_github_com_api;
 pub use github_actions::run_attempt_key;
-use github_actions::{CheckRunHandle, GitHubActions, GitHubError};
+use github_actions::{CheckRunHandle, GitHubActions, GitHubError, is_github_com_api};
 
 #[derive(Debug)]
 pub enum Ci {

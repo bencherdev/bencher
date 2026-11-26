@@ -15,9 +15,11 @@ use std::{
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
-use bencher_api_tests::{LogCapture, TestProject, TestServer, TestUser, github::github_signature};
+use bencher_api_tests::{
+    LogCapture, TestOrg, TestProject, TestServer, TestUser, github::github_signature,
+};
 use bencher_json::{
-    Clock, JobStatus, JobUuid, JsonReport,
+    Clock, JobStatus, JobUuid, JsonReport, PlanLevel,
     project::github::{LinkedRepositoryReason, LinkedRepositoryStatus},
     runner::{JobGitHubFailure, JobGitHubState},
 };
@@ -62,6 +64,7 @@ const HEAD: &str = "GET /github/repos/octo-cat/repo/pulls/7";
 const COMMENTS: &str = "GET /github/repos/octo-cat/repo/issues/7/comments";
 const CREATE_COMMENT: &str = "POST /github/repos/octo-cat/repo/issues/7/comments";
 const UPDATE_COMMENT: &str = "PATCH /github/repos/octo-cat/repo/issues/comments/";
+const ENTERPRISE_API_URL: &str = "https://github.example.com/api/v3";
 /// Long enough for a retry after its wait, and well short of a fallback pause.
 const SETTLE: Duration = Duration::from_secs(30);
 
@@ -209,6 +212,133 @@ async fn a_run_that_could_never_post_is_refused_at_submit() {
         1,
         "only the accepted run's start calls GitHub"
     );
+}
+
+// Kills a server that takes a run on any GitHub but its own, that reads a run with no API URL as
+// on any GitHub but github.com, that compares the API URLs with a trailing slash, and a refusal
+// that comes after the run creates anything, that does not name the server's GitHub, or that
+// names the run's API with a slash it did not send.
+#[tokio::test]
+async fn a_run_on_another_github_is_refused_at_submit() {
+    let setup = Setup::new(Fake::default()).await;
+    let enterprise = Setup::new_enterprise(Fake::default(), true).await;
+    for (setup, api_url, accepted, named) in [
+        (
+            &setup,
+            Some(ENTERPRISE_API_URL.to_owned()),
+            false,
+            "https://github.com",
+        ),
+        (&setup, Some("https://api.github.com/".to_owned()), true, ""),
+        (&setup, None, true, ""),
+        (&enterprise, None, false, enterprise.github.base.as_str()),
+        (
+            &enterprise,
+            Some("https://api.github.com".to_owned()),
+            false,
+            enterprise.github.base.as_str(),
+        ),
+        (
+            &enterprise,
+            Some(format!("{}/api/v3/", enterprise.github.base)),
+            true,
+            "",
+        ),
+    ] {
+        let mut run_github = github(None);
+        if let Some(api_url) = &api_url {
+            run_github["api_url"] = api_url.as_str().into();
+        }
+        let before = created(&setup.server);
+        let (status, body) = submit(&setup.server, &setup.user, &setup.project, &run_github).await;
+        if accepted {
+            assert_eq!(status, StatusCode::CREATED, "{api_url:?}: {body}");
+        } else {
+            assert_eq!(status, StatusCode::CONFLICT, "{api_url:?}: {body}");
+            assert!(
+                body.contains(named.trim_end_matches('/')),
+                "{named} not in {body}"
+            );
+            let sent = api_url.as_deref().unwrap_or("https://api.github.com");
+            assert!(body.contains(&format!("({sent})")), "{sent} not in {body}");
+            assert_eq!(created(&setup.server), before, "{api_url:?}");
+        }
+    }
+}
+
+// A run on GitHub Enterprise Server posts there, every request under the root's REST API. Kills a
+// mint, a check, or a comment sent to github.com's layout, and a licensed server that skips its
+// post.
+#[tokio::test]
+async fn a_post_on_github_enterprise_server_goes_to_its_api() {
+    let setup = Setup::new_enterprise(Fake::default(), true).await;
+    let job = setup
+        .submit_ok(&setup.enterprise_github(Some(NUMBER)))
+        .await;
+    setup.until_checks(1).await;
+
+    setup.end_and_fire(job, JobStatus::Processed).await;
+
+    let api = |line: &str| line.replacen("/github/", "/github/api/v3/", 1);
+    assert_eq!(
+        setup.github.lines(),
+        [
+            api(MINT),
+            api(CREATE_CHECK),
+            api(MINT),
+            api("PATCH /github/repos/octo-cat/repo/check-runs/1"),
+            api(HEAD),
+            api(COMMENTS),
+            api(CREATE_COMMENT),
+        ]
+    );
+    assert_eq!(setup.post(job).state, JobGitHubState::Posted);
+}
+
+// Kills a submit, a start, or a post to GitHub Enterprise Server without an Enterprise license,
+// a post without one that settles, counts an attempt, or logs no reason, and a skipped post that
+// does not complete its check once the license is back.
+#[tokio::test]
+async fn github_enterprise_server_needs_an_enterprise_license() {
+    let unlicensed = Setup::new_enterprise(Fake::default(), false).await;
+    let before = created(&unlicensed.server);
+    let (status, body) = submit(
+        &unlicensed.server,
+        &unlicensed.user,
+        &unlicensed.project,
+        &unlicensed.enterprise_github(Some(NUMBER)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED, "{body}");
+    assert!(body.contains("Enterprise license"), "{body}");
+    assert_eq!(created(&unlicensed.server), before);
+
+    let setup = Setup::new_enterprise(Fake::default(), true).await;
+    let job = setup
+        .submit_ok(&setup.enterprise_github(Some(NUMBER)))
+        .await;
+    setup.until_checks(1).await;
+    let requests = setup.github.lines().len();
+    let licenses = setup.unlicense();
+
+    setup.fire(job, JobStatus::Processed);
+    setup
+        .until_logged(
+            "GitHub post skipped: a GitHub Enterprise Server needs a Bencher Plus Enterprise license",
+            setup.github.base.as_str().trim_end_matches('/'),
+        )
+        .await;
+
+    assert_eq!(setup.github.lines().len(), requests);
+    let post = setup.post(job);
+    assert_eq!((post.state, post.attempts), (JobGitHubState::Pending, 0));
+
+    setup.relicense(licenses);
+    setup.fire_pending().await;
+    setup.server.drain_callbacks().await;
+
+    assert_eq!(setup.post(job).state, JobGitHubState::Posted);
+    assert_eq!(setup.github.created_checks(), 1);
 }
 
 // Kills a startup sweep that passes over a check never started or a pending post, and a start
@@ -1654,6 +1784,65 @@ struct Setup {
 }
 
 impl Setup {
+    /// A server whose GitHub App is on a GitHub Enterprise Server at the fake's root, with an
+    /// Enterprise license on the project's organization if `licensed`.
+    async fn new_enterprise(fake: Fake, licensed: bool) -> Self {
+        let github = FakeGitHub::start(fake).await;
+        let log = LogCapture::default();
+        let server = TestServer::new_with_github_enterprise(
+            github.base.clone(),
+            Clock::System,
+            log.logger(),
+        )
+        .await;
+        let (user, org, project) = seed_org(&server).await;
+        if licensed {
+            server.license_org(&user, &org, PlanLevel::Enterprise).await;
+        }
+        let setup = Self {
+            server,
+            log,
+            github,
+            user,
+            project,
+        };
+        setup.link(INSTALLATION, REPOSITORY);
+        setup
+    }
+
+    /// The GitHub context of a run on the fake GitHub Enterprise Server.
+    fn enterprise_github(&self, number: Option<u64>) -> serde_json::Value {
+        serde_json::json!({
+            "api_url": format!("{}/api/v3", self.github.base),
+            "repository_id": REPOSITORY,
+            "head_sha": SHA,
+            "number": number,
+        })
+    }
+
+    /// Drop every organization's license, and return what each held.
+    fn unlicense(&self) -> Vec<(i32, Option<String>)> {
+        let licenses = schema::organization::table
+            .select((schema::organization::id, schema::organization::license))
+            .load::<(i32, Option<String>)>(&mut self.server.db_conn())
+            .unwrap();
+        diesel::update(schema::organization::table)
+            .set(schema::organization::license.eq(None::<String>))
+            .execute(&mut self.server.db_conn())
+            .unwrap();
+        licenses
+    }
+
+    /// Give back the licenses that `unlicense` dropped.
+    fn relicense(&self, licenses: Vec<(i32, Option<String>)>) {
+        for (id, license) in licenses {
+            diesel::update(schema::organization::table.filter(schema::organization::id.eq(id)))
+                .set(schema::organization::license.eq(license))
+                .execute(&mut self.server.db_conn())
+                .unwrap();
+        }
+    }
+
     async fn new(fake: Fake) -> Self {
         let github = FakeGitHub::start(fake).await;
         let log = LogCapture::default();
@@ -1873,6 +2062,11 @@ impl Setup {
 }
 
 async fn seed(server: &TestServer) -> (TestUser, TestProject) {
+    let (user, _org, project) = seed_org(server).await;
+    (user, project)
+}
+
+async fn seed_org(server: &TestServer) -> (TestUser, TestOrg, TestProject) {
     let user = server.signup("Post User", "post@example.com").await;
     let response = server
         .client
@@ -1896,7 +2090,7 @@ async fn seed(server: &TestServer) -> (TestUser, TestProject) {
     assert_eq!(response.status(), StatusCode::CREATED, "the spec");
     let org = server.create_org(&user, "Post Org").await;
     let project = server.create_project(&user, &org, "Post Project").await;
-    (user, project)
+    (user, org, project)
 }
 
 /// The GitHub context of a detached run in the linked repository, on its pull request if any.
@@ -2180,7 +2374,10 @@ impl Fake {
         }
         let (method, path) = line.split_once(' ').unwrap();
         let path = path.split('?').next().unwrap();
-        let segments: Vec<&str> = path.trim_start_matches("/github/").split('/').collect();
+        let path = path.trim_start_matches("/github/");
+        // A GitHub Enterprise Server serves the same routes under its REST API.
+        let path = path.strip_prefix("api/v3/").unwrap_or(path);
+        let segments: Vec<&str> = path.split('/').collect();
         // Only the lookup still finds the repository by a name it no longer has.
         if let ["repos", owner, name, rest @ ..] = segments.as_slice()
             && *rest != ["installation"]

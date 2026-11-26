@@ -10,6 +10,7 @@ use bencher_github_client::{
 use bencher_json::{
     Clock, CommitTitle, DateTime, GitHash, GitHubInstallationId, GitHubRepositoryId,
 };
+use bencher_license::Licensor;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use http::{HeaderMap, StatusCode};
 use slog::Logger;
@@ -24,10 +25,13 @@ use tokio_util::sync::CancellationToken;
 use bencher_otel::{ApiCounter, ApiMeter, CommitTitlesFailureReason as Failure};
 
 use super::DbConnection;
-use crate::model::project::{
-    ProjectId,
-    commit::{self, InsertCommit},
-    linked_repository::QueryLinkedRepository,
+use crate::model::{
+    organization::license::any_valid_license,
+    project::{
+        ProjectId,
+        commit::{self, InsertCommit},
+        linked_repository::QueryLinkedRepository,
+    },
 };
 
 /// The most work the task holds; more is dropped, and the next sweep finds it.
@@ -72,7 +76,8 @@ impl CommitTitles {
         }
     }
 
-    /// Start the task, which sweeps at once and then every 24 hours, until `shutdown`.
+    /// Start the task, which sweeps at once and then every 24 hours, until `shutdown`. The
+    /// licensor reads whether the server may fetch from a GitHub Enterprise Server.
     pub fn spawn(
         log: Logger,
         connection: Arc<tokio::sync::Mutex<DbConnection>>,
@@ -80,12 +85,13 @@ impl CommitTitles {
         shutdown: CancellationToken,
         clock: Clock,
         github_app: Option<Arc<GitHubApp>>,
+        licensor: Licensor,
     ) -> Self {
         let Some(app) = github_app else {
             return Self::none();
         };
         let (sender, receiver) = mpsc::channel(QUEUE);
-        let titles = Titles::new(connection, reader, app, clock);
+        let titles = Titles::new(connection, reader, app, clock, licensor);
         let task = tokio::spawn(run(titles, receiver, shutdown, log.clone()));
         Self {
             queue: Some(Queue { sender, log }),
@@ -192,6 +198,7 @@ struct Titles {
     reader: Pool<ConnectionManager<DbConnection>>,
     app: Arc<GitHubApp>,
     clock: Clock,
+    licensor: Licensor,
     tokens: HashMap<(GitHubInstallationId, GitHubRepositoryId), GitHubReadToken>,
     limited: HashMap<GitHubInstallationId, DateTime>,
 }
@@ -200,6 +207,9 @@ impl Fetch for Titles {
     /// Each project's queued work once, in the order it first arrived: its fill, then the
     /// hashes that the fill left without a row.
     async fn work(&mut self, log: &Logger, batch: Vec<Work>) {
+        if !self.licensed(log).await {
+            return;
+        }
         let mut projects: Vec<(ProjectId, bool, Vec<GitHash>)> = Vec::new();
         for work in batch {
             let (project_id, fill, hashes) = match work {
@@ -226,6 +236,9 @@ impl Fetch for Titles {
 
     /// Fill every project with a connected link, one at a time.
     async fn sweep(&mut self, log: &Logger) {
+        if !self.licensed(log).await {
+            return;
+        }
         let projects = QueryLinkedRepository::connected_projects(&mut *self.read().await);
         let projects = match projects {
             Ok(projects) => projects,
@@ -253,14 +266,35 @@ impl Titles {
         reader: Pool<ConnectionManager<DbConnection>>,
         app: Arc<GitHubApp>,
         clock: Clock,
+        licensor: Licensor,
     ) -> Self {
         Self {
             connection,
             reader,
             app,
             clock,
+            licensor,
             tokens: HashMap::new(),
             limited: HashMap::new(),
+        }
+    }
+
+    /// Whether the server may fetch from its GitHub. Unlicensed work waits for a later sweep.
+    async fn licensed(&self, log: &Logger) -> bool {
+        let host = self.app.host();
+        if host.is_github_com() {
+            return true;
+        }
+        match any_valid_license(&mut *self.read().await, &self.licensor, self.clock.now()) {
+            Ok(true) => true,
+            Ok(false) => {
+                slog::warn!(log, "Commit titles skipped: a GitHub Enterprise Server needs a Bencher Plus Enterprise license"; "host" => %host);
+                false
+            },
+            Err(e) => {
+                slog::error!(log, "Commit titles skipped: failed to read the server's licenses"; "error" => %e);
+                false
+            },
         }
     }
 
@@ -496,6 +530,7 @@ mod tests {
         Clock, DateTime, GitHash, GitHubInstallationId, GitHubRepositoryId,
         project::github::LinkedRepositoryReason,
     };
+    use bencher_license::Licensor;
     use diesel::{
         Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
         connection::SimpleConnection as _,
@@ -661,6 +696,7 @@ mod tests {
                 Clock::Custom(Arc::new(move || {
                     DateTime::try_from(now.load(Ordering::SeqCst)).unwrap()
                 })),
+                Licensor::self_hosted().unwrap(),
             )
         }
 

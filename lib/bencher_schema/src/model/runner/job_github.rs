@@ -206,6 +206,7 @@ pub struct InsertJobGitHub {
 impl InsertJobGitHub {
     pub fn pending(job_id: JobId, github: JsonNewJobGitHub, now: DateTime) -> Self {
         let JsonNewJobGitHub {
+            api_url: _,
             repository_id,
             head_sha,
             number,

@@ -3,7 +3,7 @@ title: "Self-Hosted GitHub App"
 description: "Create a GitHub App to allow Bencher Self-Hosted to authenticate with GitHub"
 heading: "How to Create a Self-Hosted GitHub App"
 published: "2023-08-12T16:07:00Z"
-modified: "2026-11-18T19:27:03Z"
+modified: "2026-11-19T03:00:00Z"
 sortOrder: 9
 ---
 
@@ -96,6 +96,19 @@ To update an app that an earlier version set up with Contents: `Read and write`:
 2. Upgrade the API server and Console to `v0.6.18` or later.
    After the upgrade, a repository whose installation has not approved the new permissions cannot be linked, and Bencher cannot post to it.
 3. Change Contents to `Read-only`, as a separate change.
+
+## GitHub Enterprise Server
+
+To use GitHub Enterprise Server in place of github.com, register the GitHub App on your GitHub Enterprise Server with the settings above.
+Then set `server_url` in [the `plus.github` section of the server config](/docs/reference/server-config/#plusgithub) to its web root (ex: `https://github.example.com`).
+Bencher then uses it for sign in, linked repositories, commit titles, and the GitHub Checks and pull request comments of detached runs.
+The app's slug is the last part of its public page URL (ex: `my-bencher-app` in `https://github.example.com/github-apps/my-bencher-app`).
+
+This needs the Bencher Self-Hosted API server at `v0.6.18` or later,
+and a valid Bencher Plus Enterprise license for at least one organization on the server.
+Without the license, Bencher refuses sign in with GitHub, linking, and detached runs on GitHub Actions, and fetches no commit titles.
+Bencher posts for a detached run only when its workflow runs on the same GitHub Enterprise Server:
+it refuses a run whose `GITHUB_API_URL` is the API of any other GitHub.
 
 [linked repository]: /docs/how-to/github-actions/#pull-requests-on-bare-metal
 

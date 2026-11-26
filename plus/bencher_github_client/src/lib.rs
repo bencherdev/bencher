@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::LazyLock};
+use std::borrow::Cow;
 
 use bencher_valid::{Email, Jwt, NonEmpty, Secret, UserName};
 use oauth2::{
@@ -14,42 +14,26 @@ use url::Url;
 mod api;
 mod app;
 mod graphql;
+mod host;
 #[cfg(any(test, feature = "test-base-url"))]
 pub mod test_server;
 mod webhook;
 
-use api::GITHUB_API_URL;
 #[cfg(any(test, feature = "test-base-url"))]
 use api::join_path;
 pub use api::{GitHubApi, GitHubApiError, GitHubRepository};
 pub use app::{GitHubApp, GitHubAppError, GitHubInstallationToken, GitHubReadToken};
 pub use bencher_valid::GitHubInstallationPermission;
 pub use graphql::GitHubCommitsError;
+pub use host::GitHubHost;
 pub use webhook::{GitHubInstallationChange, GitHubWebhookError};
-
-#[expect(
-    clippy::expect_used,
-    reason = "constant URL literal, infallible at runtime"
-)]
-static AUTH_URL: LazyLock<AuthUrl> = LazyLock::new(|| {
-    AuthUrl::new("https://github.com/login/oauth/authorize".to_owned())
-        .expect("Invalid authorization endpoint URL")
-});
-
-#[expect(
-    clippy::expect_used,
-    reason = "constant URL literal, infallible at runtime"
-)]
-static TOKEN_URL: LazyLock<TokenUrl> = LazyLock::new(|| {
-    TokenUrl::new("https://github.com/login/oauth/access_token".to_owned())
-        .expect("Invalid token endpoint URL")
-});
 
 #[derive(Debug, Clone)]
 pub struct GitHubClient {
     oauth2_client:
         BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet>,
     api_url: Url,
+    host: GitHubHost,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -81,17 +65,23 @@ pub enum GitHubClientError {
 
 impl GitHubClient {
     pub fn new(client_id: NonEmpty, client_secret: Secret) -> Self {
+        Self::new_with_host(client_id, client_secret, &GitHubHost::default())
+    }
+
+    /// Signs in and reads on `host` in place of github.com.
+    pub fn new_with_host(client_id: NonEmpty, client_secret: Secret, host: &GitHubHost) -> Self {
         let client_id = ClientId::new(client_id.into());
         let client_secret = ClientSecret::new(client_secret.into());
 
         let oauth2_client = BasicClient::new(client_id)
             .set_client_secret(client_secret)
-            .set_auth_uri(AUTH_URL.clone())
-            .set_token_uri(TOKEN_URL.clone());
+            .set_auth_uri(AuthUrl::from_url(host.authorize()))
+            .set_token_uri(TokenUrl::from_url(host.access_token()));
 
         Self {
             oauth2_client,
-            api_url: GITHUB_API_URL.clone(),
+            api_url: host.api(),
+            host: host.clone(),
         }
     }
 
@@ -103,7 +93,13 @@ impl GitHubClient {
         Self {
             oauth2_client: self.oauth2_client.set_token_uri(token_url),
             api_url: base,
+            host: self.host,
         }
+    }
+
+    /// The GitHub instance that users sign in on.
+    pub fn host(&self) -> &GitHubHost {
+        &self.host
     }
 
     pub fn auth_url(&self, state: Jwt) -> Url {
@@ -235,7 +231,7 @@ mod tests {
     use bencher_valid::{GitHubInstallationId, GitHubRepositoryId, Jwt};
     use url::Url;
 
-    use super::{GitHubClient, GitHubInstallationPermission, GitHubRepository};
+    use super::{GitHubClient, GitHubHost, GitHubInstallationPermission, GitHubRepository};
     use crate::test_server::Server;
 
     const REDIRECT_URL: &str = "https://console.example/github/return";
@@ -246,6 +242,15 @@ mod tests {
         GitHubClient::new(
             "Iv1.0123456789abcdef".parse().unwrap(),
             "client-secret".parse().unwrap(),
+        )
+    }
+
+    /// A client on a GitHub Enterprise Server whose root is the fake GitHub's base.
+    fn enterprise_client(server: &Server) -> GitHubClient {
+        GitHubClient::new_with_host(
+            "Iv1.0123456789abcdef".parse().unwrap(),
+            "client-secret".parse().unwrap(),
+            &GitHubHost::new(server.base()),
         )
     }
 
@@ -407,5 +412,64 @@ mod tests {
                 Some(format!("Bearer {USER_TOKEN}").as_str())
             );
         }
+    }
+
+    // Kills an authorize page, a code exchange, or a user read that stays on github.com, or that
+    // misses the root's own path, on GitHub Enterprise Server.
+    #[tokio::test]
+    async fn sign_in_on_github_enterprise_server_stays_on_its_root() {
+        let server = Server::start(vec![
+            exchanged(),
+            signed_in_user("octo-cat"),
+            primary_email("octo-cat@example.com"),
+        ])
+        .await;
+        let client = enterprise_client(&server);
+
+        let authorize = client.auth_url(Jwt::test_token());
+        let (user_name, _email) = client.oauth_user(CODE.parse().unwrap()).await.unwrap();
+
+        assert_eq!(
+            authorize.as_str().split('?').next(),
+            Some(format!("{}/login/oauth/authorize", server.base()).as_str())
+        );
+        assert_eq!(user_name.as_ref(), "octo-cat");
+        let [exchange, user, emails] = server.received().await.try_into().ok().unwrap();
+        assert_eq!(
+            exchange.request_line(),
+            "POST /github/login/oauth/access_token HTTP/1.1"
+        );
+        assert_eq!(user.request_line(), "GET /github/api/v3/user HTTP/1.1");
+        assert_eq!(
+            emails.request_line(),
+            "GET /github/api/v3/user/emails HTTP/1.1"
+        );
+    }
+
+    // Kills a repository listing that reads anywhere but the GitHub Enterprise Server's REST API.
+    #[tokio::test]
+    async fn the_repositories_of_github_enterprise_server_come_from_its_api() {
+        let server = Server::start(vec![
+            exchanged(),
+            (200, r#"{"total_count": 0, "installations": []}"#.to_owned()),
+        ])
+        .await;
+        let client = enterprise_client(&server);
+
+        let repositories = client
+            .oauth_repositories(CODE.parse().unwrap(), REDIRECT_URL.parse().unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(repositories, []);
+        let [exchange, installations] = server.received().await.try_into().ok().unwrap();
+        assert_eq!(
+            exchange.request_line(),
+            "POST /github/login/oauth/access_token HTTP/1.1"
+        );
+        assert_eq!(
+            installations.request_line(),
+            "GET /github/api/v3/user/installations?per_page=100&page=1 HTTP/1.1"
+        );
     }
 }

@@ -33,6 +33,7 @@ Bencher 的 GitHub App 需要对仓库的检查和拉取请求的读写权限，
 Bencher 会为关联的仓库创建一个令牌，并使用该令牌发布 GitHub 检查和拉取请求评论。
 如果 GitHub 卡片显示 `Disconnected`，请点击 `Install on GitHub` 并重新授予应用对该仓库的访问权限，或者解除应用安装的暂停，关联随即恢复。
 对于 Bencher Self-Hosted，服务器需要[自己的 GitHub App][github app]以及 `v0.6.18` 或更高版本。
+拥有 Bencher Plus Enterprise 许可证时，Bencher Self-Hosted 服务器可以使用 [GitHub Enterprise Server][github enterprise server] 代替 github.com。
 
 > 🐰 任何拥有项目 API 密钥的人，都可以让 Bencher 在关联仓库中的任意提交或拉取请求上
 > 发布 GitHub 检查或拉取请求评论。
@@ -129,6 +130,7 @@ Job 会记录该失败以及批准权限的链接，如果 `bencher run` 在退�
 
 [bare metal]: /zh/docs/explanation/bare-metal/
 [github app]: /zh/docs/how-to/github-app/
+[github enterprise server]: /zh/docs/how-to/github-app/#github-enterprise-server
 [pricing]: /pricing
 [bencher run]: /zh/docs/explanation/bencher-run/
 [project option]: /zh/docs/explanation/bencher-run/#--project-project

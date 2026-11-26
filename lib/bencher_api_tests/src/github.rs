@@ -1,7 +1,7 @@
 use aws_lc_rs::hmac;
 pub use bencher_github_client::test_server::{Answer, HOLD, Received, Server as GitHubServer};
 use bencher_github_client::{
-    GitHubApp,
+    GitHubApp, GitHubHost,
     test_server::{app_key, install_crypto_provider},
 };
 
@@ -103,4 +103,21 @@ pub(crate) fn app(base: url::Url) -> GitHubApp {
     .expect("Failed to set up the GitHub App")
     .with_base_url(base)
     .expect("Failed to point the GitHub App at the base")
+}
+
+/// The app on `host`, with a fresh key, sending every request where the host's URLs point.
+#[expect(clippy::expect_used, reason = "test helper")]
+pub(crate) fn app_on(host: GitHubHost) -> GitHubApp {
+    install_crypto_provider();
+    let (private_key, _public_key) = app_key();
+    GitHubApp::new_with_host(
+        GITHUB_CLIENT_ID.parse().expect("Invalid client ID"),
+        GITHUB_APP_SLUG.parse().expect("Invalid app slug"),
+        &private_key,
+        GITHUB_WEBHOOK_SECRET
+            .parse()
+            .expect("Invalid webhook secret"),
+        host,
+    )
+    .expect("Failed to set up the GitHub App")
 }
