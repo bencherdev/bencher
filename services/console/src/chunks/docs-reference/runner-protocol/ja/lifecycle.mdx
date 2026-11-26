@@ -2,21 +2,23 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 
 ## Job のライフサイクル
 
-各 Job は、要求、実行、処理される過程で、決まった一連の状態を遷移します。
+各 Job は、その実行が送信、実行、処理される過程で、決まった一連の状態を遷移します。
+Job は最初の実行から結果が確定するまで、実行の合間も含めて `running` のままです。
 
 | 遷移元    | 遷移先      | トリガー                                                               |
 | --------- | ----------- | ---------------------------------------------------------------------- |
-| pending   | claimed     | Runner が Job を要求する                                                |
+| pending   | claimed     | Runner が Job の最初の実行を受け取る                                    |
 | pending   | canceled    | ユーザーが Job をキャンセルする                                         |
 | claimed   | running     | Runner が `running` を送信する                                          |
 | claimed   | failed      | Runner が `failed` を送信する                                                |
 | claimed   | unknown     | サーバーが Runner との接続を失う                                                   |
 | claimed   | canceled    | ユーザーが Job をキャンセルする                                         |
-| running   | completed   | Runner が `completed` を送信する                                        |
-| running   | failed      | Runner が `failed` を送信する                                                |
-| running   | unknown     | サーバーが Runner との接続を失う                                                   |
+| running   | completed   | Job のすべての反復の結果が確定する                                      |
+| running   | failed      | 実行が `allow_failure` なしで失敗する、または Job の時間が尽きる        |
+| running   | unknown     | サーバーが、進行中の唯一の実行の Runner との接続を失う                  |
 | running   | canceled    | ユーザーが Job をキャンセルする、またはハードな Job タイムアウトを超過する                             |
-| unknown   | completed   | Runner が `completed` を送信する                                             |
+| unknown   | running     | Runner が結果を再送し、Job に反復が残っている                          |
+| unknown   | completed   | Runner が結果を再送し、すべての反復の結果が確定する                    |
 | unknown   | failed      | Runner が `failed` を送信する                                                |
 | unknown   | canceled    | ユーザーが Job をキャンセルする、またはハードな Job タイムアウトを超過する                             |
 | completed | processed   | サーバーが結果を正常に処理する                                          |

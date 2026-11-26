@@ -5,13 +5,22 @@ import FlowDiagram from "../flow-diagram.mdx";
 After connecting, the Runner enters an idle polling loop,
 sending `ready` until the server assigns a `job`
 (or returns `no_job` when the poll times out, or `update` when a new version is available).
-Once it has a Job, the Runner sends `running`,
+Each `job` message is one execution: one run of the Job's image, as a Job of one iteration.
+Once it has an execution, the Runner sends `running`,
 streams `heartbeat` messages while the benchmark executes,
 and finishes with a terminal `completed` or `failed` message.
 The server acknowledges each message with `ack`,
-and the connection stays open so the Runner returns to the idle loop for the next Job.
+and the connection stays open so the Runner returns to the idle loop for the next execution.
 
-If a Job is canceled, the server replies to a `heartbeat` with `cancel`.
+The server forms a Job's iterations from its executions.
+A Job of three iterations goes out as three `job` messages,
+which may go to different Runners of the Job's Spec, at the same time,
+and between the executions of other Jobs.
+Among Jobs of the same priority, the Job whose last execution went out longest ago goes next,
+so a Job of one iteration waits for at most one iteration of a longer Job.
+
+If a Job is canceled, or ends while one of its executions is in flight on another Runner,
+the server replies to that execution's next `running` or `heartbeat` with `cancel`.
 The Runner stops the benchmark and replies with `canceled`, which the server acknowledges.
 
 <FlowDiagram />

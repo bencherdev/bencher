@@ -8,6 +8,10 @@ Runner가 서버로 보내는 메시지입니다.
 | `paused`    | Runner가 유휴 상태이지만 일시 중지 사유가 해소될 때까지 Job을 받지 않습니다. 서버는 폴링을 유지한 뒤 `no_job`으로 응답합니다 | `reasons`(각각 `kind`: `raid` 또는 `maintenance`), `since`, 그리고 `ready`의 모든 필드 |
 | `running`   | Job 설정이 완료되고 벤치마크가 시작됩니다         | 없음                                                                  |
 | `heartbeat` | 주기적인 활성 신호(약 1초에 한 번)                | 없음                                                                    |
-| `completed` | 벤치마크가 성공적으로 완료되었습니다              | `job`(Job UUID)과 `results`(반복별 출력)                   |
-| `failed`    | 벤치마크가 실패했습니다                           | `job`(Job UUID), `results`, 그리고 `error`                                |
-| `canceled`  | 서버로부터의 취소를 확인합니다                    | `job`(Job UUID)                                                        |
+| `completed` | 벤치마크가 성공적으로 완료되었습니다              | `job`(`job` 메시지의 UUID)과 `results`(그 실행의 출력)                  |
+| `failed`    | 벤치마크가 실패했습니다                           | `job`(`job` 메시지의 UUID), `results`, 그리고 `error`                   |
+| `canceled`  | 서버로부터의 취소를 확인합니다                    | `job`(`job` 메시지의 UUID)                                              |
+
+`job` 메시지의 UUID는 Job이 아니라 그 실행을 가리킵니다.
+Runner는 이를 그대로 돌려보내므로, 결과는 자신의 실행을 정확히 가리킵니다.
+같은 Job의 다른 실행이 전송된 뒤에 결과를 다시 보내는 경우에도 마찬가지입니다.

@@ -1,12 +1,17 @@
 ## Job 출력
 
 Runner가 `completed` 또는 `failed`를 보내면,
-전체 출력은 컨테이너 Image에 사용되는 것과 동일한 OCI 스토리지 백엔드의
-`{project}/output/v0/jobs/{job}` 경로에 저장됩니다.
+그 실행의 출력은 컨테이너 Image에 사용되는 것과 동일한 OCI 스토리지 백엔드의
+`{project}/output/v0/executions/{execution}` 경로에 즉시 저장됩니다.
+Job의 모든 반복의 결과가 정해지면,
+서버는 Job의 실행들로부터 반복 순서대로 Job의 출력을 조립하여
+`{project}/output/v0/jobs/{job}` 경로에 저장합니다.
 
 저장된 출력은 반복별 `results` 배열을 포함하고, 실패 시에는 `error` 문자열을 포함합니다.
 각 반복은 `exit_code`, `stdout`, `stderr`,
 그리고 수집된 출력 파일과 그 내용의 맵을 기록합니다.
+`allow_failure`에서는 실행이 실패한 반복은 `exit_code`와 `stderr`만 유지하므로,
+자리를 지키면서도 그 반복의 Metric은 Report에 들어가지 않습니다.
 출력이 저장된 후, 서버는 결과에 대해 [벤치마크 하니스 어댑터][adapters]를 실행하여
 Metric과 Alert를 Report로 파싱하고, Job을 `processed`로 전환합니다.
 

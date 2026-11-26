@@ -16,14 +16,14 @@ use api_runners::{RunnerMessage, ServerMessage};
 pub use bencher_api_tests::helpers::{
     base_timestamp, create_test_report, get_project_id, plan_project, post_metrics, set_job_status,
 };
-use bencher_api_tests::{CallbackRequest, TestServer, TestUser};
+use bencher_api_tests::{CallbackRequest, TestServer, TestServerOptions, TestUser};
 use bencher_json::{
     DateTime, JobStatus, JobUuid, JsonClaimedJob, JsonNewCallback, JsonRunnerKey, PollTimeout,
     Priority, ProjectSlug, ReportUuid, RunnerUuid, SpecUuid,
     runner::{JobCallbackState, JsonReady, JsonRunnerMetadata},
 };
 use bencher_schema::{
-    model::runner::{InsertJobCallback, JobId, QueryJobCallback},
+    model::runner::{InsertJobCallback, JobExecutionId, JobId, QueryJobCallback},
     schema,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -427,6 +427,74 @@ pub fn insert_test_job_with_invalid_config(
     job_uuid
 }
 
+/// Another report of the same project, head, version, and testbed as `report_id`, so a project
+/// can hold more than one job.
+#[expect(clippy::expect_used, reason = "test helper")]
+pub fn create_sibling_report(server: &TestServer, report_id: i32) -> i32 {
+    let mut conn = server.db_conn();
+    diesel::sql_query(
+        "INSERT INTO report (uuid, project_id, head_id, version_id, testbed_id, adapter,
+                start_time, end_time, created)
+            SELECT ?, project_id, head_id, version_id, testbed_id, adapter, start_time,
+                end_time, created
+            FROM report WHERE id = ?",
+    )
+    .bind::<diesel::sql_types::Text, _>(ReportUuid::new().to_string())
+    .bind::<diesel::sql_types::Integer, _>(report_id)
+    .execute(&mut conn)
+    .expect("Failed to insert a sibling report");
+    schema::report::table
+        .select(diesel::dsl::max(schema::report::id))
+        .first::<Option<i32>>(&mut conn)
+        .expect("Failed to get the sibling report")
+        .expect("The sibling report exists")
+}
+
+/// Give a job set in flight by hand the execution the migration to executions gives every job
+/// in flight: 1 execution under the job's own UUID, which holds all of its runs, sent to its
+/// runner, or to a new runner when it has none. Call it once the job's status and times are set.
+/// Returns the execution's ID.
+#[expect(clippy::expect_used, reason = "test helper")]
+pub fn insert_whole_job_execution(server: &TestServer, job_uuid: JobUuid) -> JobExecutionId {
+    let mut conn = server.db_conn();
+    let runner_id: Option<i32> = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::runner_id)
+        .first(&mut conn)
+        .expect("Failed to get the job's runner");
+    if runner_id.is_none() {
+        diesel::sql_query(
+            "INSERT INTO runner (uuid, name, slug, key_hash, created, modified)
+                VALUES (?1, 'Whole Job Runner', ?1, ?1, 0, 0)",
+        )
+        .bind::<diesel::sql_types::Text, _>(RunnerUuid::new().to_string())
+        .execute(&mut conn)
+        .expect("Failed to insert a runner");
+        diesel::sql_query("UPDATE job SET runner_id = last_insert_rowid() WHERE uuid = ?")
+            .bind::<diesel::sql_types::Text, _>(job_uuid.to_string())
+            .execute(&mut conn)
+            .expect("Failed to set the job's runner");
+    }
+    diesel::sql_query(
+        "INSERT INTO job_execution (
+                uuid, job_id, report_id, iteration, runner_id, timeout, status, sent, started,
+                last_heartbeat
+            )
+            SELECT uuid, id, report_id, 0, runner_id, timeout,
+                CASE status WHEN 1 THEN 0 WHEN 2 THEN 1 ELSE 5 END,
+                COALESCE(claimed, created), started, COALESCE(last_heartbeat, claimed, created)
+            FROM job WHERE uuid = ?",
+    )
+    .bind::<diesel::sql_types::Text, _>(job_uuid.to_string())
+    .execute(&mut conn)
+    .expect("Failed to insert the job's execution");
+    schema::job_execution::table
+        .filter(schema::job_execution::uuid.eq(job_uuid))
+        .select(schema::job_execution::id)
+        .first(&mut conn)
+        .expect("Failed to get the job's execution")
+}
+
 /// Get project ID from report ID.
 #[expect(clippy::expect_used, reason = "test helper")]
 pub fn get_project_id_from_report(server: &TestServer, report_id: i32) -> i32 {
@@ -540,6 +608,16 @@ pub fn get_runner_id(server: &TestServer, runner_uuid: RunnerUuid) -> i32 {
         .expect("Failed to get runner ID")
 }
 
+/// A test server whose heartbeat timeout outlasts any test, so an execution a test claims and
+/// never heartbeats stays in flight while the test checks a claim rule, however slow the run.
+pub async fn server_with_no_heartbeat_timeout() -> TestServer {
+    TestServer::new_with_options(TestServerOptions {
+        heartbeat_timeout: Some(std::time::Duration::from_hours(1)),
+        ..TestServerOptions::default()
+    })
+    .await
+}
+
 // =============================================================================
 // WebSocket Channel Helpers
 // =============================================================================
@@ -644,6 +722,29 @@ pub async fn claim_via_channel(
         },
     };
     (ws, job)
+}
+
+/// The job a `Job` message sends an execution of: the message names the execution.
+#[expect(clippy::expect_used, reason = "test helper")]
+pub fn job_of(server: &TestServer, claimed: &JsonClaimedJob) -> JobUuid {
+    schema::job_execution::table
+        .inner_join(schema::job::table)
+        .filter(schema::job_execution::uuid.eq(claimed.uuid))
+        .select(schema::job::uuid)
+        .first(&mut server.db_conn())
+        .expect("Failed to get the execution's job")
+}
+
+/// The UUID of a job's latest execution, which its runner names in a result.
+#[expect(clippy::expect_used, reason = "test helper")]
+pub fn latest_execution(server: &TestServer, job_uuid: JobUuid) -> JobUuid {
+    schema::job_execution::table
+        .inner_join(schema::job::table)
+        .filter(schema::job::uuid.eq(job_uuid))
+        .order(schema::job_execution::iteration.desc())
+        .select(schema::job_execution::uuid)
+        .first(&mut server.db_conn())
+        .expect("Failed to get the job's execution")
 }
 
 /// Assert the WebSocket stream is closed (no more messages or Close frame).

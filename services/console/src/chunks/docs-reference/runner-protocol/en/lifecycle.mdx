@@ -2,21 +2,23 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 
 ## Job Lifecycle
 
-Each Job moves through a fixed set of states as it is claimed, executed, and processed.
+Each Job moves through a fixed set of states as its executions are sent, run, and processed.
+A Job stays `running` from its first execution until its outcome, between its executions too.
 
 | From      | To          | Trigger                                                                |
 | --------- | ----------- | ---------------------------------------------------------------------- |
-| pending   | claimed     | A Runner claims the Job                                                 |
+| pending   | claimed     | A Runner takes the Job's first execution                               |
 | pending   | canceled    | A user cancels the Job                                                  |
 | claimed   | running     | The Runner sends `running`                                              |
 | claimed   | failed      | The Runner sends `failed`                                              |
 | claimed   | unknown     | The server loses contact with the Runner                               |
 | claimed   | canceled    | A user cancels the Job                                                  |
-| running   | completed   | The Runner sends `completed`                                            |
-| running   | failed      | The Runner sends `failed`                                              |
-| running   | unknown     | The server loses contact with the Runner                               |
+| running   | completed   | Every iteration of the Job has its outcome                             |
+| running   | failed      | An execution fails without `allow_failure`, or the Job's time runs out |
+| running   | unknown     | The server loses contact with the Runner of its only execution in flight |
 | running   | canceled    | A user cancels the Job, or the hard Job timeout is exceeded             |
-| unknown   | completed   | The Runner sends `completed`                                           |
+| unknown   | running     | The Runner resends its result, and the Job has iterations left         |
+| unknown   | completed   | The Runner resends its result, and every iteration has its outcome     |
 | unknown   | failed      | The Runner sends `failed`                                              |
 | unknown   | canceled    | A user cancels the Job, or the hard Job timeout is exceeded            |
 | completed | processed   | The server successfully processes the results                          |

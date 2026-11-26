@@ -8,6 +8,10 @@ Messages envoyés du Runner vers le serveur.
 | `paused`    | Le Runner est inactif mais n'accepte aucun Job tant que ses motifs de pause persistent ; le serveur maintient l'interrogation et répond `no_job` | `reasons` (chacun avec un `kind` : `raid` ou `maintenance`), `since` et tous les champs de `ready` |
 | `running`   | La préparation du Job est terminée et le benchmark démarre | Aucune                                                          |
 | `heartbeat` | Signal de vie périodique (environ une fois par seconde) | Aucune                                                            |
-| `completed` | Le benchmark s'est terminé avec succès            | `job` (UUID du Job) et `results` (sortie par itération)                 |
-| `failed`    | Le benchmark a échoué                             | `job` (UUID du Job), `results` et `error`                               |
-| `canceled`  | Accuse réception d'une annulation depuis le serveur | `job` (UUID du Job)                                                   |
+| `completed` | Le benchmark s'est terminé avec succès            | `job` (l'UUID du message `job`) et `results` (la sortie de l'exécution) |
+| `failed`    | Le benchmark a échoué                             | `job` (l'UUID du message `job`), `results` et `error`                   |
+| `canceled`  | Accuse réception d'une annulation depuis le serveur | `job` (l'UUID du message `job`)                                       |
+
+L'UUID d'un message `job` désigne cette exécution, et non le Job.
+Le Runner le renvoie, de sorte qu'un résultat désigne exactement son exécution,
+même lorsqu'il est renvoyé après le départ d'une autre exécution du même Job.

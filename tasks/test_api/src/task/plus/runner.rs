@@ -2,7 +2,7 @@ use std::process::Command;
 
 use assert_cmd::cargo::CommandCargoExt as _;
 use bencher_json::{
-    JobStatus, JobUuid, JsonJob, JsonProjectKeyCreated, JsonUserKeyCreated, Jwt, Url,
+    DateTime, JobStatus, JobUuid, JsonJob, JsonProjectKeyCreated, JsonUserKeyCreated, Jwt, Url,
     runner::{JobCallbackState, JsonJobCallback},
 };
 use pretty_assertions::assert_eq;
@@ -273,8 +273,15 @@ impl RunnerTest {
             Ok(())
         };
 
+        // Run a job of 3 iterations, which the server sends as 3 executions
+        let iterations_result = if no_sandbox_result.is_ok() {
+            run_iterations_runner_test(&self.url, &self.token)
+        } else {
+            Ok(())
+        };
+
         // Run the detach runner test
-        let detach_result = if no_sandbox_result.is_ok() {
+        let detach_result = if iterations_result.is_ok() {
             run_detach_runner_test(&self.url, &self.token)
         } else {
             Ok(())
@@ -338,6 +345,7 @@ impl RunnerTest {
         result?;
         image_project_result?;
         no_sandbox_result?;
+        iterations_result?;
         detach_result?;
         detach_failed_result?;
         user_key_result?;
@@ -350,8 +358,8 @@ impl RunnerTest {
                 .filter_map(|line| serde_json::from_str(line).ok())
                 .collect();
             ensure_a_pull_reused_the_store(&records)?;
-            if let Some((job, build_time)) = build_time_result? {
-                ensure_the_build_time_is_the_commands(&records, job, build_time)?;
+            if let Some(job) = build_time_result? {
+                ensure_the_build_time_is_the_commands(&records, &job)?;
             }
         }
         println!("=== Runner Daemon Test Passed ===");
@@ -591,17 +599,20 @@ fn ensure_a_pull_reused_the_store(records: &[serde_json::Value]) -> anyhow::Resu
 /// Job's command, not its pull, unpack, or boot.
 fn ensure_the_build_time_is_the_commands(
     records: &[serde_json::Value],
-    job: JobUuid,
-    build_time: f64,
+    job: &BuildTimeJob,
 ) -> anyhow::Result<()> {
-    let job = job.to_string();
+    let BuildTimeJob {
+        job: uuid,
+        build_time,
+        ..
+    } = job;
     let durations: Vec<u64> = records_with(records, "Command finished")
-        .filter(|record| record["job"].as_str() == Some(job.as_str()))
+        .filter(|record| job.logged_during(record))
         .filter_map(|record| record["duration_ms"].as_u64())
         .collect();
     println!("Build time {build_time} s, command finished in {durations:?} ms");
     let [duration_ms] = durations.as_slice() else {
-        anyhow::bail!("Expected one command for the build time Job {job}, got {durations:?}");
+        anyhow::bail!("Expected one command for the build time Job {uuid}, got {durations:?}");
     };
     #[expect(clippy::cast_precision_loss, reason = "milliseconds of one command")]
     let command = *duration_ms as f64 / 1000.0;
@@ -610,6 +621,25 @@ fn ensure_the_build_time_is_the_commands(
         "The build time {build_time} s is not the command's {duration_ms} ms"
     );
     Ok(())
+}
+
+/// The daemon names each record by the execution the server sent it, never by
+/// the Job, so the Job's records are the ones logged between its submit and its
+/// report: the harness runs 1 Job at a time.
+struct BuildTimeJob {
+    job: JobUuid,
+    build_time: f64,
+    submitted: DateTime,
+    reported: DateTime,
+}
+
+impl BuildTimeJob {
+    fn logged_during(&self, record: &serde_json::Value) -> bool {
+        serde_json::from_value::<DateTime>(record["ts"].clone()).is_ok_and(|logged| {
+            (self.submitted.into_inner()..=self.reported.into_inner())
+                .contains(&logged.into_inner())
+        })
+    }
 }
 
 fn records_with<'a>(
@@ -736,13 +766,9 @@ pub fn run_runner_test(
     Ok(())
 }
 
-/// Run a Job that asks for its build time, and return the Job and the build
-/// time its report holds.
-fn run_build_time_runner_test(
-    url: &Url,
-    token: &Jwt,
-    spec: &str,
-) -> anyhow::Result<(JobUuid, f64)> {
+/// Run a Job that asks for its build time, and return the Job, the build time
+/// its report holds, and when the harness submitted it and got its report.
+fn run_build_time_runner_test(url: &Url, token: &Jwt, spec: &str) -> anyhow::Result<BuildTimeJob> {
     use bencher_json::project::measure::built_in::{BuiltInMeasure as _, json::BuildTime};
 
     let host = url.as_ref();
@@ -779,7 +805,9 @@ fn run_build_time_runner_test(
         "mock",
     ];
     cmd.args(args).current_dir(CLI_DIR);
+    let submitted = DateTime::now();
     let output = cmd.output()?;
+    let reported = DateTime::now();
     anyhow::ensure!(
         output.status.success(),
         "bencher run --build-time failed:\nstdout: {}\nstderr: {}",
@@ -806,7 +834,12 @@ fn run_build_time_runner_test(
     };
 
     println!("Build time runner smoke test passed!");
-    Ok((job, *build_time))
+    Ok(BuildTimeJob {
+        job,
+        build_time: *build_time,
+        submitted,
+        reported,
+    })
 }
 
 /// Run the image-derived project runner smoke test variant.
@@ -928,6 +961,64 @@ fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     );
 
     println!("No-sandbox runner smoke test passed!");
+    Ok(())
+}
+
+/// Run a job of 3 iterations on the no-sandbox runner: the server sends each iteration as its own
+/// execution of 1 iteration, which the runner runs as it runs any job, and the report holds all 3.
+fn run_iterations_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
+    let host = url.as_ref();
+
+    println!("Running iterations runner smoke test against: {host}");
+
+    // The image should already be pushed from the first test
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
+    let args = [
+        "run",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        "--project",
+        PROJECT_SLUG,
+        "--branch",
+        "master",
+        "--testbed",
+        "base",
+        "--image",
+        &image_ref,
+        "--spec",
+        "no-sandbox-spec",
+        "--iter",
+        "3",
+        "--format",
+        "json",
+        "--quiet",
+        "--job-timeout",
+        "120",
+        "--job-poll-interval",
+        "1",
+        "--exec",
+        "mock",
+    ];
+    cmd.args(args).current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run (iterations) failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
+    let iterations = json.results.as_ref().map_or(0, Vec::len);
+    anyhow::ensure!(
+        iterations == 3,
+        "Expected 3 iterations in the report, got {iterations}: {json:?}"
+    );
+
+    println!("Iterations runner smoke test passed!");
     Ok(())
 }
 
@@ -2014,6 +2105,34 @@ mod tests {
             "the cleanup reports nothing to complain about"
         );
         String::from_utf8(output.stdout).unwrap()
+    }
+
+    #[test]
+    fn the_build_time_is_the_command_logged_while_its_job_ran() {
+        // The daemon names each record by its execution, never by the Job, and
+        // the same daemon ran an earlier Job whose command must not count.
+        let at = |ts: &str| serde_json::from_value::<DateTime>(serde_json::json!(ts)).unwrap();
+        let command = |ts: &str, duration_ms: u64| {
+            serde_json::json!({
+                "msg": "Command finished",
+                "ts": ts,
+                "job": JobUuid::new().to_string(),
+                "exit_code": 0,
+                "duration_ms": duration_ms,
+            })
+        };
+        let records = [
+            command("2026-11-25T04:08:20.900000001Z", 500),
+            command("2026-11-25T04:08:21.123456789Z", 30),
+        ];
+        let job = BuildTimeJob {
+            job: JobUuid::new(),
+            build_time: 0.03,
+            submitted: at("2026-11-25T04:08:21Z"),
+            reported: at("2026-11-25T04:08:22Z"),
+        };
+
+        ensure_the_build_time_is_the_commands(&records, &job).unwrap();
     }
 
     #[test]
