@@ -1,4 +1,4 @@
-import { commandOf, quote } from "../report/snippet";
+import { commandOf, quote } from "../report/command";
 import type { ModelLike } from "./text";
 
 /** Where the run reports; `host` is the API's URL on a self-hosted server. */

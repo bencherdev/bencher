@@ -1,8 +1,14 @@
 import { execFileSync } from "node:child_process";
 import { describe, expect, test } from "vitest";
-import { type SnippetLine, thresholdSnippets } from "./snippet";
+import { Adapter } from "../../types/bencher";
+import { type SnippetLine, cliAdapter, thresholdSnippets } from "./snippet";
 
-const PLACE = { project: "hashbrown", branch: "main", testbed: "linux-x86-64" };
+const PLACE = {
+	project: "hashbrown",
+	branch: "main",
+	testbed: "linux-x86-64",
+	adapter: Adapter.Json,
+};
 
 type TestLine = SnippetLine & { benchmark: string };
 
@@ -34,6 +40,34 @@ const apiKey = (text: string): string =>
 		["-c", `bencher() { printf '%s' "$BENCHER_API_KEY"; }\n${text}`],
 		{ encoding: "utf8", env: {} },
 	);
+
+// `--adapter` values `bencher run` takes; a snippet spells `json_v0` and `json_v1` as `json`.
+const CLI_ADAPTERS = new Set([
+	"magic",
+	"json",
+	"c_sharp_dot_net",
+	"cpp_catch2",
+	"cpp_google",
+	"dart_benchmark_harness",
+	"go_bench",
+	"java_jmh",
+	"js_benchmark",
+	"js_deno",
+	"js_mitata",
+	"js_time",
+	"js_tinybench",
+	"js_vitest",
+	"python_asv",
+	"python_pytest",
+	"ruby_benchmark",
+	"ruby_benchmark_ips",
+	"rust_bench",
+	"rust_criterion",
+	"rust_divan",
+	"rust_iai",
+	"rust_gungraun",
+	"shell_hyperfine",
+]);
 
 const COMMON = [
 	"run",
@@ -238,5 +272,54 @@ describe("thresholdSnippets", () => {
 			const { simple } = thresholdSnippets(PLACE, fast, [fast]);
 			expect(boundaries(simple)).toEqual(["--threshold-lower-boundary"]);
 		});
+	});
+});
+
+describe("the adapter", () => {
+	const adapterOf = (adapter: Adapter) => {
+		const { exact, simple } = thresholdSnippets({ ...PLACE, adapter }, THIS, [
+			THIS,
+		]);
+		return [exact, simple].map((snippet) => {
+			const args = argv(snippet?.text ?? "");
+			return args[args.indexOf("--adapter") + 1];
+		});
+	};
+
+	// Kills a snippet that names `json` for every report, which reads a
+	// harness's output as JSON and fails the run.
+	test("names the report's harness, as the CLI spells it", () => {
+		expect(adapterOf(Adapter.RustCriterionJson)).toEqual([
+			"rust_criterion",
+			"rust_criterion",
+		]);
+		expect(adapterOf(Adapter.RustDivan)).toEqual(["rust_divan", "rust_divan"]);
+	});
+
+	// Kills a report's adapter passed through as stored, which the CLI refuses
+	// for a language, or a fixed adapter in place of the report's.
+	test("names magic for a magic or a language report, and json for a json report", () => {
+		expect(adapterOf(Adapter.Magic)).toEqual(["magic", "magic"]);
+		expect(adapterOf(Adapter.Rust)).toEqual(["magic", "magic"]);
+		expect(adapterOf(Adapter.Json)).toEqual(["json", "json"]);
+		expect(adapterOf(Adapter.JsonV1)).toEqual(["json", "json"]);
+	});
+});
+
+describe("cliAdapter", () => {
+	// Kills a stored adapter passed through to `--adapter`, which the CLI
+	// refuses, or one spelled as a different harness.
+	test("every stored adapter is one the CLI takes, for the same harness", () => {
+		for (const adapter of Object.values(Adapter)) {
+			const cli = cliAdapter(adapter);
+			expect(CLI_ADAPTERS.has(cli), adapter).toBe(true);
+			if (CLI_ADAPTERS.has(adapter)) {
+				expect(cli).toBe(adapter);
+			}
+		}
+		expect(cliAdapter(Adapter.JsonV0)).toBe("json");
+		expect(cliAdapter(Adapter.ShellHyperfineV2)).toBe("shell_hyperfine");
+		expect(cliAdapter(Adapter.RustGungraunJson)).toBe("rust_gungraun");
+		expect(cliAdapter(Adapter.Python)).toBe("magic");
 	});
 });

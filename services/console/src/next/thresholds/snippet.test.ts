@@ -19,8 +19,10 @@ const LATENCY = {
 
 describe("declarationSnippet", () => {
 	// Kills a flag dropped, misordered, or left without its continuation, a model
-	// field the threshold does not have, and the threshold's rows not flagged.
-	test("declares the threshold's model exactly, as run flags", () => {
+	// field the threshold does not have, the threshold's rows not flagged, and
+	// an adapter named where no single report says which (the run's default is
+	// `magic`).
+	test("declares the threshold's model exactly, as run flags with no adapter", () => {
 		const snippet = declarationSnippet(PLACE, LATENCY);
 		expect(snippet.kind).toBe("flags");
 		expect(snippet.text).toBe(
@@ -30,7 +32,6 @@ describe("declarationSnippet", () => {
 				"  --project hashbrown \\",
 				"  --branch main \\",
 				"  --testbed ubuntu-latest \\",
-				"  --adapter json \\",
 				"  --threshold-measure latency \\",
 				"  --threshold-metric value \\",
 				"  --threshold-test t_test \\",

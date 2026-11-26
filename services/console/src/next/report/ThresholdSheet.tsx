@@ -22,7 +22,7 @@ interface ThresholdSheetProps {
 	report: string;
 	branch: string;
 	testbed: string;
-	/** The adapter of the report, which a version 0 snippet names. */
+	/** The adapter of the report, which the snippet names. */
 	adapter: Adapter;
 	version: BmfVersion | undefined;
 	/** Where the run reports, for a server other than Bencher Cloud. */
@@ -55,18 +55,12 @@ const Snippets = (props: ThresholdSheetProps & { line: ReportLine }) => {
 			branch: props.branch,
 			testbed: props.testbed,
 			host: runHost(props.host),
+			adapter: props.adapter,
 		};
 		const line = snippetLine(props.line);
 		const lines = props.lines.map(snippetLine);
 		return props.version === 0
-			? {
-					exact: null,
-					simple: thresholdSnippetV0(
-						{ ...place, adapter: props.adapter },
-						line,
-						lines,
-					),
-				}
+			? { exact: null, simple: thresholdSnippetV0(place, line, lines) }
 			: thresholdSnippets(place, line, lines);
 	};
 	const label = () =>

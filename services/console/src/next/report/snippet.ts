@@ -1,5 +1,7 @@
+import type { Adapter } from "../../types/bencher";
 import type { Guard } from "../plot/format";
-import { type ParameterSet, parameterEntries } from "./row";
+import { commandOf, json, quote } from "./command";
+import type { ParameterSet } from "./row";
 
 /** A report line as the no-threshold sheet sees it; `measure` is the measure's slug. */
 export interface SnippetLine {
@@ -9,12 +11,13 @@ export interface SnippetLine {
 	guard?: Guard | undefined;
 }
 
-/** Where the run reports; `host` is the API's URL on a self-hosted server. */
-interface SnippetPlace {
+/** Where the run reports, and the adapter of the report the line is in; `host` is the API's URL on a self-hosted server. */
+export interface SnippetPlace {
 	project: string;
 	branch: string;
 	testbed: string;
 	host?: string | undefined;
+	adapter: Adapter;
 }
 
 interface Snippet<L> {
@@ -79,7 +82,7 @@ const snippet = (
 		...(place.host ? [row(`  --host ${quote(place.host)}`)] : []),
 		row(`  --branch ${quote(place.branch)}`),
 		row(`  --testbed ${quote(place.testbed)}`),
-		row("  --adapter json"),
+		row(`  --adapter ${cliAdapter(place.adapter)}`),
 		row(`  --threshold-measure ${quote(line.measure)}`, true),
 		row(`  --threshold-metric ${quote(line.metric)}`, true),
 		...(parameters
@@ -98,24 +101,11 @@ const snippet = (
 	return commandOf(rows);
 };
 
-type Row = { text: string; flag: boolean };
+// A language's adapter tries each of its harnesses, as `magic` does.
+const LANGUAGE = /^(rust|cpp|go|java|c_sharp|js|python|ruby|shell|dart)$/;
 
-/** The export line and the command it runs, each command row but the last continued. */
-export const commandOf = (rows: readonly Row[]) => {
-	const code = rows.map(({ text, flag }, index) => ({
-		text: index === 0 || index === rows.length - 1 ? text : `${text} \\`,
-		flag,
-	}));
-	return { text: code.map(({ text }) => text).join("\n"), code };
-};
-
-// Spaced for reading, with keys in the API's order.
-export const json = (parameters: ParameterSet) =>
-	`{${parameterEntries(parameters)
-		.map(([key, value]) => `${JSON.stringify(key)}: ${JSON.stringify(value)}`)
-		.join(", ")}}`;
-
-const SHELL_SAFE = /^[A-Za-z0-9_@%+=:,./-]+$/;
-
-export const quote = (value: string) =>
-	SHELL_SAFE.test(value) ? value : `'${value.replaceAll("'", `'\\''`)}'`;
+/** The adapter as `bencher run --adapter` spells it, which takes no language and no format revision. */
+export const cliAdapter = (adapter: Adapter): string =>
+	LANGUAGE.test(adapter)
+		? "magic"
+		: adapter.replace(/_(v\d|json|stdout|text|xml)$/, "");
