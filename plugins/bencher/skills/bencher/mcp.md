@@ -99,7 +99,7 @@ the same tool set applied across all of the user's projects.
 
 | Tools | Purpose |
 |-------|---------|
-| `submit_run` | Submit raw benchmark harness output; the server parses it (adapter defaults to `magic`) and creates branches, testbeds, and thresholds on the fly |
+| `submit_run` | Submit raw benchmark harness output or BMF JSON; the server parses it (adapter defaults to `magic`) at `bmf_version`, else at the project's BMF version, and creates branches, testbeds, and thresholds on the fly |
 | `query_perf` | Query metrics over time |
 | `list_projects`, `view_project` | Project discovery |
 | `list_reports`, `create_report`, `view_report` | Reports |
@@ -129,6 +129,12 @@ Notes:
   it has them. A plot holds at most 64 lines, and `total` counts every line
   the query names. The result also carries the `project` and a `url` that opens
   the plot in Bencher.
+- At BMF version 1, the version every new project starts at, `submit_run`'s
+  `thresholds.models` is a list of entries, each naming its `measure`, `metric`,
+  optional `parameters` filter, and `model`; a map of measure to model is the
+  BMF version 0 shape. `create_threshold` takes a `metric` (default `value`) and a
+  `parameters` filter: a version 1 harness measure usually has no `value`, so name
+  a metric its adapter writes (see [local-runs.md](./local-runs.md#adapters)).
 - Tool errors carry the REST status code and message
   (e.g. `403: Project keys cannot rename testbeds`).
 

@@ -22,10 +22,11 @@
 | Flag | Env Var | Default | Purpose |
 |------|---------|---------|---------|
 | `--testbed <name>` | `BENCHER_TESTBED` | | Testbed name/slug/UUID (auto-created) |
-| `--adapter <name>` | `BENCHER_ADAPTER` | `magic` | Benchmark harness adapter |
-| `--average <type>` | | | Suggested central tendency |
+| `--adapter <name>` | `BENCHER_ADAPTER` | `magic` | Benchmark harness adapter, read at the project's BMF version (`json_v0` and `json_v1` set the version) |
+| `--average <type>` | | | Suggested central tendency, BMF version 0 only (ignored at version 1 with a warning on the report) |
 | `--iter <n>` | | 1 | Number of run iterations |
-| `--fold <fn>` | | | Aggregate function (requires `--iter`) |
+| `--fold <fn>` | | | Aggregate function (requires `--iter`), BMF version 0 only (ignored at version 1 with a warning on the report) |
+| `--measure <measure>` | | | Measure to keep (repeatable); every other measure is dropped before it is stored |
 | `--backdate <epoch>` | | | Backdate report (seconds since epoch) |
 | `--allow-failure` | | | Allow benchmark command failure |
 
@@ -34,6 +35,8 @@
 | Flag | Purpose |
 |------|---------|
 | `--threshold-measure <measure>` | Measure for threshold |
+| `--threshold-metric <metric>` | Metric the threshold checks, BMF version 1 only. At version 1, a group without it creates no threshold and the report warns |
+| `--threshold-parameters <json>` | Parameters filter, a JSON object such as `'{"size": 64}'`; the threshold checks only the variants it matches, BMF version 1 only |
 | `--threshold-test <model>` | Statistical test model |
 | `--threshold-min-sample-size <n>` | Minimum historical sample size |
 | `--threshold-max-sample-size <n>` | Maximum historical sample size |
@@ -109,10 +112,15 @@
 
 ## Adapters
 
+The metric to threshold first for each adapter, and the harness notes, are in
+[local-runs.md](./local-runs.md#adapters).
+
 | Adapter | Language | Tool |
 |---------|----------|------|
 | `magic` | Any | Auto-detect |
-| `json` | Any | Bencher Metric Format (BMF) |
+| `json` | Any | Bencher Metric Format (BMF), at the project's version |
+| `json_v0` | Any | BMF version 0, on any project |
+| `json_v1` | Any | BMF version 1, on any project |
 | `c_sharp_dot_net` | C# | BenchmarkDotNet |
 | `cpp_catch2` | C++ | Catch2 |
 | `cpp_google` | C++ | Google Benchmark |
@@ -120,13 +128,18 @@
 | `go_bench` | Go | `go test -bench` |
 | `java_jmh` | Java | JMH |
 | `js_benchmark` | JavaScript | Benchmark.js |
+| `js_deno` | JavaScript | `deno bench --json` (BMF version 1 only) |
+| `js_mitata` | JavaScript | mitata (BMF version 1 only) |
 | `js_time` | JavaScript | console.time/timeEnd |
+| `js_tinybench` | JavaScript | tinybench (BMF version 1 only) |
 | `js_vitest` | JavaScript | Vitest |
 | `python_asv` | Python | ASV |
 | `python_pytest` | Python | pytest-benchmark |
 | `ruby_benchmark` | Ruby | Benchmark module |
+| `ruby_benchmark_ips` | Ruby | benchmark-ips (BMF version 1 only) |
 | `rust_bench` | Rust | libtest bench (nightly) |
 | `rust_criterion` | Rust | Criterion.rs |
+| `rust_divan` | Rust | Divan (BMF version 1 only) |
 | `rust_iai` | Rust | Iai |
 | `rust_gungraun` | Rust | Gungraun (alias: `rust_iai_callgrind`) |
 | `shell_hyperfine` | Shell | Hyperfine |
@@ -175,12 +188,23 @@ Aliases: `get` (view), `edit` (update), `rm` (revoke), `ls` (list).
 ## Utility Commands
 
 ```bash
-# Generate mock benchmark data (verify setup)
+# Generate mock benchmark data (verify setup), BMF version 1 with one `value` per measure
 bencher mock
+# One variant of every benchmark per parameter set (repeatable)
+bencher mock --parameters '{"size": 64}'
+# BMF version 0
+bencher mock --bmf-version 0
 
-# Measure environment noise
+# Measure environment noise (`--format json` writes BMF version 1)
 bencher noise
+bencher noise --format json
+# BMF version 0
+bencher noise --format json --bmf-version 0
 ```
+
+At BMF version 1, `bencher noise --format json` writes each jitter measure with the
+metric `cov` (its coefficient of variation) beside a `latency` measure with `mean`,
+`std_dev`, and `p99`; CPU steal and the noise score write `value`.
 
 ## Common Resource Commands
 
@@ -189,6 +213,7 @@ bencher noise
 bencher project list <organization>
 bencher project view <project>
 bencher project create <organization> --name <name>
+bencher project update <project> --bmf-version 1  # only a server admin can move it back
 
 # Branches
 bencher branch list <project>
@@ -211,6 +236,8 @@ bencher measure view <project> <measure>
 # Reports
 bencher report list <project>
 bencher report view <project> <report>
+# Takes the same adapter and threshold flags as bencher run
+bencher report create <project> --branch <branch> --testbed <testbed> --start-time <iso8601> --end-time <iso8601> --results '<results>' --adapter <adapter>
 
 # Alerts
 bencher alert list <project>
@@ -219,6 +246,7 @@ bencher alert view <project> <alert>
 # Thresholds
 bencher threshold list <project>
 bencher threshold view <project> <threshold>
+bencher threshold create <project> --branch <branch> --testbed <testbed> --measure <measure> --metric <metric> [--parameters '<json>'] --test <model> --upper-boundary <val>
 
 # Metrics (view only, no list)
 bencher metric view <project> <metric>
@@ -226,6 +254,10 @@ bencher metric view <project> <metric>
 # Plots
 bencher plot list <project>
 bencher plot view <project> <plot>
+# --metric and --parameters are repeatable; without --metric, the plot draws every metric
+bencher plot create <project> --x-axis date_time --window <secs> --branches <branch-uuid> --testbeds <testbed-uuid> --benchmarks <benchmark-uuid> --measures <measure-uuid> --metric <metric> [--parameters '<json>']
+# Replaces only the sets given; --metric _ alone draws every metric again, --parameters '{}' every variant
+bencher plot update <project> <plot> --metric <metric> --parameters '<json>'
 
 # Jobs (Bencher Plus)
 bencher job list <project>
@@ -243,6 +275,6 @@ bencher spec view <spec>
 bencher archive --project <project> --branch <branch>
 bencher unarchive --project <project> --branch <branch>
 
-# Performance query (all flags are repeatable and take UUIDs only)
+# Performance query, printed as JSON (all flags are repeatable and take UUIDs only)
 bencher perf <project> --branches <branch-uuid> --testbeds <testbed-uuid> --benchmarks <benchmark-uuid> --measures <measure-uuid>
 ```

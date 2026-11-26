@@ -402,7 +402,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BENCHER_PROJECT: my-project-slug
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
     steps:
       - uses: actions/checkout@v6
       - uses: bencherdev/bencher@main
@@ -420,7 +420,9 @@ Supported Operating Systems:
 
 ### Repository Secrets
 
-Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`). You can find your API tokens by running `bencher token list my-user-slug` or [view them in the Bencher Console](https://bencher.dev/console/users/tokens).
+Add `BENCHER_API_KEY` to your **Repository** secrets (ex: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`), set to a project API key (`bencher_run_*`). Create one in your project's settings in the [Bencher Console](https://bencher.dev/console).
+
+👉 For more details see the [explanation of API keys](https://bencher.dev/docs/explanation/bencher-run/#--key-key).
 
 ### Error on Alert
 

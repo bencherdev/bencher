@@ -5,13 +5,20 @@ eliminating noisy-neighbor effects from shared CI runners.
 
 ## Quick Start
 
-The simplest bare metal run uses the built-in noise measurement tool:
+The simplest bare metal run uses the `bencher` CLI image and its built-in noise
+measurement tool. `--image` runs an image from the Bencher registry, whose
+repository is the project's slug, so push the CLI image there first:
 ```bash
-bencher run --image alpine:latest "bencher noise"
+docker pull --platform linux/amd64 ghcr.io/bencherdev/bencher:latest
+docker tag ghcr.io/bencherdev/bencher:latest registry.bencher.dev/my-project:latest
+docker push registry.bencher.dev/my-project:latest
+bencher run --project my-project --image my-project:latest noise --format json
 ```
 
-This submits a job that runs `bencher noise` inside an Alpine container on
-dedicated hardware and reports back environment noise metrics.
+This submits a job that runs `bencher noise --format json` (the image's entrypoint
+is `bencher`) on dedicated hardware and reports back environment noise metrics.
+For a claimed project, log in to the registry before the push (see
+[Build and Push](#build-and-push)).
 
 ## Available Specs (Bencher Cloud)
 
@@ -23,14 +30,16 @@ See: https://bencher.dev/docs/explanation/testbeds/#--spec-spec
 
 Specify with `--spec`:
 ```bash
-bencher run --image my-bench:latest --spec intel-v1 "cargo bench"
+bencher run --project my-project --image my-project:latest --spec intel-v1 "cargo bench"
 ```
 
 ## Workflow
 
 1. Build an OCI image containing your benchmark suite
-2. Push it to a container registry (Docker Hub, GHCR, etc.)
-3. Submit with `bencher run --image <ref>`
+2. Push it to the Bencher registry (`registry.bencher.dev/<project>`; on Bencher
+   Self-Hosted, the API server's host, such as `localhost:6610/<project>`), the only
+   registry `--image` pulls from
+3. Submit with `bencher run --project <project> --image <ref>`
 
 ### Writing a Dockerfile
 
@@ -63,9 +72,12 @@ RUN pip install -e ".[bench]"
 
 ### Build and Push
 
+A claimed project's repository needs a login first: the username is the project
+slug and the password is an API key, read from `BENCHER_API_KEY`.
 ```bash
-docker build -t ghcr.io/myorg/my-bench:latest .
-docker push ghcr.io/myorg/my-bench:latest
+docker login registry.bencher.dev -u my-project --password-stdin <<< "$BENCHER_API_KEY"
+docker build -t registry.bencher.dev/my-project:latest .
+docker push registry.bencher.dev/my-project:latest
 ```
 
 ### Submit
@@ -74,10 +86,14 @@ docker push ghcr.io/myorg/my-bench:latest
 bencher run \
   --project my-project \
   --branch main \
-  --image ghcr.io/myorg/my-bench:latest \
+  --image my-project:latest \
   --spec intel-v1 \
+  --adapter rust_criterion \
   "cargo bench"
 ```
+
+Pass `--project` with `--image`, so the run reads the project's BMF version;
+without it, the run declares version 1 (see `local-runs.md`).
 
 ## Key Flags
 
@@ -101,15 +117,15 @@ bencher run \
 
 Build time and file size tracking work with bare metal runs:
 ```bash
-bencher run --image my-bench:latest --build-time "cargo build --release"
-bencher run --image my-bench:latest --file-size /app/target/release/my-binary
+bencher run --project my-project --image my-project:latest --build-time "cargo build --release"
+bencher run --project my-project --image my-project:latest --file-size /app/target/release/my-binary
 ```
 
 ## Detached Runs
 
 Submit the job and exit immediately (useful in CI where you check results later):
 ```bash
-bencher run --image my-bench:latest --detach "cargo bench"
+bencher run --project my-project --image my-project:latest --detach "cargo bench"
 ```
 
 On GitHub Actions, `--detach` with `--github-actions` sends a `repository_dispatch` when the job
@@ -122,7 +138,8 @@ GitHub Check (see `ci.md`).
 Pass non-secret config into the container:
 ```bash
 bencher run \
-  --image my-bench:latest \
+  --project my-project \
+  --image my-project:latest \
   --env BENCH_SIZE=large \
   --env FEATURE_FLAG=true \
   "pytest benchmarks/"
