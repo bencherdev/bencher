@@ -1,4 +1,4 @@
-use std::{fmt, sync::LazyLock};
+use std::sync::LazyLock;
 
 use bencher_valid::{DateTime, NameId, ResourceId, ResourceName};
 #[cfg(feature = "schema")]
@@ -67,12 +67,6 @@ pub struct JsonMeasure {
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
-}
-
-impl fmt::Display for JsonMeasure {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.name, self.units)
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
