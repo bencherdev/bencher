@@ -10,10 +10,18 @@
 //! Integration tests for OCI blob endpoints.
 
 use bencher_api_tests::TestServer;
+use bencher_api_tests::helpers::{organizations, projects};
 use bencher_api_tests::oci::compute_digest;
-use bencher_json::RunnerUuid;
+use bencher_json::{OrganizationUuid, RunnerUuid};
 use bencher_token::OciAction;
 use http::StatusCode;
+use std::sync::Arc;
+use tokio::task::JoinSet;
+
+/// As many blob upload starts as a Docker push of a many-layer image sends at once.
+const RACERS: usize = 8;
+/// Long enough for an upload start to pass its reads and queue on the API's writer.
+const QUEUE: std::time::Duration = std::time::Duration::from_secs(1);
 
 // POST /v2/{name}/blobs/uploads - Start upload (authenticated)
 #[tokio::test]
@@ -515,6 +523,324 @@ async fn blob_upload_nonexistent_slug_authenticated() {
         .expect("Request failed");
 
     assert_eq!(unauth_resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+// Concurrent upload starts by one user to a new project slug all start, and create the project once,
+// in the user's organization.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn blob_upload_starts_at_once_create_the_project_once() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "raceadmin@example.com").await;
+    let user = server.signup("Race User", "raceuser@example.com").await;
+    let slug = "raced-project";
+    let token = server.oci_token(&user, slug, &[OciAction::Push]);
+
+    let statuses = start_uploads_at_once(&server, vec![(slug, token); RACERS]).await;
+
+    assert_eq!(statuses, vec![StatusCode::ACCEPTED; RACERS]);
+    assert_eq!(projects(&server), vec![(slug.to_owned(), user.uuid.into())]);
+    assert_eq!(
+        organizations(&server),
+        vec![OrganizationUuid::from(admin.uuid), user.uuid.into()]
+    );
+}
+
+// Concurrent anonymous upload starts to a new project slug all start, and create the project and
+// its organization once.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn blob_upload_starts_at_once_unclaimed_create_the_project_once() {
+    let server = TestServer::new().await;
+    let slug = "raced-unclaimed-project";
+    let token = server.oci_public_token(slug, &[OciAction::Push]);
+
+    let statuses = start_uploads_at_once(&server, vec![(slug, token); RACERS]).await;
+
+    assert_eq!(statuses, vec![StatusCode::ACCEPTED; RACERS]);
+    let organizations = organizations(&server);
+    assert_eq!(organizations.len(), 1);
+    assert_eq!(projects(&server), vec![(slug.to_owned(), organizations[0])]);
+}
+
+// A user who claimed an organization at signup has no organization of its own. Concurrent upload
+// starts by that user to a new project slug, all queued on the writer before any creates the
+// organization, create that organization once and the project once, with the default rate limits.
+// Only the one that creates the organization counts toward the user's organization creation limit.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn blob_upload_starts_at_once_create_the_user_organization_once() {
+    let server = TestServer::new_with_default_rate_limits().await;
+    let admin = server.signup("Admin", "raceorgadmin@example.com").await;
+    let claimed_slug = "claimed-at-signup";
+    let public_token = server.oci_public_token(claimed_slug, &[OciAction::Push]);
+    let statuses = start_uploads_at_once(&server, vec![(claimed_slug, public_token)]).await;
+    assert_eq!(statuses, vec![StatusCode::ACCEPTED]);
+    let claimed = organizations(&server)[1];
+    let user = server
+        .signup_with_claim("Claim User", "raceorguser@example.com", Some(claimed))
+        .await;
+    let slug = "raced-first-project";
+    let token = server.oci_token(&user, slug, &[OciAction::Push]);
+
+    let statuses =
+        start_uploads_behind_the_writer(&server, vec![vec![(slug, token); RACERS]]).await;
+
+    assert_eq!(statuses, vec![StatusCode::ACCEPTED; RACERS]);
+    assert_eq!(
+        projects(&server),
+        vec![
+            (claimed_slug.to_owned(), claimed),
+            (slug.to_owned(), user.uuid.into())
+        ]
+    );
+    assert_eq!(
+        organizations(&server),
+        vec![
+            OrganizationUuid::from(admin.uuid),
+            claimed,
+            user.uuid.into()
+        ]
+    );
+    // The organization creation limit allows 2 a minute, and the race counted once.
+    let mut statuses = Vec::new();
+    for i in 0..3 {
+        let status = server
+            .client
+            .post(server.api_url("/v0/organizations"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&serde_json::json!({ "name": format!("After The Race {i}") }))
+            .send()
+            .await
+            .expect("Request failed")
+            .status();
+        statuses.push(status);
+        if status != StatusCode::CREATED {
+            break;
+        }
+    }
+    assert_eq!(
+        statuses,
+        vec![StatusCode::CREATED, StatusCode::TOO_MANY_REQUESTS]
+    );
+}
+
+// A user who left their own organization still has an organization with their UUID, which they
+// cannot use. An upload start by that user to a new project slug is refused as a conflict.
+#[tokio::test]
+async fn blob_upload_start_by_a_user_who_left_their_organization_conflicts() {
+    let server = TestServer::new().await;
+    let _admin = server.signup("Admin", "leftadmin@example.com").await;
+    let user = server.signup("Left User", "leftuser@example.com").await;
+    let resp = server
+        .client
+        .delete(server.api_url(&format!(
+            "/v0/organizations/{uuid}/members/{uuid}",
+            uuid = user.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    let slug = "left-project";
+    let token = server.oci_token(&user, slug, &[OciAction::Push]);
+
+    let statuses = start_uploads_at_once(&server, vec![(slug, token)]).await;
+
+    assert_eq!(statuses, vec![StatusCode::CONFLICT]);
+    assert_eq!(projects(&server), Vec::new());
+}
+
+// Concurrent upload starts to a new project slug by a user one project short of its organization's
+// creation limit all start: only the one that creates the project counts toward the limit.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn blob_upload_starts_at_once_at_the_creation_limit_create_the_project_once() {
+    let server = TestServer::new_with_creation_limits(u32::MAX, 1).await;
+    let _admin = server.signup("Admin", "racelimitadmin@example.com").await;
+    let user = server.signup("Limit User", "racelimit@example.com").await;
+    let slug = "raced-last-project";
+    let token = server.oci_token(&user, slug, &[OciAction::Push]);
+
+    let statuses = start_uploads_at_once(&server, vec![(slug, token); RACERS]).await;
+
+    assert_eq!(statuses, vec![StatusCode::ACCEPTED; RACERS]);
+    assert_eq!(projects(&server), vec![(slug.to_owned(), user.uuid.into())]);
+}
+
+// An anonymous upload start that the creation limit refuses leaves no project and no organization.
+#[tokio::test]
+async fn blob_upload_start_unclaimed_refused_by_the_creation_limit_creates_nothing() {
+    let server = TestServer::new_with_creation_limits(0, u32::MAX).await;
+    let slug = "refused-unclaimed-project";
+    let token = server.oci_public_token(slug, &[OciAction::Push]);
+
+    let statuses = start_uploads_at_once(&server, vec![(slug, token)]).await;
+
+    assert_eq!(statuses, vec![StatusCode::TOO_MANY_REQUESTS]);
+    assert_eq!(organizations(&server), Vec::new());
+    assert_eq!(projects(&server), Vec::new());
+}
+
+// Two users race to create the same project slug. The project lands in one user's organization:
+// that user's upload starts all start, and the other user's are all denied, as they would be on
+// the project once it exists.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn blob_upload_starts_at_once_by_two_users_create_the_project_for_one() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "racetwoadmin@example.com").await;
+    let first = server.signup("First User", "racefirst@example.com").await;
+    let second = server.signup("Second User", "racesecond@example.com").await;
+    let slug = "contested-project";
+    let racers = [&first, &second]
+        .into_iter()
+        .cycle()
+        .take(RACERS)
+        .collect::<Vec<_>>();
+    let uploads = racers
+        .iter()
+        .map(|user| (slug, server.oci_token(user, slug, &[OciAction::Push])))
+        .collect();
+
+    let statuses = start_uploads_at_once(&server, uploads).await;
+
+    let projects = projects(&server);
+    assert_eq!(projects.len(), 1);
+    let (project_slug, owner) = &projects[0];
+    assert_eq!(project_slug, slug);
+    let expected = racers
+        .iter()
+        .map(|user| {
+            if OrganizationUuid::from(user.uuid) == *owner {
+                StatusCode::ACCEPTED
+            } else {
+                StatusCode::FORBIDDEN
+            }
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(statuses, expected);
+    assert_eq!(
+        organizations(&server),
+        vec![
+            OrganizationUuid::from(admin.uuid),
+            first.uuid.into(),
+            second.uuid.into()
+        ]
+    );
+}
+
+// A user and an anonymous pusher race to create each of several project slugs, the user's upload
+// starts queued on the writer before the anonymous ones, after both passed their reads. Each project
+// is created once, in the user's organization. The anonymous upload starts are all refused, as they
+// would be on a project that exists, and leave no organization behind.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn blob_upload_starts_at_once_by_a_user_and_anonymous_create_each_project_once() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "racemixedadmin@example.com").await;
+    let user = server.signup("Mixed User", "racemixed@example.com").await;
+    let slugs = (0..RACERS)
+        .map(|i| format!("mixed-project-{i}"))
+        .collect::<Vec<_>>();
+    let user_uploads = slugs
+        .iter()
+        .map(|slug| {
+            (
+                slug.as_str(),
+                server.oci_token(&user, slug, &[OciAction::Push]),
+            )
+        })
+        .collect();
+    let public_uploads = slugs
+        .iter()
+        .map(|slug| {
+            (
+                slug.as_str(),
+                server.oci_public_token(slug, &[OciAction::Push]),
+            )
+        })
+        .collect();
+
+    let statuses =
+        start_uploads_behind_the_writer(&server, vec![user_uploads, public_uploads]).await;
+
+    let expected = [StatusCode::ACCEPTED; RACERS]
+        .into_iter()
+        .chain([StatusCode::UNAUTHORIZED; RACERS])
+        .collect::<Vec<_>>();
+    assert_eq!(statuses, expected);
+    let mut projects = projects(&server);
+    projects.sort();
+    let expected_projects = slugs
+        .iter()
+        .map(|slug| (slug.clone(), OrganizationUuid::from(user.uuid)))
+        .collect::<Vec<_>>();
+    assert_eq!(projects, expected_projects);
+    assert_eq!(
+        organizations(&server),
+        vec![OrganizationUuid::from(admin.uuid), user.uuid.into()]
+    );
+}
+
+/// Start an upload with each repository and token at once, and return each status in order.
+async fn start_uploads_at_once(
+    server: &TestServer,
+    uploads: Vec<(&str, String)>,
+) -> Vec<StatusCode> {
+    let mut starts = JoinSet::new();
+    for (i, (repository, token)) in uploads.into_iter().enumerate() {
+        spawn_upload_start(&mut starts, server, i, repository, &token);
+    }
+    statuses_in_order(starts).await
+}
+
+/// Start an upload with each repository and token while holding the API's writer, each batch once
+/// the batch before it has queued on the writer, then let the writer go, and return each status in
+/// order.
+async fn start_uploads_behind_the_writer(
+    server: &TestServer,
+    batches: Vec<Vec<(&str, String)>>,
+) -> Vec<StatusCode> {
+    let writer = Arc::clone(&server.context().database.connection)
+        .lock_owned()
+        .await;
+    let mut starts = JoinSet::new();
+    let mut i = 0;
+    for batch in batches {
+        for (repository, token) in batch {
+            spawn_upload_start(&mut starts, server, i, repository, &token);
+            i += 1;
+        }
+        tokio::time::sleep(QUEUE).await;
+    }
+    drop(writer);
+    statuses_in_order(starts).await
+}
+
+#[expect(clippy::expect_used, reason = "test helper sending requests")]
+fn spawn_upload_start(
+    starts: &mut JoinSet<(usize, StatusCode)>,
+    server: &TestServer,
+    i: usize,
+    repository: &str,
+    token: &str,
+) {
+    let request = server
+        .client
+        .post(server.api_url(&format!("/v2/{repository}/blobs/uploads")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        );
+    starts.spawn(async move { (i, request.send().await.expect("Request failed").status()) });
+}
+
+async fn statuses_in_order(starts: JoinSet<(usize, StatusCode)>) -> Vec<StatusCode> {
+    let mut statuses = starts.join_all().await;
+    statuses.sort_by_key(|(i, _)| *i);
+    statuses.into_iter().map(|(_, status)| status).collect()
 }
 
 // Monolithic upload (PUT /blobs/uploads?digest=) to unclaimed project with public token

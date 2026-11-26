@@ -195,6 +195,33 @@ pub fn is_conflict(error: &HttpError) -> bool {
     error.status_code == ClientErrorStatusCode::CONFLICT
 }
 
+/// Why a write transaction rolled back.
+pub(crate) enum InsertRefusal {
+    /// The transaction itself failed.
+    Diesel(diesel::result::Error),
+    /// The write was refused, for the reason given.
+    Refused(HttpError),
+}
+
+impl From<diesel::result::Error> for InsertRefusal {
+    fn from(error: diesel::result::Error) -> Self {
+        Self::Diesel(error)
+    }
+}
+
+impl InsertRefusal {
+    /// The refusal, or a failed transaction as a conflict on the resource it writes.
+    pub(crate) fn into_http_error<V>(self, resource: BencherResource, value: V) -> HttpError
+    where
+        V: fmt::Debug,
+    {
+        match self {
+            Self::Refused(error) => error,
+            Self::Diesel(error) => resource_conflict_error(resource, value, error),
+        }
+    }
+}
+
 /// The value, or `None` for a daily limit's 429, which a report skips past instead of failing.
 /// Every other error propagates.
 pub fn past_the_ceiling<T>(

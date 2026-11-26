@@ -145,6 +145,12 @@ impl TestServer {
         Self::build(None, None, None, None, Some(rate_limiting), None, false).await
     }
 
+    /// Create a new test server with the default rate limits of Bencher Cloud.
+    #[cfg(feature = "plus")]
+    pub async fn new_with_default_rate_limits() -> Self {
+        Self::new_with_rate_limiting(bencher_schema::context::RateLimiting::default()).await
+    }
+
     /// Create a new test server with the given rate limits, in-memory request
     /// limiters included, for tests of the request throttle itself.
     #[cfg(feature = "plus")]

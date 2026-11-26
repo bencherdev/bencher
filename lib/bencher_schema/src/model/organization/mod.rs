@@ -3,8 +3,8 @@ use std::string::ToString as _;
 #[cfg(feature = "plus")]
 use bencher_json::JsonSsos;
 use bencher_json::{
-    DateTime, IntoResourceId as _, JsonNewOrganization, JsonOrganization, Jwt,
-    OrganizationResourceId, OrganizationSlug, OrganizationUuid, ProjectSlug, ResourceName,
+    DateTime, JsonNewOrganization, JsonOrganization, Jwt, OrganizationResourceId, OrganizationSlug,
+    OrganizationUuid, ProjectSlug, ResourceName,
     organization::{
         JsonOrganizationPatch, JsonOrganizationPatchNull, JsonUpdateOrganization,
         member::OrganizationRole,
@@ -25,7 +25,8 @@ use crate::{
     ApiContext, CLAIM_TOKEN_TTL, auth_conn,
     context::{DbConnection, Rbac},
     error::{
-        BencherResource, forbidden_error, issue_error, resource_not_found_error, unauthorized_error,
+        BencherResource, InsertRefusal, forbidden_error, issue_error, resource_conflict_error,
+        resource_not_found_error, unauthorized_error,
     },
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
@@ -33,8 +34,8 @@ use crate::{
         slug::ok_slug,
         sql::last_insert_rowid,
     },
-    model::user::auth::AuthUser,
-    public_conn, resource_conflict_err, resource_not_found_err,
+    model::user::{UserId, auth::AuthUser},
+    resource_conflict_err, resource_not_found_err,
     schema::{self, organization as organization_table},
     write_conn, write_transaction,
 };
@@ -89,18 +90,55 @@ impl QueryOrganization {
             return Ok(query_organization);
         }
 
-        let insert_organization =
-            InsertOrganization::from_user(auth_conn!(context), &auth_user.user);
-        match Self::create(context, auth_user, insert_organization).await {
-            Ok(org) => Ok(org),
-            Err(e) if crate::error::is_conflict(&e) => {
-                // Another concurrent request created this org — re-lookup
-                Self::find_user_organization(context, auth_user, user_uuid)
-                    .await
-                    .map_err(|_lookup_err| e)
-            },
-            Err(e) => Err(e),
+        // The lookup, the creation limit, and the insert share one write transaction,
+        // so only the request that creates the organization counts toward the limit.
+        let organization_uuid = OrganizationUuid::from(user_uuid);
+        let user_id = auth_user.id;
+        let inserted = write_transaction!(context, |conn| {
+            let existing = schema::organization::table
+                .filter(schema::organization::uuid.eq(organization_uuid))
+                .filter(schema::organization::deleted.is_null())
+                .select(schema::organization::id)
+                .first::<OrganizationId>(conn)
+                .optional()?;
+            if existing.is_some() {
+                return Ok(None);
+            }
+            #[cfg(feature = "plus")]
+            context
+                .rate_limiting
+                .create_organization(user_uuid)
+                .map_err(InsertRefusal::Refused)?;
+            let insert_organization = InsertOrganization::from_user(conn, &auth_user.user);
+            let id =
+                Self::insert_with_leader(conn, &insert_organization, user_id).map_err(|e| {
+                    InsertRefusal::Refused(resource_conflict_error(
+                        BencherResource::Organization,
+                        &insert_organization,
+                        e,
+                    ))
+                })?;
+            Ok::<_, InsertRefusal>(Some(insert_organization.into_query(id)))
+        })
+        .map_err(|refusal| {
+            refusal.into_http_error(BencherResource::Organization, organization_uuid)
+        })?;
+
+        if let Some(query_organization) = inserted {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
+            return Ok(query_organization);
         }
+        // Another request created the organization, along with this user's role in it,
+        // after this user was loaded. A user who left their organization conflicts with it.
+        let auth_user = auth_user.reload(auth_conn!(context))?;
+        let query_organization = Self::from_uuid(auth_conn!(context), organization_uuid)?;
+        query_organization
+            .try_allowed(&context.rbac, &auth_user, Permission::View)
+            .map_err(|e| {
+                resource_conflict_error(BencherResource::Organization, organization_uuid, e)
+            })?;
+        Ok(query_organization)
     }
 
     async fn find_user_organization(
@@ -121,73 +159,35 @@ impl QueryOrganization {
         Ok(query_organization)
     }
 
-    pub async fn get_or_create_from_project(
-        context: &ApiContext,
+    /// Find the organization of an on-the-fly project by the project slug, or insert it.
+    /// This runs in the write transaction that inserts the project,
+    /// so the organization is only kept along with its project.
+    pub(crate) fn get_or_insert_for_project(
+        conn: &mut DbConnection,
         project_name: &ResourceName,
         project_slug: &ProjectSlug,
-    ) -> Result<Self, HttpError> {
-        // Fast path: check if already exists (pool connection, covers common case)
-        if let Ok(query_organization) =
-            Self::find_unclaimed_project_organization(context, project_slug).await
-        {
-            return Ok(query_organization);
+    ) -> diesel::QueryResult<GetOrInsertOrganization> {
+        let slug = OrganizationSlug::from(project_slug.clone());
+        let existing = schema::organization::table
+            .filter(schema::organization::slug.eq(&slug))
+            .filter(schema::organization::deleted.is_null())
+            .first::<Self>(conn)
+            .optional()?;
+        if let Some(existing) = existing {
+            return Ok(
+                if QueryOrganizationRole::count_query(conn, existing.id)? == 0 {
+                    GetOrInsertOrganization::Unclaimed(existing)
+                } else {
+                    GetOrInsertOrganization::Claimed
+                },
+            );
         }
 
-        // Slow path: atomic check-or-insert using only the write connection
-        let insert_organization =
-            InsertOrganization::new(project_name.clone(), project_slug.clone().into());
-
-        let result = write_transaction!(context, |conn| {
-            let existing = schema::organization::table
-                .filter(schema::organization::slug.eq(&insert_organization.slug))
-                .filter(schema::organization::deleted.is_null())
-                .first::<Self>(conn)
-                .optional()?;
-
-            if let Some(existing) = existing {
-                return diesel::QueryResult::Ok(
-                    if QueryOrganizationRole::count_query(conn, existing.id)? == 0 {
-                        GetOrCreateOrg::Unclaimed(existing)
-                    } else {
-                        GetOrCreateOrg::Claimed
-                    },
-                );
-            }
-
-            let id = Self::insert(conn, &insert_organization)?;
-            diesel::QueryResult::Ok(GetOrCreateOrg::Inserted(id))
-        })
-        .map_err(resource_conflict_err!(Organization, &insert_organization))?;
-
-        match result {
-            GetOrCreateOrg::Unclaimed(org) => Ok(org),
-            GetOrCreateOrg::Inserted(id) => {
-                #[cfg(feature = "otel")]
-                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
-                Ok(insert_organization.into_query(id))
-            },
-            GetOrCreateOrg::Claimed => Err(unauthorized_error(format!(
-                "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) or project key (`--key`) to authenticate."
-            ))),
-        }
-    }
-
-    async fn find_unclaimed_project_organization(
-        context: &ApiContext,
-        project_slug: &ProjectSlug,
-    ) -> Result<Self, HttpError> {
-        let query_organization = Self::from_resource_id(
-            public_conn!(context),
-            &OrganizationSlug::from(project_slug.clone()).into_resource_id(),
-        )?;
-        // If the project is part of an organization that is claimed,
-        // then the project can not have anonymous reports.
-        if query_organization.is_claimed(public_conn!(context))? {
-            return Err(unauthorized_error(format!(
-                "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) or project key (`--key`) to authenticate."
-            )));
-        }
-        Ok(query_organization)
+        let insert_organization = InsertOrganization::new(project_name.clone(), slug);
+        let id = Self::insert(conn, &insert_organization)?;
+        Ok(GetOrInsertOrganization::Inserted(
+            insert_organization.into_query(id),
+        ))
     }
 
     pub async fn create(
@@ -200,25 +200,9 @@ impl QueryOrganization {
             .rate_limiting
             .create_organization(auth_user.user.uuid)?;
 
-        let timestamp = DateTime::now();
         let user_id = auth_user.id;
-
         let query_organization = write_transaction!(context, |conn| {
-            let id = Self::insert(conn, &insert_organization)?;
-
-            // Connect the user to the organization as a `Leader`
-            let insert_org_role = InsertOrganizationRole {
-                user_id,
-                organization_id: id,
-                role: OrganizationRole::Leader,
-                created: timestamp,
-                modified: timestamp,
-            };
-            diesel::insert_into(schema::organization_role::table)
-                .values(&insert_org_role)
-                .execute(conn)?;
-
-            diesel::QueryResult::Ok(id)
+            Self::insert_with_leader(conn, &insert_organization, user_id)
         })
         .map_err(resource_conflict_err!(Organization, &insert_organization))
         .map(|id| insert_organization.into_query(id))?;
@@ -227,6 +211,27 @@ impl QueryOrganization {
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
 
         Ok(query_organization)
+    }
+
+    /// Insert the organization, and connect the user to it as a `Leader`.
+    fn insert_with_leader(
+        conn: &mut DbConnection,
+        insert_organization: &InsertOrganization,
+        user_id: UserId,
+    ) -> diesel::QueryResult<OrganizationId> {
+        let id = Self::insert(conn, insert_organization)?;
+        let timestamp = DateTime::now();
+        let insert_org_role = InsertOrganizationRole {
+            user_id,
+            organization_id: id,
+            role: OrganizationRole::Leader,
+            created: timestamp,
+            modified: timestamp,
+        };
+        diesel::insert_into(schema::organization_role::table)
+            .values(&insert_org_role)
+            .execute(conn)?;
+        Ok(id)
     }
 
     fn insert(
@@ -575,9 +580,9 @@ impl QueryOrganization {
     }
 }
 
-enum GetOrCreateOrg {
+pub(crate) enum GetOrInsertOrganization {
     Unclaimed(QueryOrganization),
-    Inserted(OrganizationId),
+    Inserted(QueryOrganization),
     Claimed,
 }
 

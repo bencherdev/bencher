@@ -140,6 +140,62 @@ async fn run_post_unauthenticated() {
     );
 }
 
+// POST /v0/run - concurrent runs to a new project, named by its run context alone or by its slug,
+// both create their report, and create the project once, in the user's organization
+#[cfg(feature = "plus")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn run_post_at_once_creates_the_project_once() {
+    use bencher_api_tests::helpers::projects;
+    use bencher_json::OrganizationUuid;
+
+    let server = TestServer::new().await;
+    let _admin = server.signup("Admin", "runraceadmin@example.com").await;
+    let user = server.signup("Race User", "runrace@example.com").await;
+    let run = |project: Option<&str>| {
+        let mut body = serde_json::json!({
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": [bmf_results().to_string()],
+            "context": { "bencher.dev/v0/repo/name": "raced-run-project" }
+        });
+        if let Some(project) = project {
+            body["project"] = project.into();
+        }
+        server
+            .client
+            .post(server.api_url("/v0/run"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&body)
+            .send()
+    };
+
+    for project in [None, Some("raced-named-project")] {
+        let (first, second) = tokio::join!(run(project), run(project));
+        for resp in [first, second] {
+            let resp = resp.expect("Request failed");
+            let status = resp.status();
+            let body = resp.text().await.expect("Failed to read response");
+            assert_eq!(status, StatusCode::CREATED, "{body}");
+        }
+    }
+
+    assert_eq!(
+        projects(&server),
+        vec![
+            (
+                "raced-run-project".to_owned(),
+                OrganizationUuid::from(user.uuid)
+            ),
+            ("raced-named-project".to_owned(), user.uuid.into())
+        ]
+    );
+}
+
 // POST /v0/run - a run made with a project key names that key on its report
 #[tokio::test]
 async fn run_post_with_a_project_key_names_the_key() {
