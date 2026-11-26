@@ -228,7 +228,7 @@ fn get_ls_query<'q>(
 ///
 /// Create a new project for an organization.
 /// The user must have `create` permissions for the organization.
-/// The new project will have a `main` branch, a `localhost` testbed, `latency` and `throughput` measures, and a threshold for both measures.
+/// The new project starts at BMF version 1.
 /// ➕ Bencher Plus: The project visibility must be `public` unless the organization has a valid Bencher Plus subscription.
 #[endpoint {
     method = POST,

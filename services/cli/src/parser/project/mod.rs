@@ -27,6 +27,8 @@ pub enum CliProject {
     #[clap(alias = "ls")]
     List(CliProjectList),
     /// Create a project
+    ///
+    /// The project starts at BMF version 1.
     #[clap(alias = "add")]
     Create(CliProjectCreate),
     /// View a project

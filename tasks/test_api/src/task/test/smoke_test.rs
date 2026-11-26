@@ -21,7 +21,7 @@ use crate::{
     task::test::{
         examples::Examples,
         seed_test::{
-            BENCHER_CMD, BRANCH_ARG, BRANCH_SLUG, CLI_DIR, HOST_ARG, PROJECT_ARG, PROJECT_SLUG,
+            BENCHER_CMD, BRANCH_ARG, BRANCH_SLUG, CLI_DIR, HOST_ARG, ORG_SLUG, PROJECT_ARG,
             SeedTest, TESTBED_ARG, TESTBED_SLUG, TOKEN_ARG,
         },
     },
@@ -40,6 +40,9 @@ pub(crate) static DEV_ADMIN_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| 
         .parse()
         .expect("Invalid test JWT")
 });
+
+const SMOKE_PROJECT_NAME: &str = "The Smoke Test";
+const SMOKE_PROJECT_SLUG: &str = "the-smoke-test";
 
 pub(crate) static DEV_BENCHER_API_TOKEN: LazyLock<Jwt> =
     LazyLock::new(|| DEV_BENCHER_API_TOKEN_STR.parse().expect("Invalid test JWT"));
@@ -261,9 +264,7 @@ fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Res
                 runner_test.exec()?;
             }
 
-            move_project_to_bmf_v1(&seed_test)?;
-            send_bmf_v1_report(&seed_test)?;
-            send_mock_v1_report(&seed_test)
+            bmf_versions(&seed_test)
         },
         MockSetup::SelfHosted { examples, runner } => {
             let task = TaskSeedTest {
@@ -303,15 +304,53 @@ fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Res
                 examples.exec()?;
             }
 
-            move_project_to_bmf_v1(&seed_test)?;
-            send_bmf_v1_report(&seed_test)?;
-            send_mock_v1_report(&seed_test)
+            bmf_versions(&seed_test)
         },
     }
 }
 
-// The dev deploy leaves a BMF v1 project to look at in the new console.
-fn move_project_to_bmf_v1(seed_test: &SeedTest) -> anyhow::Result<()> {
+// A project made at BMF version 1, which a server admin moves down to version 0 for the
+// version 0 run, and its editor moves back up for the version 1 runs.
+fn bmf_versions(seed_test: &SeedTest) -> anyhow::Result<()> {
+    create_smoke_project(seed_test)?;
+    update_bmf_version(seed_test, &seed_test.admin_token, BmfVersion::V0)?;
+    send_mock_v0_report(seed_test)?;
+    update_bmf_version(seed_test, &seed_test.token, BmfVersion::V1)?;
+    send_bmf_v1_report(seed_test)?;
+    send_mock_v1_report(seed_test)
+}
+
+fn create_smoke_project(seed_test: &SeedTest) -> anyhow::Result<()> {
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "project",
+        "create",
+        HOST_ARG,
+        seed_test.url.as_ref(),
+        TOKEN_ARG,
+        seed_test.token.as_ref(),
+        "--name",
+        SMOKE_PROJECT_NAME,
+        "--slug",
+        SMOKE_PROJECT_SLUG,
+        ORG_SLUG,
+    ])
+    .current_dir(CLI_DIR);
+    let assert = cmd.assert().success();
+    let project: JsonProject = serde_json::from_slice(&assert.get_output().stdout)?;
+    anyhow::ensure!(
+        project.bmf_version == BmfVersion::V1,
+        "Project {SMOKE_PROJECT_SLUG} was created at BMF version {}, not 1",
+        project.bmf_version
+    );
+    Ok(())
+}
+
+fn update_bmf_version(
+    seed_test: &SeedTest,
+    token: &Jwt,
+    bmf_version: BmfVersion,
+) -> anyhow::Result<()> {
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "project",
@@ -319,18 +358,44 @@ fn move_project_to_bmf_v1(seed_test: &SeedTest) -> anyhow::Result<()> {
         HOST_ARG,
         seed_test.url.as_ref(),
         TOKEN_ARG,
-        seed_test.admin_token.as_ref(),
+        token.as_ref(),
         "--bmf-version",
-        "1",
-        PROJECT_SLUG,
+        &bmf_version.to_string(),
+        SMOKE_PROJECT_SLUG,
     ])
     .current_dir(CLI_DIR);
     let assert = cmd.assert().success();
     let project: JsonProject = serde_json::from_slice(&assert.get_output().stdout)?;
     anyhow::ensure!(
-        project.bmf_version == BmfVersion::V1,
-        "Project {PROJECT_SLUG} is on BMF version {} after moving it to 1",
+        project.bmf_version == bmf_version,
+        "Project {SMOKE_PROJECT_SLUG} is on BMF version {} after moving it to {bmf_version}",
         project.bmf_version
+    );
+    Ok(())
+}
+
+// `bencher mock --bmf-version 0` writes the metric triple for each benchmark's `latency`.
+fn send_mock_v0_report(seed_test: &SeedTest) -> anyhow::Result<()> {
+    let report = send_mock_report(seed_test, &["--bmf-version", "0"])?;
+    anyhow::ensure!(
+        report.bmf_version == Some(BmfVersion::V0)
+            && report.parse_outcome == Some(ParseOutcome::Parsed)
+            && report.warnings.is_none(),
+        "Mock report on {SMOKE_PROJECT_SLUG} was read at BMF version {:?} with parse outcome {:?} and warnings {:?}",
+        report.bmf_version,
+        report.parse_outcome,
+        report.warnings
+    );
+    let metrics = metric_names(&report);
+    let mock_metrics = (0..5)
+        .flat_map(|c| {
+            ["value", "lower_value", "upper_value"]
+                .map(|metric| format!("bencher::mock_{c} {{}} latency {metric}"))
+        })
+        .collect::<BTreeSet<_>>();
+    anyhow::ensure!(
+        metrics == mock_metrics,
+        "Mock report on {SMOKE_PROJECT_SLUG} holds {metrics:#?}, not {mock_metrics:#?}"
     );
     Ok(())
 }
@@ -344,7 +409,7 @@ fn send_bmf_v1_report(seed_test: &SeedTest) -> anyhow::Result<()> {
         TOKEN_ARG,
         seed_test.token.as_ref(),
         PROJECT_ARG,
-        PROJECT_SLUG,
+        SMOKE_PROJECT_SLUG,
         BRANCH_ARG,
         BRANCH_SLUG,
         TESTBED_ARG,
@@ -361,17 +426,17 @@ fn send_bmf_v1_report(seed_test: &SeedTest) -> anyhow::Result<()> {
     let report: JsonReport = serde_json::from_slice(&assert.get_output().stdout)?;
     anyhow::ensure!(
         report.bmf_version == Some(BmfVersion::V1),
-        "Report on {PROJECT_SLUG} was read at BMF version {:?}, not 1",
+        "Report on {SMOKE_PROJECT_SLUG} was read at BMF version {:?}, not 1",
         report.bmf_version
     );
     anyhow::ensure!(
         report.parse_outcome == Some(ParseOutcome::Parsed),
-        "Report on {PROJECT_SLUG} has parse outcome {:?}, not parsed",
+        "Report on {SMOKE_PROJECT_SLUG} has parse outcome {:?}, not parsed",
         report.parse_outcome
     );
     anyhow::ensure!(
         report.warnings.is_none(),
-        "Report on {PROJECT_SLUG} has warnings {:?}",
+        "Report on {SMOKE_PROJECT_SLUG} has warnings {:?}",
         report.warnings
     );
     let metrics = report
@@ -397,7 +462,7 @@ fn send_bmf_v1_report(seed_test: &SeedTest) -> anyhow::Result<()> {
     let payload_metrics = BTreeSet::from(BMF_V1_METRICS.map(String::from));
     anyhow::ensure!(
         metrics == payload_metrics,
-        "Report on {PROJECT_SLUG} holds {metrics:#?}, not the payload's {payload_metrics:#?}"
+        "Report on {SMOKE_PROJECT_SLUG} holds {metrics:#?}, not the payload's {payload_metrics:#?}"
     );
     let payload_counts = vec![JsonReportIterationCounts {
         benchmarks: 4,
@@ -406,7 +471,7 @@ fn send_bmf_v1_report(seed_test: &SeedTest) -> anyhow::Result<()> {
     }];
     anyhow::ensure!(
         report.counts.results == payload_counts,
-        "Report on {PROJECT_SLUG} counts {:?}, not the payload's {payload_counts:?}",
+        "Report on {SMOKE_PROJECT_SLUG} counts {:?}, not the payload's {payload_counts:?}",
         report.counts.results
     );
     Ok(())
@@ -414,6 +479,28 @@ fn send_bmf_v1_report(seed_test: &SeedTest) -> anyhow::Result<()> {
 
 // `bencher mock` writes BMF version 1 by default: one `value` for each benchmark's `latency`.
 fn send_mock_v1_report(seed_test: &SeedTest) -> anyhow::Result<()> {
+    let report = send_mock_report(seed_test, &[])?;
+    anyhow::ensure!(
+        report.bmf_version == Some(BmfVersion::V1)
+            && report.parse_outcome == Some(ParseOutcome::Parsed)
+            && report.warnings.is_none(),
+        "Mock report on {SMOKE_PROJECT_SLUG} was read at BMF version {:?} with parse outcome {:?} and warnings {:?}",
+        report.bmf_version,
+        report.parse_outcome,
+        report.warnings
+    );
+    let metrics = metric_names(&report);
+    let mock_metrics = (0..5)
+        .map(|c| format!("bencher::mock_{c} {{}} latency value"))
+        .collect::<BTreeSet<_>>();
+    anyhow::ensure!(
+        metrics == mock_metrics,
+        "Mock report on {SMOKE_PROJECT_SLUG} holds {metrics:#?}, not {mock_metrics:#?}"
+    );
+    Ok(())
+}
+
+fn send_mock_report(seed_test: &SeedTest, mock_args: &[&str]) -> anyhow::Result<JsonReport> {
     let bencher_cmd = assert_cmd::Command::cargo_bin(BENCHER_CMD)?
         .get_program()
         .to_string_lossy()
@@ -426,7 +513,7 @@ fn send_mock_v1_report(seed_test: &SeedTest) -> anyhow::Result<()> {
         TOKEN_ARG,
         seed_test.token.as_ref(),
         PROJECT_ARG,
-        PROJECT_SLUG,
+        SMOKE_PROJECT_SLUG,
         BRANCH_ARG,
         BRANCH_SLUG,
         TESTBED_ARG,
@@ -437,19 +524,14 @@ fn send_mock_v1_report(seed_test: &SeedTest) -> anyhow::Result<()> {
         &bencher_cmd,
         "mock",
     ])
+    .args(mock_args)
     .current_dir(CLI_DIR);
     let assert = cmd.assert().success();
-    let report: JsonReport = serde_json::from_slice(&assert.get_output().stdout)?;
-    anyhow::ensure!(
-        report.bmf_version == Some(BmfVersion::V1)
-            && report.parse_outcome == Some(ParseOutcome::Parsed)
-            && report.warnings.is_none(),
-        "Mock report on {PROJECT_SLUG} was read at BMF version {:?} with parse outcome {:?} and warnings {:?}",
-        report.bmf_version,
-        report.parse_outcome,
-        report.warnings
-    );
-    let metrics = report
+    Ok(serde_json::from_slice(&assert.get_output().stdout)?)
+}
+
+fn metric_names(report: &JsonReport) -> BTreeSet<String> {
+    report
         .results
         .iter()
         .flatten()
@@ -467,15 +549,7 @@ fn send_mock_v1_report(seed_test: &SeedTest) -> anyhow::Result<()> {
                 })
             })
         })
-        .collect::<BTreeSet<_>>();
-    let mock_metrics = (0..5)
-        .map(|c| format!("bencher::mock_{c} {{}} latency value"))
-        .collect::<BTreeSet<_>>();
-    anyhow::ensure!(
-        metrics == mock_metrics,
-        "Mock report on {PROJECT_SLUG} holds {metrics:#?}, not {mock_metrics:#?}"
-    );
-    Ok(())
+        .collect()
 }
 
 const BMF_V1_REPORT: &str = r#"{

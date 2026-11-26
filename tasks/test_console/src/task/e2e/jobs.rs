@@ -134,22 +134,22 @@ pub(super) async fn seed(
     admin_token: &str,
 ) -> anyhow::Result<JobProjects> {
     spec(api, admin_token).await?;
-    let runner = project(api, organization, RUNNER, token, admin_token).await?;
+    let runner = api.project(organization, RUNNER, "public", token).await?;
     runner_runs(api, db, &runner, token).await?;
     let mut held = Vec::with_capacity(REPEATS + 1);
     let mut handover = Vec::with_capacity(REPEATS);
     for repeat in 0..REPEATS {
         let name = format!("{HELD} {repeat}");
-        let seeded = project(api, organization, &name, token, admin_token).await?;
+        let seeded = api.project(organization, &name, "public", token).await?;
         held_run(api, db, &seeded, token).await?;
         held.push(seeded);
         let name = format!("{HANDOVER} {repeat}");
-        let seeded = project(api, organization, &name, token, admin_token).await?;
+        let seeded = api.project(organization, &name, "public", token).await?;
         handover_run(api, db, &seeded, token).await?;
         handover.push(seeded);
     }
     let name = format!("{HELD} {REPEATS}");
-    let scanned = project(api, organization, &name, token, admin_token).await?;
+    let scanned = api.project(organization, &name, "public", token).await?;
     held_run(api, db, &scanned, token).await?;
     held.push(scanned);
     Ok(JobProjects {
@@ -157,25 +157,6 @@ pub(super) async fn seed(
         held,
         handover,
     })
-}
-
-/// A public version 1 project.
-async fn project(
-    api: &Api,
-    organization: &JsonOrganization,
-    name: &str,
-    token: &str,
-    admin_token: &str,
-) -> anyhow::Result<JsonProject> {
-    let project = api.project(organization, name, "public", token).await?;
-    let path = format!("/v0/projects/{}", project.slug);
-    api.send(
-        Method::Patch,
-        &path,
-        admin_token,
-        &serde_json::json!({ "bmf_version": 1 }),
-    )
-    .await
 }
 
 /// The spec the jobs ran on, made through the API by the server's admin.

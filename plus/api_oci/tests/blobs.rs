@@ -11,7 +11,7 @@
 
 use bencher_api_tests::TestServer;
 use bencher_api_tests::oci::compute_digest;
-use bencher_json::RunnerUuid;
+use bencher_json::{BmfVersion, JsonProject, RunnerUuid};
 use bencher_token::OciAction;
 use http::StatusCode;
 
@@ -412,6 +412,36 @@ async fn blob_upload_authenticated_to_unclaimed_project() {
         .expect("Request failed");
 
     assert_eq!(public_resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+// A push to a repository with no project creates the project at BMF version 1
+#[tokio::test]
+async fn blob_upload_creates_a_project_at_bmf_version_1() {
+    let server = TestServer::new().await;
+
+    let project_slug = "pushed-bmf-one";
+    let public_token = server.oci_public_token(project_slug, &[OciAction::Push]);
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&public_token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::ACCEPTED);
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{}", project_slug)))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let project: JsonProject = resp.json().await.expect("Failed to parse response");
+    assert_eq!(project.bmf_version, BmfVersion::V1);
 }
 
 // A structurally valid but wrongly-signed JWT must be rejected with 401.

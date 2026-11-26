@@ -51,7 +51,6 @@ test.describe("New project", () => {
 		await textbox(page, "Name").fill(name);
 		await page.getByRole("button", { name: "Create project" }).click();
 
-		// The API still makes version 0 projects, which open in the console.
 		await expect(page).toHaveURL(/\/console\/projects\/([a-z0-9-]+)\/$/);
 		const slug = new URL(page.url()).pathname.split("/")[3] ?? "";
 		const project = (await (
@@ -63,7 +62,7 @@ test.describe("New project", () => {
 			name,
 			organization: organization.uuid,
 			visibility: "public",
-			bmf_version: 0,
+			bmf_version: 1,
 		});
 	});
 });

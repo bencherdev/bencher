@@ -44,6 +44,7 @@ pub async fn run_options(_rqctx: RequestContext<ApiContext>) -> Result<CorsRespo
 /// Create a run.
 /// The user does not need have an account yet or be authenticated.
 /// The project may or may not exist yet.
+/// If it does not exist, it will be created at BMF version 1.
 #[endpoint {
     method = POST,
     path =  "/v0/run",

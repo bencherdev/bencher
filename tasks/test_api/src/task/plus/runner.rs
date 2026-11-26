@@ -709,8 +709,6 @@ pub fn run_runner_test(
         "1",
         "--exec",
         "mock",
-        "--bmf-version",
-        "0",
     ];
     cmd.args(args).current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -773,8 +771,6 @@ fn run_build_time_runner_test(
         "1",
         "--exec",
         "mock",
-        "--bmf-version",
-        "0",
     ];
     cmd.args(args).current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -845,8 +841,6 @@ fn run_image_project_runner_test(url: &Url, token: &Jwt, spec: &str) -> anyhow::
         "1",
         "--exec",
         "mock",
-        "--bmf-version",
-        "0",
     ];
     cmd.args(args).current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -909,8 +903,6 @@ fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
         "1",
         "--exec",
         "mock",
-        "--bmf-version",
-        "0",
     ];
     cmd.args(args).current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -943,7 +935,7 @@ fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     println!("Running detach runner smoke test against: {host}");
 
     // Submit the job with --detach (returns immediately)
-    let json = submit_detached(host, token, &["--exec", "mock", "--bmf-version", "0"])?;
+    let json = submit_detached(host, token, &["--exec", "mock"])?;
     assert_eq!(json.project.slug.to_string(), PROJECT_SLUG);
     let job_uuid = json
         .job
@@ -1022,11 +1014,7 @@ fn run_detach_failed_attach_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
 
     println!("Running failed detach runner smoke test against: {host}");
 
-    let json = submit_detached(
-        host,
-        token,
-        &["--exec", "mock", "--bmf-version", "0", "--fail"],
-    )?;
+    let json = submit_detached(host, token, &["--exec", "mock", "--fail"])?;
     let job_uuid = json
         .job
         .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {json:?}"))?;
@@ -1153,11 +1141,7 @@ fn run_callback_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
 
 /// Submit a detached job with `callback`, and wait for it through the attach.
 fn submit_callback_job(host: &str, token: &Jwt, callback: &[&str]) -> anyhow::Result<JobUuid> {
-    let report = submit_detached(
-        host,
-        token,
-        &[callback, &["--exec", "mock", "--bmf-version", "0"]].concat(),
-    )?;
+    let report = submit_detached(host, token, &[callback, &["--exec", "mock"]].concat())?;
     let job_uuid = report
         .job
         .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {report:?}"))?;
@@ -1283,8 +1267,6 @@ fn run_user_key_runner_test(url: &Url, email: &str, token: &Jwt, spec: &str) -> 
         "1",
         "--exec",
         "mock",
-        "--bmf-version",
-        "0",
     ])
     .current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -1397,8 +1379,6 @@ fn run_project_key_runner_test(url: &Url, admin_token: &Jwt, spec: &str) -> anyh
         "1",
         "--exec",
         "mock",
-        "--bmf-version",
-        "0",
     ])
     .current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -1451,8 +1431,6 @@ fn run_project_key_runner_test(url: &Url, admin_token: &Jwt, spec: &str) -> anyh
         "1",
         "--exec",
         "mock",
-        "--bmf-version",
-        "0",
     ])
     .current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -1821,8 +1799,6 @@ fn run_unclaimed_push_and_run(
         "1",
         "--exec",
         "mock",
-        "--bmf-version",
-        "0",
     ];
     cmd.args(args).current_dir(CLI_DIR);
     let output = cmd.output()?;
@@ -1844,7 +1820,7 @@ fn docker_build_local_image(tag: &str) -> anyhow::Result<()> {
 }
 
 fn docker_build_mock_image(tag: &str) -> anyhow::Result<()> {
-    docker_build_cli_image(tag, r#"["/usr/bin/bencher", "mock", "--bmf-version", "0"]"#)
+    docker_build_cli_image(tag, r#"["/usr/bin/bencher", "mock"]"#)
 }
 
 /// A Job runs this tree's CLI, and on Linux a static build so the host's glibc never matters.

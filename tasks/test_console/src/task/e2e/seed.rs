@@ -254,17 +254,15 @@ impl Seed {
         let iterations = api
             .project(&organization, ITERATIONS, "public", token)
             .await?;
-        for project in [&hashbrown, &empty, &private, &iterations] {
-            let path = format!("/v0/projects/{}", project.slug);
-            let _project: JsonProject = api
-                .send(
-                    Method::Patch,
-                    &path,
-                    admin_token,
-                    &serde_json::json!({ "bmf_version": 1 }),
-                )
-                .await?;
-        }
+        let path = format!("/v0/projects/{}", version_zero.slug);
+        let _project: JsonProject = api
+            .send(
+                Method::Patch,
+                &path,
+                admin_token,
+                &serde_json::json!({ "bmf_version": 0 }),
+            )
+            .await?;
 
         report_history(&api, &hashbrown, token).await?;
         key_report(&api, &hashbrown, token).await?;
@@ -347,14 +345,6 @@ async fn admin_project(
 ) -> anyhow::Result<SeedProject> {
     let project = api.project(organization, name, "public", token).await?;
     let path = format!("/v0/projects/{}", project.slug);
-    let project: JsonProject = api
-        .send(
-            Method::Patch,
-            &path,
-            token,
-            &serde_json::json!({ "bmf_version": 1 }),
-        )
-        .await?;
     let report = report_body(MAIN, start, &main_hash(0), &results(0, |_| 1.0))?;
     let _json: serde_json::Value = api
         .send(Method::Post, &format!("{path}/reports"), token, &report)

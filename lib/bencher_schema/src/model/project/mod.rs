@@ -667,6 +667,7 @@ pub struct InsertProject {
     pub slug: ProjectSlug,
     pub url: Option<Url>,
     pub visibility: Visibility,
+    pub bmf_version: BmfVersion,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -749,6 +750,9 @@ impl InsertProject {
             slug,
             url,
             visibility: visibility.unwrap_or_default(),
+            // Only a new project starts at version 1: `BmfVersion::default()` stays 0 for stored
+            // job configs that predate the version.
+            bmf_version: BmfVersion::V1,
             created: timestamp,
             modified: timestamp,
         }
@@ -762,6 +766,7 @@ impl InsertProject {
             slug,
             url,
             visibility,
+            bmf_version,
             created,
             modified,
         } = self;
@@ -773,7 +778,7 @@ impl InsertProject {
             slug,
             url,
             visibility,
-            bmf_version: BmfVersion::default(),
+            bmf_version,
             created,
             modified,
             deleted: None,

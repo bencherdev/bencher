@@ -80,7 +80,7 @@ async fn fixture(server: &TestServer, label: &str) -> Fixture {
         .create_org(&user, &format!("Params Org {label}"))
         .await;
     let project = server
-        .create_project(&user, &org, &format!("Params Project {label}"))
+        .create_v0_project(&user, &org, &format!("Params Project {label}"))
         .await;
     Fixture {
         project_slug: project.slug.to_string(),
