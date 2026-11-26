@@ -39,26 +39,30 @@ Cette base historique peut alors être utilisée pour détecter les régressions
     Cela doit probablement correspondre à la machine sélectionnée dans `image`.
     Consultez [la documentation `--testbed`][testbed option] pour plus de détails.
     (ex : `--testbed debian:bullseye`)
-11. Définissez le seuil pour la branche `main`, le banc d'essai `debian:bullseye`, et la mesure de `latency` :
-    1. Définissez l'option `--threshold-measure` sur la mesure intégrée `latency` qui est générée par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+11. Définissez le seuil pour la branche `main`, le banc d'essai `debian:bullseye`, la Mesure `latency` et la Métrique `value` :
+    1. Définissez l'option `--threshold-measure` sur la Mesure intégrée `latency` qui est générée par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     Consultez [la documentation `--threshold-measure`][threshold measure option] pour plus de détails.
     (ex : `--threshold-measure latency`)
-    2. Définissez l'option `--threshold-test` sur un test t de Student (`t_test`).
+    2. Définissez l'option `--threshold-metric` sur la Métrique `value` qui est générée par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+    Avec votre propre harnais de benchmark, utilisez la Métrique sur laquelle [son adaptateur][adapters] recommande de placer un seuil en premier.
+    Consultez [la documentation `--threshold-metric`][threshold metric option] pour plus de détails.
+    (ex : `--threshold-metric value`)
+    3. Définissez l'option `--threshold-test` sur un test t de Student (`t_test`).
     Consultez [la documentation `--threshold-test`][threshold test option] pour un aperçu complet.
     (ex : `--threshold-test t_test`)
-    3. Définissez l'option `--threshold-max-sample-size` sur la taille d'échantillon maximale de `64`.
+    4. Définissez l'option `--threshold-max-sample-size` sur la taille d'échantillon maximale de `64`.
     Consultez [la documentation `--threshold-max-sample-size`][threshold max sample size] pour plus de détails.
     (ex : `--threshold-max-sample-size 64`)
-    4. Définissez l'option `--threshold-upper-boundary` sur la limite supérieure de `0.99`.
+    5. Définissez l'option `--threshold-upper-boundary` sur la limite supérieure de `0.99`.
     Consultez [la documentation `--threshold-upper-boundary`][threshold upper boundary] pour plus de détails.
     (ex : `--threshold-upper-boundary 0.99`)
-    5. Définissez le flag `--thresholds-reset` pour que seul le seuil spécifié soit actif.
+    6. Définissez le flag `--thresholds-reset` pour que seul le seuil spécifié soit actif.
     Consultez [la documentation `--thresholds-reset`][thresholds reset] pour un aperçu complet.
     (ex : `--thresholds-reset`)
 12. Définissez le flag `--error-on-alert` pour que la commande échoue si une alerte est générée.
     Consultez [la documentation `--error-on-alert`][alert err] pour un aperçu complet.
     (ex : `--error-on-alert`)
-13. Définissez l'option `--adapter` sur le format JSON de Bencher Metric (`json`) [Bencher Metric Format JSON (`json`)][bmf] qui est généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+13. Définissez l'option `--adapter` sur [Bencher Metric Format JSON (`json`)][bmf] qui est généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     Consultez [les adaptateurs de harnais de benchmark][adapter json] pour un aperçu complet.
     (ex : `--adapter json`)
 14. Spécifiez les arguments de commande du benchmark.
@@ -69,7 +73,7 @@ Cette base historique peut alors être utilisée pour détecter les régressions
 [gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
 [gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
 
-[statistical continuous benchmarking]: /fr/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[statistical continuous benchmarking]: /fr/docs/how-to/track-benchmarks/#benchmarking-continu-statistique
 [install bencher cli]: /fr/docs/how-to/install-cli/#install-cli-with-script
 [bencher run]: /fr/docs/explanation/bencher-run/
 [project option]: /fr/docs/explanation/bencher-run/#--project-project
@@ -77,8 +81,10 @@ Cette base historique peut alors être utilisée pour détecter les régressions
 [branch option]: /fr/docs/explanation/branches/#--branch-branch
 [testbed option]: /fr/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /fr/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /fr/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /fr/docs/explanation/adapters/
 [threshold test option]: /fr/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /fr/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /fr/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /fr/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /fr/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /fr/docs/explanation/thresholds/#--error-on-alert

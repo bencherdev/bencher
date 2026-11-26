@@ -1,0 +1,22 @@
+import ThresholdCmdExample from "../threshold-cmd-example.mdx";
+
+## Thresholds
+
+To catch performance regressions in your custom benchmarks, add a [Threshold][threshold].
+A Threshold checks one Metric of a Measure,
+so set [the `--threshold-metric` option][threshold metric option]
+to the name of a Metric that your custom benchmark harness reports.
+This command creates a Threshold for the `value` Metric of the `latency` Measure:
+
+<ThresholdCmdExample />
+
+To check only some of your [Variants][variant],
+also set [the `--threshold-parameters` option][threshold parameters option]
+to a JSON object of the [Parameters][parameters] they share.
+(ex: `--threshold-parameters '{"size": 64}'`)
+
+[threshold]: /docs/explanation/thresholds/
+[threshold metric option]: /docs/explanation/thresholds/#--threshold-metric-metric
+[threshold parameters option]: /docs/explanation/thresholds/#--threshold-parameters-parameters
+[parameters]: /docs/explanation/benchmarking/#parameters
+[variant]: /docs/explanation/benchmarking/#parameters

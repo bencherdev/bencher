@@ -12,7 +12,7 @@ Das `--build-time` Flag erfordert [einen Benchmark-Befehl][bencher run].
 <ShellExample />
 
 Das generierte BMF-JSON würde so aussehen,
-wenn Ihr Build-Skript `87,0` Sekunden zur Fertigstellung benötigte:
+wenn Ihr Build-Skript `87.0` Sekunden zur Fertigstellung benötigte:
 
 <ShellJsonExample />
 
@@ -25,26 +25,27 @@ können Sie entweder mehrere Argumente angeben oder das `--exec` Flag verwenden.
 
 <ExecExample />
 
-Wenn dieser Exec-Form-Build `86,98` Sekunden dauerte,
+Wenn dieser Exec-Form-Build `86.98` Sekunden dauerte,
 würde das generierte BMF-JSON wie folgt aussehen:
 
 <ExecJsonExample />
 
 Jetzt ist der [Benchmark][benchmark]-Name einfach `./my_build_script.sh`.
-Das `./my_build_script.sh` Objekt enthält den `build-time` Schlüssel.
-`build-time` ist das Kürzel für die eingebaute Buildzeit-[Messung][measure].
-Die Buildzeit-Messung wird nicht standardmäßig für alle Projekte erstellt.
-Wenn Sie jedoch die Buildzeit-Messung verwenden,
+Der Schlüssel `./my_build_script.sh` verweist auf eine Liste mit einem Eintrag,
+und das `measures`-Objekt dieses Eintrags enthält den `build-time` Schlüssel.
+`build-time` ist das Kürzel für die eingebaute Build Time [Measure][measure].
+Die Build Time Measure wird nicht standardmäßig für alle Projekte erstellt.
+Wenn Sie jedoch die Build Time Measure verwenden,
 wird sie automatisch für Ihr Projekt erstellt.
-Das Buildzeit-Messobjekt enthält eine [Metrik][metric]
-mit dem Bauzeitwert in Sekunden, `87,0` und `86,98` in unseren Beispielen.
+Das Build Time Measure-Objekt enthält die `value`-[Metrik][metric]
+mit der Bauzeit in Sekunden, `87.0` und `86.98` in unseren Beispielen.
 
 Die Bauzeit wird immer auf die nächsten zwei Dezimalstellen gerundet.
-Das heißt, sie wird niemals eine lange Dezimalzahl wie `42,666666` sein.
+Das heißt, sie wird _niemals_ eine lange Dezimalzahl wie `42.666666` sein.
 
 [json adapter]: /de/docs/explanation/adapters/#-json
 [bencher run]: /de/docs/explanation/bencher-run/#benchmark-command
 
 [benchmark]: /de/docs/explanation/benchmarking/#benchmark
 [measure]: /de/docs/explanation/benchmarking/#measure
-[metric]: /de/docs/explanation/benchmarking/#metrics
+[metric]: /de/docs/explanation/benchmarking/#metric

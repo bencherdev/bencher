@@ -36,7 +36,7 @@ import BaseBranchCode from "../base-branch-code.mdx";
 10. Установите опцию `--project` на шифр проекта.
     См. [документацию о `--project`][project option] для получения более подробной информации.
     (например, `--project project-abc4567-wxyz123456789`)
-11. Установите опцию `--key` на секрет **Repositorий** `BENCHER_API_KEY`.
+11. Установите опцию `--key` на секрет **Репозитория** `BENCHER_API_KEY`.
    См. [документацию о `--key`][key option] для получения более подробной информации.
    (например, `--key '${{ secrets.BENCHER_API_KEY }}'`)
 12. Установите опцию `--branch` на имя основной ветки.
@@ -44,25 +44,29 @@ import BaseBranchCode from "../base-branch-code.mdx";
     (например, `--branch main`)
 13. Установите опцию `--testbed` на имя Testbed.
     Это, вероятно, должно соответствовать машине, выбранной в `runs-on`.
-    См. [документацию о `--tested`][testbed option] для получения более подробной информации.
+    См. [документацию о `--testbed`][testbed option] для получения более подробной информации.
     (например, `--testbed ubuntu-latest`)
-14. Установите порог для ветки `main`, тестового стенда `ubuntu-latest` и измерения `latency`:
+14. Установите порог для ветки `main`, тестового стенда `ubuntu-latest`, измерения `latency` и метрики `value`:
     1. Установите опцию `--threshold-measure` на встроенное измерение `latency`, которое создается <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     См. [документацию о `--threshold-measure`][threshold measure option] для получения более подробной информации.
     (например, `--threshold-measure latency`)
-    2. Установите опцию `--threshold-test` на t-критерий Стьюдента (`t_test`).
+    2. Установите опцию `--threshold-metric` на метрику `value`, которая создается <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+    Для собственной оболочки бенчмаркинга используйте метрику, для которой [ее адаптер][adapters] рекомендует задать порог в первую очередь.
+    См. [документацию о `--threshold-metric`][threshold metric option] для получения более подробной информации.
+    (например, `--threshold-metric value`)
+    3. Установите опцию `--threshold-test` на t-критерий Стьюдента (`t_test`).
     См. [документацию о `--threshold-test`][threshold test option] для получения полной информации.
     (например, `--threshold-test t_test`)
-    3. Установите опцию `--threshold-max-sample-size` на максимальный размер выборки `64`.
+    4. Установите опцию `--threshold-max-sample-size` на максимальный размер выборки `64`.
     См. [документацию о `--threshold-max-sample-size`][threshold max sample size] для получения более подробной информации.
     (например, `--threshold-max-sample-size 64`)
-    4. Установите опцию `--threshold-upper-boundary` на верхнюю границу `0.99`.
+    5. Установите опцию `--threshold-upper-boundary` на верхнюю границу `0.99`.
     См. [документацию о `--threshold-upper-boundary`][threshold upper boundary] для получения более подробной информации.
     (например, `--threshold-upper-boundary 0.99`)
-    5. Установите флаг `--thresholds-reset`, чтобы только указанное пороговое значение было активным.
+    6. Установите флаг `--thresholds-reset`, чтобы только указанное пороговое значение было активным.
     См. [документацию о `--thresholds-reset`][thresholds reset] для получения полной информации.
     (например, `--thresholds-reset`)
-15. Установите флаг `--error-on-alert`, чтобы команда завершалась с ошибкой, если будет сформировано оповещение.
+15. Установите флаг `--error-on-alert`, чтобы команда завершалась с ошибкой, если будет сформировано предупреждение.
     См. [документацию о `--error-on-alert`][alert err] для получения полной информации.
     (например, `--error-on-alert`)
 16. Установите опцию `--adapter` на [формат метрик Bencher в формате JSON (`json`)][bmf], который сгенерирован <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
@@ -83,15 +87,17 @@ import BaseBranchCode from "../base-branch-code.mdx";
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github token]: https://docs.github.com/ru/actions/security-guides/automatic-token-authentication
 
-[statistical continuous benchmarking]: /ru/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[statistical continuous benchmarking]: /ru/docs/how-to/track-benchmarks/#статистическое-непрерывное-тестирование-производительности
 [bencher run]: /ru/docs/explanation/bencher-run/
 [project option]: /ru/docs/explanation/bencher-run/#--project-project
 [key option]: /ru/docs/explanation/bencher-run/#--key-key
 [branch option]: /ru/docs/explanation/branches/#--branch-branch
 [testbed option]: /ru/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /ru/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /ru/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /ru/docs/explanation/adapters/
 [threshold test option]: /ru/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /ru/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /ru/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /ru/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ru/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /ru/docs/explanation/thresholds/#--error-on-alert

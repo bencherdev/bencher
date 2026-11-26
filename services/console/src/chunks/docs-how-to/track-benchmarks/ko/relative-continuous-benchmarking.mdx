@@ -42,7 +42,7 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 7. 벤치마크 명령의 인수를 지정합니다. 벤치마크 명령에 대한 전체 개요는 [명령 인수][command argument]를 참조하세요.
    (예: `bencher mock`)
 
-이 명령이 CI에서 처음 실행될 때, 아직 존재하지 않으므로 `main` Branch가 생성됩니다. 새로운 `main`에는 시작 지점, 기존 데이터 또는 임계값이 없습니다. 이후의 실행에서는 이전 `main` [머리][head]가 대체되고 시작 지점, 기존 데이터 또는 임계값 없이 새로운 `main` [머리][head]가 생성됩니다.
+이 명령이 CI에서 처음 실행될 때, 아직 존재하지 않으므로 `main` 브랜치가 생성됩니다. 새로운 `main`에는 시작 지점, 기존 데이터 또는 임계값이 없습니다. 이후의 실행에서는 이전 `main` [헤드][head]가 대체되고 시작 지점, 기존 데이터 또는 임계값 없이 새로운 `main` [헤드][head]가 생성됩니다.
 
 [bencher run]: /ko/docs/explanation/bencher-run/
 [project option]: /ko/docs/explanation/bencher-run/#--project-project
@@ -75,14 +75,16 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
    (예: `--start-point-reset`)
 5. `--testbed` 옵션을 CI 러너 테스트베드 이름으로 설정합니다. 자세한 내용은 [`--testbed` 문서][testbed option]를 참조하세요.
    (예: `--testbed ci-runner`)
-6. `feature-branch` 브랜치, `ci-runner` 테스트베드 및 `latency` 측정 값을 위한 임계값을 설정하세요:
-   1. 내장된 `latency` 측정 값을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>으로 `--threshold-measure` 옵션에 설정합니다. 자세한 내용은 [`--threshold-measure` 문서][threshold measure option]를 참조하세요.
+6. `feature-branch` 브랜치, `ci-runner` 테스트베드, `latency` 측정 및 `value` 메트릭을 위한 임계값을 설정하세요:
+   1. 내장된 `latency` 측정을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>으로 `--threshold-measure` 옵션에 설정합니다. 자세한 내용은 [`--threshold-measure` 문서][threshold measure option]를 참조하세요.
    (예: `--threshold-measure latency`)
-   2. 기본 비율(`percentage`)로 `--threshold-test` 옵션을 설정합니다. 이에 대한 전체 개요는 [`--threshold-test` 문서][threshold test option]를 참조하세요.
+   2. `--threshold-metric` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성되는 `value` 메트릭으로 설정합니다. 자체 벤치마크 하네스를 사용하는 경우, [해당 어댑터][adapters]가 먼저 임계값을 설정하도록 권장하는 메트릭을 사용하세요. 자세한 내용은 [`--threshold-metric` 문서][threshold metric option]를 참조하세요.
+   (예: `--threshold-metric value`)
+   3. 기본 비율(`percentage`)로 `--threshold-test` 옵션을 설정합니다. 이에 대한 전체 개요는 [`--threshold-test` 문서][threshold test option]를 참조하세요.
    (예: `--threshold-test percentage`)
-   3. `--threshold-upper-boundary` 옵션을 `0.25`의 상한값으로 설정합니다. 자세한 내용은 [`--threshold-upper-boundary` 문서][threshold upper boundary]를 참조하세요.
+   4. `--threshold-upper-boundary` 옵션을 `0.25`의 상한값으로 설정합니다. 자세한 내용은 [`--threshold-upper-boundary` 문서][threshold upper boundary]를 참조하세요.
    (예: `--threshold-upper-boundary 0.25`)
-   4. 지정된 임계값만 활성 상태가 되도록 `--thresholds-reset` 플래그를 설정합니다. 이에 대한 전체 개요는 [`--thresholds-reset` 문서][thresholds reset]를 참조하세요.
+   5. 지정된 임계값만 활성 상태가 되도록 `--thresholds-reset` 플래그를 설정합니다. 이에 대한 전체 개요는 [`--thresholds-reset` 문서][thresholds reset]를 참조하세요.
    (예: `--thresholds-reset`)
 7. 경고가 생성되면 명령이 실패하도록 `--error-on-alert` 플래그를 설정합니다. 이에 대한 전체 개요는 [`--error-on-alert` 문서][alert err]를 참조하세요.
    (예: `--error-on-alert`)
@@ -96,6 +98,8 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 [start point]: /ko/docs/explanation/branches/#--start-point-branch
 [start point reset]: /ko/docs/explanation/branches/#--start-point-reset
 [threshold measure option]: /ko/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /ko/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /ko/docs/explanation/adapters/
 [threshold test option]: /ko/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /ko/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ko/docs/explanation/thresholds/#--thresholds-reset

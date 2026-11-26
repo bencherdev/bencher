@@ -107,17 +107,21 @@ Por fim, estamos prontos para executar nossos benchmarks de `feature-branch` no 
 5. Configure a opção `--testbed` para o nome do Testbed do runner do CI.
    Veja [os documentos da opção `--testbed`][testbed option] para mais detalhes.
    (ex: `--testbed ci-runner`)
-6. Configure o Limite para o branch `feature-branch`, Testbed `ci-runner` e Medida `latency`:
+6. Configure o Limiar para o branch `feature-branch`, Testbed `ci-runner`, Medida `latency` e Métrica `value`:
    1. Configure a opção `--threshold-measure` para a Medida `latency` incorporada que é gerada por <code><a href="/pt/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Veja [mais detalhes dos documentos da opção `--threshold-measure`][threshold measure option].
    (ex: `--threshold-measure latency`)
-   2. Configure a opção `--threshold-test` para uma porcentagem básica (`percentage`).
+   2. Configure a opção `--threshold-metric` para a Métrica `value` que é gerada por <code><a href="/pt/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   Com seu próprio harness de benchmark, use a Métrica na qual [o adaptador dele][adapters] recomenda definir um Limiar primeiro.
+   Veja [mais detalhes dos documentos da opção `--threshold-metric`][threshold metric option].
+   (ex: `--threshold-metric value`)
+   3. Configure a opção `--threshold-test` para uma porcentagem básica (`percentage`).
    Veja [uma visão geral completa dos documentos da opção `--threshold-test`][threshold test option].
    (ex: `--threshold-test percentage`)
-   3. Configure a opção `--threshold-upper-boundary` para o Limite Superior de `0.25`.
+   4. Configure a opção `--threshold-upper-boundary` para o Limite Superior de `0.25`.
    Veja [mais detalhes dos documentos da opção `--threshold-upper-boundary`][threshold upper boundary].
    (ex: `--threshold-upper-boundary 0.25`)
-   4. Configure o sinalizador `--thresholds-reset` para que apenas o Limite especificado fique ativo.
+   5. Configure o sinalizador `--thresholds-reset` para que apenas o Limiar especificado fique ativo.
    Veja [uma visão geral completa dos documentos do `--thresholds-reset`][thresholds reset].
    (ex: `--thresholds-reset`)
 7. Configure o sinalizador `--error-on-alert` para falhar o comando se um Alerta for gerado.
@@ -132,11 +136,13 @@ Por fim, estamos prontos para executar nossos benchmarks de `feature-branch` no 
 
 Toda vez que este comando for executado no CI,
 ele estará comparando os resultados do `feature-branch` com apenas os resultados mais recentes do `main`.
-O Limite especificado é então usado para detectar regressões de desempenho.
+O Limiar especificado é então usado para detectar regressões de desempenho.
 
 [start point]: /pt/docs/explanation/branches/#--start-point-branch
 [start point reset]: /pt/docs/explanation/branches/#--start-point-reset
 [threshold measure option]: /pt/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /pt/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /pt/docs/explanation/adapters/
 [threshold test option]: /pt/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /pt/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /pt/docs/explanation/thresholds/#--thresholds-reset

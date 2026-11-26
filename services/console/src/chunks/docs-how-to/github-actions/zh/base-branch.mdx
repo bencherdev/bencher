@@ -40,22 +40,26 @@ import BaseBranchCode from "../base-branch-code.mdx";
    (例如：`--branch main`)
 13. 将 `--testbed` 选项设置为测试平台名称。
     这应与在 `runs-on` 中选择的机器相匹配。
-    请参阅 [ `--tested` 文档][testbed option] 了解更多详情。
+    请参阅 [ `--testbed` 文档][testbed option] 了解更多详情。
     (例如：`--testbed ubuntu-latest`)
-14. 为 `main` 分支、`ubuntu-latest` 测试平台和 `latency` 测量设置阈值：
-    1. 将 `--threshold-measure` 选项设置为由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的内置 `latency` 测量。
+14. 为 `main` 分支、`ubuntu-latest` 测试平台、`latency` 度量和 `value` 指标设置阈值：
+    1. 将 `--threshold-measure` 选项设置为由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的内置 `latency` 度量。
     请参阅 [ `--threshold-measure` 文档][threshold measure option] 了解更多详情。
     (例如：`--threshold-measure latency`)
-    2. 将 `--threshold-test` 选项设置为学生 t 检验（`t_test`）。
+    2. 将 `--threshold-metric` 选项设置为由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的 `value` 指标。
+    对于你自己的基准测试工具，请使用[其适配器][adapters]建议首先设置阈值的指标。
+    请参阅 [ `--threshold-metric` 文档][threshold metric option] 了解更多详情。
+    (例如：`--threshold-metric value`)
+    3. 将 `--threshold-test` 选项设置为学生 t 检验（`t_test`）。
     请参阅 [ `--threshold-test` 文档][threshold test option] 了解完整概述。
     (例如：`--threshold-test t_test`)
-    3. 将 `--threshold-max-sample-size` 选项设置为最大样本大小 `64`。
+    4. 将 `--threshold-max-sample-size` 选项设置为最大样本大小 `64`。
     请参阅 [ `--threshold-max-sample-size` 文档][threshold max sample size] 了解更多详情。
     (例如：`--threshold-max-sample-size 64`)
-    4. 将 `--threshold-upper-boundary` 选项设置为上界 `0.99`。
+    5. 将 `--threshold-upper-boundary` 选项设置为上界 `0.99`。
     请参阅 [ `--threshold-upper-boundary` 文档][threshold upper boundary] 了解更多详情。
     (例如：`--threshold-upper-boundary 0.99`)
-    5. 设置 `--thresholds-reset` 标志，使得只有指定的阈值是活跃的。
+    6. 设置 `--thresholds-reset` 标志，使得只有指定的阈值是活跃的。
     请参阅 [ `--thresholds-reset` 文档][thresholds reset] 了解完整概述。
     (例如：`--thresholds-reset`)
 15. 设置 `--error-on-alert` 标志，如果生成警报，则使命令失败。
@@ -78,15 +82,17 @@ import BaseBranchCode from "../base-branch-code.mdx";
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github token]: https://docs.github.com/zh/actions/security-guides/automatic-token-authentication
 
-[statistical continuous benchmarking]: /zh/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[statistical continuous benchmarking]: /zh/docs/how-to/track-benchmarks/#统计连续基准测试
 [bencher run]: /zh/docs/explanation/bencher-run/
 [project option]: /zh/docs/explanation/bencher-run/#--project-project
 [key option]: /zh/docs/explanation/bencher-run/#--key-key
 [branch option]: /zh/docs/explanation/branches/#--branch-branch
 [testbed option]: /zh/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /zh/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /zh/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /zh/docs/explanation/adapters/
 [threshold test option]: /zh/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /zh/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /zh/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /zh/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /zh/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /zh/docs/explanation/thresholds/#--error-on-alert

@@ -22,13 +22,14 @@ if `my_binary` had a size of `42` bytes:
 
 In this example, the key `my_binary` is the binary file name.
 It is used as the name of the [Benchmark][benchmark].
-The `my_binary` object contains the `file-size` key.
+The `my_binary` key maps to a list with one entry,
+and the `measures` object of that entry contains the `file-size` key.
 `file-size` is the slug for the built-in File Size [Measure][measure].
 The File Size Measure is not created by default for all Projects.
 However, when you use the File Size Measure,
 it will be automatically created for your Project.
-The File Size Measure object contains a [Metric][metric]
-with the file size `value` in bytes, `42.0`.
+The File Size Measure object contains the `value` [Metric][metric]
+with the file size in bytes, `42.0`.
 
 The File Size will always be a whole byte increment.
 That is, it will _never_ have a decimal like `42.5`.
@@ -40,4 +41,4 @@ so it uses floats instead of integers.
 
 [benchmark]: /docs/explanation/benchmarking/#benchmark
 [measure]: /docs/explanation/benchmarking/#measure
-[metric]: /docs/explanation/benchmarking/#metrics
+[metric]: /docs/explanation/benchmarking/#metric

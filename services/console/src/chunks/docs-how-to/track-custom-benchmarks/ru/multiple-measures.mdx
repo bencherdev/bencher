@@ -1,41 +1,41 @@
 import BmfMultiExample from "../bmf-multi-example.mdx";
 import RunCmdMultiExample from "../run-cmd-multi-example.mdx";
+import RunMeasureExample from "../run-measure-example.mdx";
 
-## Множественные Измерения
+## Несколько Измерений
 
-В [JSON формате метрики Bencher (BMF)][bmf]
-объект [Benchmark][benchmark] может содержать несколько имен, слоганов или UUID [Measure][measure] в качестве ключей.
-Если указано имя или слоган и Измерение еще не существует, оно будет создано для вас.
-Однако, если указано значение UUID, то Измерение должно уже существовать.
-Каждый объект Измерения должен содержать [Metric][metric] с до трех значений:
-`value`, `lower_value` и `upper_value`.
-Значения `lower_value` и `upper_value` являются необязательными.
+В [Bencher Metric Format (BMF) JSON][bmf]
+объект `measures` записи [Бенчмарка][benchmark] может содержать в качестве ключей несколько имен, slug или UUID [Измерений][measure].
+Если указано имя или slug и такое Измерение еще не существует, оно будет создано автоматически.
+Однако если указан UUID, то Измерение должно уже существовать.
+Каждый объект Измерения сопоставляет имена [Метрик][metric] с их значениями.
 
-Это пример JSON BMF с несколькими Измерениями:
+Это пример BMF JSON с несколькими Измерениями:
 
 <BmfMultiExample />
 
-В этом примере объект Измерения `latency` содержит следующие значения:
-
-- `value` равное `88.0`
-- `lower_value` равное `87.42`
-- `upper_value` равное `88.88`
-
-А объект Измерения `throughput` содержит следующие значения:
-
-- `value` равное `5.55`
-- `lower_value` равное `3.14`
-- `upper_value` равное `6.30`
+В этом примере объект Измерения `latency` содержит Метрику `value`, равную `88.0`,
+а объект Измерения `throughput` содержит Метрику `value`, равную `5.55`.
 
 Вы можете использовать [подкоманду CLI `bencher mock`][bencher mock]
 с [опцией `--measure`][measure option]
-для генерации фиктивных данных BMF с множественными Измерениями.
-Мы будем использовать это как замену для вашего собственного кастомного бенчмарк-раннера.
+для генерации фиктивных данных BMF с несколькими Измерениями.
+Мы будем использовать ее как заполнитель для вашего собственного инструмента запуска бенчмарков.
 Используя <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
-и [адаптер `json`][json adapter]
+и [адаптер `json`][json adapter],
 мы можем отслеживать наши бенчмарки с несколькими Измерениями с помощью следующей команды:
 
 <RunCmdMultiExample />
+
+Если ваша оболочка бенчмаркинга сообщает больше Измерений, чем вы хотите отслеживать,
+используйте [опцию `--measure`][run measure option] команды <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>,
+чтобы сохранить только перечисленные Измерения.
+Все остальные Измерения отбрасываются до сохранения.
+Это отличается от опции `--measure` команды `bencher mock`,
+которая задает Измерения, генерируемые `bencher mock`.
+Например, эта команда генерирует оба Измерения и отслеживает только `latency`:
+
+<RunMeasureExample />
 
 [bmf]: /ru/docs/reference/bencher-metric-format/
 [benchmark]: /ru/docs/explanation/benchmarking/#benchmark
@@ -44,3 +44,4 @@ import RunCmdMultiExample from "../run-cmd-multi-example.mdx";
 [bencher mock]: /ru/docs/reference/bencher-metric-format/#bencher-mock
 [measure option]: /ru/docs/reference/bencher-metric-format/#--measure-measure
 [json adapter]: /ru/docs/explanation/adapters/#-json
+[run measure option]: /ru/docs/explanation/bencher-run/#--measure-measure

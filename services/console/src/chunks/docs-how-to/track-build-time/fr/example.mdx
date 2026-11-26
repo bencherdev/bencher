@@ -31,15 +31,16 @@ alors le JSON BMF généré ressemblerait à ceci :
 <ExecJsonExample />
 
 Maintenant, le nom du [Benchmark][benchmark] est simplement `./my_build_script.sh`.
-L'objet `./my_build_script.sh` contient la clé `build-time`.
-`build-time` est le slug pour la Mesure de Temps de Construction intégrée [Measure][measure].
-La Mesure de Temps de Construction n'est pas créée par défaut pour tous les Projets.
-Cependant, lorsque vous utilisez la Mesure de Temps de Construction,
+La clé `./my_build_script.sh` correspond à une liste d'une seule entrée,
+et l'objet `measures` de cette entrée contient la clé `build-time`.
+`build-time` est le slug pour la [Mesure][measure] Build Time intégrée.
+La Mesure Build Time n'est pas créée par défaut pour tous les Projets.
+Cependant, lorsque vous utilisez la Mesure Build Time,
 elle sera automatiquement créée pour votre Projet.
-L'objet de la Mesure de Temps de Construction contient un [Métrique][metric]
-avec la valeur du temps de construction en secondes, `87.0` et `86.98` dans nos exemples.
+L'objet de la Mesure Build Time contient la [Métrique][metric] `value`
+avec le temps de construction en secondes, `87.0` et `86.98` dans nos exemples.
 
-Le Temps de Construction sera toujours arrondi au plus proche deux décimales.
+Le temps de construction sera toujours arrondi au plus proche deux décimales.
 C'est-à-dire qu'il ne sera _jamais_ un long décimal comme `42.666666`.
 
 [json adapter]: /fr/docs/explanation/adapters/#-json
@@ -47,4 +48,4 @@ C'est-à-dire qu'il ne sera _jamais_ un long décimal comme `42.666666`.
 
 [benchmark]: /fr/docs/explanation/benchmarking/#benchmark
 [measure]: /fr/docs/explanation/benchmarking/#measure
-[metric]: /fr/docs/explanation/benchmarking/#metrics
+[metric]: /fr/docs/explanation/benchmarking/#metric

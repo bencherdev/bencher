@@ -31,13 +31,14 @@ then the generated BMF JSON would look like this:
 <ExecJsonExample />
 
 Now, the [Benchmark][benchmark] name is simply `./my_build_script.sh`.
-The `./my_build_script.sh` object contains the `build-time` key.
+The `./my_build_script.sh` key maps to a list with one entry,
+and the `measures` object of that entry contains the `build-time` key.
 `build-time` is the slug for the built-in Build Time [Measure][measure].
 The Build Time Measure is not created by default for all Projects.
 However, when you use the Build Time Measure,
 it will be automatically created for your Project.
-The Build Time Measure object contains a [Metric][metric]
-with the build time `value` in seconds, `87.0` and `86.98` in our examples.
+The Build Time Measure object contains the `value` [Metric][metric]
+with the build time in seconds, `87.0` and `86.98` in our examples.
 
 The Build Time will always be rounded to the nearest two decimal places.
 That is, it will _never_ be a long decimal like `42.666666`.
@@ -47,4 +48,4 @@ That is, it will _never_ be a long decimal like `42.666666`.
 
 [benchmark]: /docs/explanation/benchmarking/#benchmark
 [measure]: /docs/explanation/benchmarking/#measure
-[metric]: /docs/explanation/benchmarking/#metrics
+[metric]: /docs/explanation/benchmarking/#metric

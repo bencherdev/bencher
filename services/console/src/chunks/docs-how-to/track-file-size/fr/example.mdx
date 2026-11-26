@@ -22,13 +22,14 @@ si `my_binary` avait une taille de `42` octets :
 
 Dans cet exemple, la clé `my_binary` est le nom du fichier binaire.
 Elle est utilisée comme nom du [Benchmark][benchmark].
-L'objet `my_binary` contient la clé `file-size`.
-`file-size` est le slug pour la Mesure de Taille de Fichier intégrée [Measure][measure].
-La Mesure de Taille de Fichier n'est pas créée par défaut pour tous les Projets.
-Cependant, lorsque vous utilisez la Mesure de Taille de Fichier,
+La clé `my_binary` correspond à une liste d'une seule entrée,
+et l'objet `measures` de cette entrée contient la clé `file-size`.
+`file-size` est le slug pour la [Mesure][measure] File Size intégrée.
+La Mesure File Size n'est pas créée par défaut pour tous les Projets.
+Cependant, lorsque vous utilisez la Mesure File Size,
 elle sera automatiquement créée pour votre Projet.
-L'objet Mesure de Taille de Fichier contient un [Métrique][metric]
-avec la `valeur` de taille de fichier en octets, `42.0`.
+L'objet Mesure File Size contient la [Métrique][metric] `value`
+avec la taille de fichier en octets, `42.0`.
 
 La taille du fichier sera toujours un nombre entier de bytes.
 C'est-à-dire qu'elle _n'aura jamais_ de décimale comme `42.5`.
@@ -40,4 +41,4 @@ il utilise donc des flottants au lieu d'entiers.
 
 [benchmark]: /fr/docs/explanation/benchmarking/#benchmark
 [measure]: /fr/docs/explanation/benchmarking/#measure
-[metric]: /fr/docs/explanation/benchmarking/#metrics
+[metric]: /fr/docs/explanation/benchmarking/#metric

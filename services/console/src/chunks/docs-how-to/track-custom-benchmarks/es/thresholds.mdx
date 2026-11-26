@@ -1,0 +1,22 @@
+import ThresholdCmdExample from "../threshold-cmd-example.mdx";
+
+## Umbrales
+
+Para detectar regresiones de rendimiento en tus benchmarks personalizados, añade un [Umbral][threshold].
+Un Umbral comprueba una Métrica de una Medida,
+así que establece [la opción `--threshold-metric`][threshold metric option]
+en el nombre de una Métrica que informe tu arnés de benchmark personalizado.
+Este comando crea un Umbral para la Métrica `value` de la Medida `latency`:
+
+<ThresholdCmdExample />
+
+Para comprobar solo algunas de tus [Variantes][variant],
+establece también [la opción `--threshold-parameters`][threshold parameters option]
+en un objeto JSON con los [Parámetros][parameters] que comparten.
+(ej: `--threshold-parameters '{"size": 64}'`)
+
+[threshold]: /es/docs/explanation/thresholds/
+[threshold metric option]: /es/docs/explanation/thresholds/#--threshold-metric-metric
+[threshold parameters option]: /es/docs/explanation/thresholds/#--threshold-parameters-parameters
+[parameters]: /es/docs/explanation/benchmarking/#parameters
+[variant]: /es/docs/explanation/benchmarking/#parameters

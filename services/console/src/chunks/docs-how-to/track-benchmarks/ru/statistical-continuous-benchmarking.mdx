@@ -40,20 +40,24 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 4. Установите опцию `--testbed` в название тестовой среды CI.
    Подробнее смотрите в [документации по опции `--testbed`][testbed option].
    (например: `--testbed ci-runner`)
-5. Установите порог для ветви `main`, тестовой среды `ci-runner` и измерения `latency`:
+5. Установите порог для ветви `main`, тестовой среды `ci-runner`, измерения `latency` и метрики `value`:
    1. Установите опцию `--threshold-measure` в встроенное измерение `latency`, создаваемое <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Подробнее смотрите в [документации по опции `--threshold-measure`][threshold measure option].
    (например: `--threshold-measure latency`)
-   2. Установите опцию `--threshold-test` в тест Стьюдента (`t_test`).
+   2. Установите опцию `--threshold-metric` на метрику `value`, которая создается <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   Для собственной оболочки бенчмаркинга используйте метрику, для которой [ее адаптер][adapters] рекомендует задать порог в первую очередь.
+   Подробнее смотрите в [документации по опции `--threshold-metric`][threshold metric option].
+   (например: `--threshold-metric value`)
+   3. Установите опцию `--threshold-test` в тест Стьюдента (`t_test`).
    Полный обзор смотрите в [документации по опции `--threshold-test`][threshold test option].
    (например: `--threshold-test t_test`)
-   3. Установите опцию `--threshold-max-sample-size` на максимальный размер выборки `64`.
+   4. Установите опцию `--threshold-max-sample-size` на максимальный размер выборки `64`.
    Подробнее смотрите в [документации по опции `--threshold-max-sample-size`][threshold max sample size].
    (например: `--threshold-max-sample-size 64`)
-   4. Установите опцию `--threshold-upper-boundary` на верхнюю границу `0.99`.
+   5. Установите опцию `--threshold-upper-boundary` на верхнюю границу `0.99`.
    Подробнее смотрите в [документации по опции `--threshold-upper-boundary`][threshold upper boundary].
    (например: `--threshold-upper-boundary 0.99`)
-   5. Установите флаг `--thresholds-reset`, чтобы только указанный порог был активен.
+   6. Установите флаг `--thresholds-reset`, чтобы только указанный порог был активен.
    Полный обзор смотрите в [документации по флагу `--thresholds-reset`][thresholds reset].
    (например: `--thresholds-reset`)
 6. Установите флаг `--error-on-alert` для завершения команды в случае возникновения предупреждения.
@@ -68,7 +72,7 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 
 Первый запуск этой команды в CI создаст ветвь `main`, если она еще не существует.
 Новая `main` не будет иметь начальной точки или существующих данных.
-Для ветви `main`, тестовой среды `ci-runner` и измерения `latency` будет создан порог.
+Для ветви `main`, тестовой среды `ci-runner`, измерения `latency` и метрики `value` будет создан порог.
 На последующих запусках новые данные будут добавляться в ветвь `main`.
 Указанный порог будет использоваться для обнаружения регрессий производительности.
 
@@ -77,8 +81,10 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 [branch option]: /ru/docs/explanation/branches/#--branch-branch
 [testbed option]: /ru/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /ru/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /ru/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /ru/docs/explanation/adapters/
 [threshold test option]: /ru/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /ru/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /ru/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /ru/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ru/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /ru/docs/explanation/thresholds/#--error-on-alert

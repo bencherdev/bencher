@@ -33,20 +33,22 @@ Una piedra angular de [Benchmarking Continuo Estadístico][statistical continuou
    (ej: `--branch main`)
 13. Establece la opción `--testbed` al nombre del Testbed. Esto debería probablemente coincidir con la máquina seleccionada en `runs-on`. Consulta [la documentación de `--testbed`][testbed option] para más detalles.
     (ej: `--testbed ubuntu-latest`)
-14. Establece el Umbral para la Rama `main`, Testbed `ubuntu-latest` y la Medida `latency`:
+14. Establece el Umbral para la Rama `main`, Testbed `ubuntu-latest`, la Medida `latency` y la Métrica `value`:
     1. Establece la opción `--threshold-measure` a la Medida incorporada `latency` que genera <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>. Consulta [la documentación de `--threshold-measure`][threshold measure option] para más detalles.
     (ej: `--threshold-measure latency`)
-    2. Establece la opción `--threshold-test` a una prueba t de Student (`t_test`). Consulta [la documentación de `--threshold-test`][threshold test option] para una visión completa.
+    2. Establece la opción `--threshold-metric` a la Métrica `value` que genera <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>. Con tu propio arnés de benchmark, usa la Métrica en la que [su adaptador][adapters] recomienda poner un Umbral primero. Consulta [la documentación de `--threshold-metric`][threshold metric option] para más detalles.
+    (ej: `--threshold-metric value`)
+    3. Establece la opción `--threshold-test` a una prueba t de Student (`t_test`). Consulta [la documentación de `--threshold-test`][threshold test option] para una visión completa.
     (ej: `--threshold-test t_test`)
-    3. Establece la opción `--threshold-max-sample-size` al tamaño máximo de muestra de `64`. Consulta [la documentación de `--threshold-max-sample-size`][threshold max sample size] para más detalles.
+    4. Establece la opción `--threshold-max-sample-size` al tamaño máximo de muestra de `64`. Consulta [la documentación de `--threshold-max-sample-size`][threshold max sample size] para más detalles.
     (ej: `--threshold-max-sample-size 64`)
-    4. Establece la opción `--threshold-upper-boundary` al Límite Superior de `0.99`. Consulta [la documentación de `--threshold-upper-boundary`][threshold upper boundary] para más detalles.
+    5. Establece la opción `--threshold-upper-boundary` al Límite Superior de `0.99`. Consulta [la documentación de `--threshold-upper-boundary`][threshold upper boundary] para más detalles.
     (ej: `--threshold-upper-boundary 0.99`)
-    5. Establece la bandera `--thresholds-reset` para que solo el Umbral especificado esté activo. Consulta [la documentación de `--thresholds-reset`][thresholds reset] para una visión completa.
+    6. Establece la bandera `--thresholds-reset` para que solo el Umbral especificado esté activo. Consulta [la documentación de `--thresholds-reset`][thresholds reset] para una visión completa.
     (ej: `--thresholds-reset`)
 15. Establece la bandera `--error-on-alert` para que el comando falle si se genera una Alerta. Consulta [la documentación de `--error-on-alert`][alert err] para una visión completa.
    (ej: `--error-on-alert`)
-16. Establece la opción `--adapter` al Formato JSON de Métricas de Bencher (`json`) que genera <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>. Consulta [adaptadores de harness de benchmark][adapter json] para una visión completa.
+16. Establece la opción `--adapter` al [Formato JSON de Métricas de Bencher (`json`)][bmf] que genera <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>. Consulta [adaptadores de harness de benchmark][adapter json] para una visión completa.
    (ej: `--adapter json`)
 17. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como un comentario de Checks de GitHub usando
     [la variable de entorno `GITHUB_TOKEN` de GitHub Actions][github token].
@@ -63,15 +65,17 @@ Una piedra angular de [Benchmarking Continuo Estadístico][statistical continuou
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github token]: https://docs.github.com/es/actions/security-guides/automatic-token-authentication
 
-[statistical continuous benchmarking]: /es/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[statistical continuous benchmarking]: /es/docs/how-to/track-benchmarks/#benchmarking-continuo-estadístico
 [bencher run]: /es/docs/explanation/bencher-run/
 [project option]: /es/docs/explanation/bencher-run/#--project-project
 [key option]: /es/docs/explanation/bencher-run/#--key-key
 [branch option]: /es/docs/explanation/branches/#--branch-branch
 [testbed option]: /es/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /es/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /es/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /es/docs/explanation/adapters/
 [threshold test option]: /es/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /es/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /es/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /es/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /es/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /es/docs/explanation/thresholds/#--error-on-alert

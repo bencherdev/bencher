@@ -1,0 +1,22 @@
+import ThresholdCmdExample from "../threshold-cmd-example.mdx";
+
+## Limiares
+
+Para detectar regressões de desempenho nos seus benchmarks personalizados, adicione um [Limiar][threshold].
+Um Limiar verifica uma Métrica de uma Medida,
+então defina [a opção `--threshold-metric`][threshold metric option]
+como o nome de uma Métrica que o seu harness de benchmark personalizado reporta.
+Este comando cria um Limiar para a Métrica `value` da Medida `latency`:
+
+<ThresholdCmdExample />
+
+Para verificar apenas algumas das suas [Variantes][variant],
+defina também [a opção `--threshold-parameters`][threshold parameters option]
+como um objeto JSON dos [Parâmetros][parameters] que elas compartilham.
+(ex: `--threshold-parameters '{"size": 64}'`)
+
+[threshold]: /pt/docs/explanation/thresholds/
+[threshold metric option]: /pt/docs/explanation/thresholds/#--threshold-metric-metric
+[threshold parameters option]: /pt/docs/explanation/thresholds/#--threshold-parameters-parameters
+[parameters]: /pt/docs/explanation/benchmarking/#parameters
+[variant]: /pt/docs/explanation/benchmarking/#parameters

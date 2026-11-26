@@ -6,8 +6,8 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 ## Relative Continuous Benchmarking
 
 Anknüpfend an unsere bisherigen Fortschritte in den
-[Quickstart][quickstart] und [Docker Self-Hosted][docker self-hosted] Tutorials,
-fügen wir Relatives [Continuous Benchmarking][continuous benchmarking] zu unserem `claimed` Projekt hinzu.
+[Schnellstart][quickstart] und [Docker Selbstgehostet][docker self-hosted] Tutorials,
+fügen wir relatives [kontinuierliches Benchmarking][continuous benchmarking] zu unserem `claimed` Projekt hinzu.
 
 > 🐰 Stellen Sie sicher, dass Sie
 > einen Projekt-API-Schlüssel erstellt und als `BENCHER_API_KEY` Umgebungsvariable gesetzt haben,
@@ -17,15 +17,15 @@ fügen wir Relatives [Continuous Benchmarking][continuous benchmarking] zu unser
 [docker self-hosted]: /de/docs/tutorial/self-hosted/
 [continuous benchmarking]: /de/docs/explanation/continuous-benchmarking/
 
-Relatives Continuous Benchmarking führt einen direkten Vergleich zwischen zwei Versionen Ihres Codes durch.
+Relatives kontinuierliches Benchmarking führt einen direkten Vergleich zwischen zwei Versionen Ihres Codes durch.
 Dies kann nützlich sein, wenn man mit lauten CI/CD-Umgebungen zu tun hat,
 bei denen die verfügbaren Ressourcen zwischen den Läufen stark variieren können.
 In diesem Beispiel werden wir die Ergebnisse vom Laufen im `main` Branch
 mit den Ergebnissen aus einem feature Branch, treffend als `feature-branch` benannt, vergleichen.
 Da jede CI-Umgebung ein wenig anders ist,
 soll dieses Beispiel mehr veranschaulichend als praktisch sein.
-Für spezifischere Beispiele, siehe [Continuous Benchmarking in GitHub Actions][github actions]
-und [Continuous Benchmarking in GitLab CI/CD][gitlab ci/cd].
+Für spezifischere Beispiele, siehe [Kontinuierliches Benchmarking in GitHub Actions][github actions]
+und [Kontinuierliches Benchmarking in GitLab CI/CD][gitlab ci/cd].
 
 [github actions]: /de/docs/how-to/github-actions/
 [gitlab ci/cd]: /de/docs/how-to/gitlab-ci-cd/
@@ -56,17 +56,17 @@ Dann müssen wir unsere Benchmarks im `main` Branch in CI ausführen:
    Siehe [die `--testbed` Dokus][testbed option] für weitere Details.
    (z.B.: `--testbed ci-runner`)
 6. Setzen Sie die `--adapter` Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
-   Siehe [benchmark harness adapters][adapter json] für eine vollständige Übersicht.
+   Siehe [Benchmark-Harness-Adapter][adapter json] für eine vollständige Übersicht.
    (z.B.: `--adapter json`)
 7.  Geben Sie die Argumente des Benchmark-Befehls an.
-    Siehe [benchmark command][command argument] für eine vollständige Übersicht.
+    Siehe [Benchmark-Befehl][command argument] für eine vollständige Übersicht.
     (z.B.: `bencher mock`)
 
 Beim ersten Mal, wenn dieser Befehl in CI ausgeführt wird,
 wird der `main` Branch erstellt, da er noch nicht existiert.
-Der neue `main` wird _nicht_ über einen Startpunkt, vorhandene Daten oder Thresholds verfügen.
+Der neue `main` wird _nicht_ über einen Startpunkt, vorhandene Daten oder Schwellenwerte verfügen.
 Bei nachfolgenden Läufen wird der alte `main` [Head][head] ersetzt
-und ein neuer `main` [Head][head] wird erstellt, ohne einen Startpunkt, vorhandene Daten oder Thresholds.
+und ein neuer `main` [Head][head] wird erstellt, ohne einen Startpunkt, vorhandene Daten oder Schwellenwerte.
 
 [bencher run]: /de/docs/explanation/bencher-run/
 [project option]: /de/docs/explanation/bencher-run/#--project-project
@@ -107,36 +107,42 @@ Schließlich sind wir bereit, unsere `feature-branch` Benchmarks in CI auszufüh
 5. Setzen Sie die `--testbed` Option auf den Namen des CI-Runner-Testbeds.
    Siehe [die `--testbed` Dokus][testbed option] für weitere Details.
    (z.B.: `--testbed ci-runner`)
-6. Setzen Sie die Schwelle für den `feature-branch` Branch, `ci-runner` Testbed und `latency` Measure:
-   1. Setzen Sie die `--threshold-measure` Option auf das eingebaute `latency` Measure, das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
+6. Setzen Sie den Schwellenwert für den `feature-branch` Branch, `ci-runner` Testbed, die `latency` Measure und die `value` Metrik:
+   1. Setzen Sie die `--threshold-measure` Option auf die eingebaute `latency` Measure, die von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
    Siehe [die `--threshold-measure` Dokus][threshold measure option] für weitere Details.
    (z.B.: `--threshold-measure latency`)
-   2. Setzen Sie die `--threshold-test` Option auf einen einfachen Prozentsatz (`percentage`).
+   2. Setzen Sie die `--threshold-metric` Option auf die `value` Metrik, die von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
+   Verwenden Sie mit Ihrem eigenen Benchmark-Harness die Metrik, für die [sein Adapter][adapters] zuerst einen Schwellenwert empfiehlt.
+   Siehe [die `--threshold-metric` Dokus][threshold metric option] für weitere Details.
+   (z.B.: `--threshold-metric value`)
+   3. Setzen Sie die `--threshold-test` Option auf einen einfachen Prozentsatz (`percentage`).
    Siehe [die `--threshold-test` Dokus][threshold test option] für eine vollständige Übersicht.
    (z.B.: `--threshold-test percentage`)
-   3. Setzen Sie die `--threshold-upper-boundary` Option auf die Obergrenze von `0.25`.
+   4. Setzen Sie die `--threshold-upper-boundary` Option auf die Obergrenze von `0.25`.
    Siehe [die `--threshold-upper-boundary` Dokus][threshold upper boundary] für weitere Details.
    (z.B.: `--threshold-upper-boundary 0.25`)
-   4. Setzen Sie das `--thresholds-reset` Flag, so dass nur die angegebene Schwelle aktiv ist.
+   5. Setzen Sie das `--thresholds-reset` Flag, so dass nur der angegebene Schwellenwert aktiv ist.
    Siehe [die `--thresholds-reset` Dokus][thresholds reset] für eine vollständige Übersicht.
    (z.B.: `--thresholds-reset`)
 7. Setzen Sie das `--error-on-alert` Flag, um den Befehl zu beenden, falls ein Alert erzeugt wird.
    Siehe [die `--error-on-alert` Dokus][alert err] für eine vollständige Übersicht.
    (z.B.: `--error-on-alert`)
 8. Setzen Sie die `--adapter` Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
-   Siehe [benchmark harness adapters][adapter json] für eine vollständige Übersicht.
+   Siehe [Benchmark-Harness-Adapter][adapter json] für eine vollständige Übersicht.
    (z.B.: `--adapter json`)
 9. Geben Sie die Argumente des Benchmark-Befehls an.
-   Siehe [benchmark command][command argument] für eine vollständige Übersicht.
+   Siehe [Benchmark-Befehl][command argument] für eine vollständige Übersicht.
    (z.B.: `bencher mock`)
 
 Jedes Mal, wenn dieser Befehl in CI ausgeführt wird,
 vergleicht er die Ergebnisse des `feature-branch` nur mit den neuesten Ergebnissen aus `main`.
-Die angegebene Schwelle wird dann verwendet, um Leistungsregressionen zu erkennen.
+Der angegebene Schwellenwert wird dann verwendet, um Leistungsregressionen zu erkennen.
 
 [start point]: /de/docs/explanation/branches/#--start-point-branch
 [start point reset]: /de/docs/explanation/branches/#--start-point-reset
 [threshold measure option]: /de/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /de/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /de/docs/explanation/adapters/
 [threshold test option]: /de/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /de/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /de/docs/explanation/thresholds/#--thresholds-reset

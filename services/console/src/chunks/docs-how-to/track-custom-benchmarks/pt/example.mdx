@@ -6,22 +6,27 @@ Este é um exemplo de JSON BMF:
 
 Neste exemplo, a chave `benchmark_name` seria o nome de um [Benchmark][benchmark].
 Um Benchmark pode ser identificado pelo seu nome, slug ou UUID.
-O objeto `benchmark_name` pode conter várias chaves correspondentes a nomes, slugs ou UUIDs de [Medida][measure].
+A chave `benchmark_name` aponta para uma lista de entradas,
+e cada entrada tem um objeto `measures`.
+O objeto `measures` pode conter várias chaves correspondentes a nomes, slugs ou UUIDs de [Medida][measure].
 Se o valor especificado for um nome ou slug e a [Medida][measure] ainda não existir, ela será criada para você.
 No entanto, se o valor especificado for um UUID, então a [Medida][measure] já deve existir.
-Neste exemplo, `latency` é o slug da Medida de Latência integrada.
-Cada Projeto, por padrão, tem uma Medida de Latência (ou seja, `latency`) e uma Medida de Throughput (ou seja, `throughput`),
+Neste exemplo, `latency` é o slug da Medida Latency integrada.
+Cada Projeto, por padrão, tem uma Medida Latency (ou seja, `latency`) e uma Medida Throughput (ou seja, `throughput`),
 que são medidas em `nanosecond (ns)` e `operations / second (ops/s)` respectivamente.
-O objeto de [Medida][measure] contém uma [Métrica][metric] com até três valores:
-`value`, `lower_value` e `upper_value`.
-Os valores `lower_value` e `upper_value` são opcionais.
+Cada objeto de [Medida][measure] associa nomes de [Métrica][metric] aos seus valores.
+Quando o seu harness de benchmark reporta um único resultado para uma Medida,
+dê à sua Métrica o nome `value`.
 
-Neste exemplo, o objeto da Medida `latency` contém os seguintes valores:
+Neste exemplo, o objeto da Medida `latency` contém uma Métrica `value` de `88.0`.
 
-- Um `value` de `88.0`
-- Um `lower_value` de `87.42`
-- Um `upper_value` de `88.88`
+Uma entrada também pode ter um objeto `parameters`, como `{"size": 64}`.
+Cada conjunto de [Parâmetros][parameters] é a sua própria [Variante][variant] do Benchmark,
+então um Benchmark pode ter várias Variantes.
+Uma entrada sem `parameters` é a Variante do Benchmark sem Parâmetros.
 
 [benchmark]: /pt/docs/explanation/benchmarking/#benchmark
 [measure]: /pt/docs/explanation/benchmarking/#measure
-[metric]: /pt/docs/explanation/benchmarking/#metrics
+[metric]: /pt/docs/explanation/benchmarking/#metric
+[parameters]: /pt/docs/explanation/benchmarking/#parameters
+[variant]: /pt/docs/explanation/benchmarking/#parameters

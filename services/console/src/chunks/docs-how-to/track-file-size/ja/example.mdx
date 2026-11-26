@@ -4,7 +4,7 @@ import JsonExample from "../json-example.mdx";
 
 スクリプトが `./my_build_script.sh` にあり、バイナリを `./path/to/my_binary` にビルドする場合、
 <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>
-と[the `json` adapter][json adapter]を用いて、このバイナリファイルのサイズを追跡できます。
+と[`json` アダプタ][json adapter]を用いて、このバイナリファイルのサイズを追跡できます。
 これは、[ベンチマークコマンド][bencher run]がある場合とない場合の両方で機能します。
 
 ベンチマークコマンドがある場合：
@@ -19,14 +19,15 @@ import JsonExample from "../json-example.mdx";
 
 この例では、キー `my_binary` はバイナリファイルの名前です。
 [ベンチマーク][benchmark]の名前として使用されます。
-`my_binary` オブジェクトには `file-size` キーが含まれます。
-`file-size` は、内蔵されたファイルサイズ [Measure][measure]のスラッグです。
-ファイルサイズ Measure は、すべてのプロジェクトに対してデフォルトで作成されるわけではありません。
-しかし、ファイルサイズ Measure を使用すると、プロジェクトに対して自動的に作成されます。
-ファイルサイズ Measure オブジェクトには、ファイルサイズ `value` をバイト単位で持つ [Metric][metric]が含まれます、`42.0`。
+`my_binary` キーは1つのエントリを持つリストに対応し、
+そのエントリの `measures` オブジェクトには `file-size` キーが含まれます。
+`file-size` は、組み込みの File Size [メジャー][measure]のスラッグです。
+File Size メジャーは、すべてのプロジェクトに対してデフォルトで作成されるわけではありません。
+しかし、File Size メジャーを使用すると、プロジェクトに対して自動的に作成されます。
+File Size メジャーオブジェクトには、ファイルサイズをバイト単位で持つ `value` [メトリック][metric]が含まれます（`42.0`）。
 
 ファイルサイズは常にバイト単位で計算されます。
-つまり、小数点以下の値（例：`42.5`）は_決して_含まれません。
+つまり、小数点以下の値（例：`42.5`）は*決して*含まれません。
 しかし、BMF JSONは幅広い値をサポートする必要があるため、整数ではなく浮動小数点数を使用します。
 
 [json adapter]: /ja/docs/explanation/adapters/#-json
@@ -34,4 +35,4 @@ import JsonExample from "../json-example.mdx";
 
 [benchmark]: /ja/docs/explanation/benchmarking/#benchmark
 [measure]: /ja/docs/explanation/benchmarking/#measure
-[metric]: /ja/docs/explanation/benchmarking/#metrics
+[metric]: /ja/docs/explanation/benchmarking/#metric

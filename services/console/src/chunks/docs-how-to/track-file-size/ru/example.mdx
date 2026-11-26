@@ -20,14 +20,15 @@ import JsonExample from "../json-example.mdx";
 <JsonExample />
 
 В этом примере ключ `my_binary` является именем двоичного файла.
-Он используется в качестве названия [Benchmark][benchmark].
-Объект `my_binary` содержит ключ `file-size`.
-`file-size` - это слаг для встроенного измерения размера файла [Measure][measure].
-Измерение размера файла по умолчанию не создается для всех проектов.
-Однако, когда вы используете измерение размера файла,
+Он используется в качестве имени [Бенчмарка][benchmark].
+Ключ `my_binary` соответствует списку с одной записью,
+и объект `measures` этой записи содержит ключ `file-size`.
+`file-size` является slug встроенного [Измерения][measure] File Size.
+Измерение File Size по умолчанию не создается для всех проектов.
+Однако, когда вы используете Измерение File Size,
 оно будет автоматически создано для вашего проекта.
-Объект измерения размера файла содержит [Metric][metric]
-с размером файла `value` в байтах, `42.0`.
+Объект Измерения File Size содержит [Метрику][metric] `value`
+с размером файла в байтах, `42.0`.
 
 Размер файла всегда будет целым числом в байтах.
 То есть, он _никогда_ не будет дробным, например `42.5`.
@@ -39,4 +40,4 @@ import JsonExample from "../json-example.mdx";
 
 [benchmark]: /ru/docs/explanation/benchmarking/#benchmark
 [measure]: /ru/docs/explanation/benchmarking/#measure
-[metric]: /ru/docs/explanation/benchmarking/#metrics
+[metric]: /ru/docs/explanation/benchmarking/#metric
