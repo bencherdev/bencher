@@ -15,7 +15,11 @@ use reqwest as _;
 mod error;
 mod job_output;
 mod metrics;
+#[cfg(test)]
+mod mock_s3;
+mod part_copy;
 mod recording;
+mod s3_error;
 mod storage;
 mod types;
 
