@@ -1,9 +1,39 @@
 import Go from "../go.mdx";
+import GoJson from "../go-json.mdx";
 
 ## 🕳 Go Bench
 
 El adaptador Go Bench (`go_bench`) espera la salida de [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks).
-Se recopila la medida de `latencia` (es decir, `nanosegundos (ns)`).
-Solo está disponible el promedio (es decir, `value`). No hay `lower_value` y `upper_value`.
 
 <Go />
+
+También se lee su salida JSON (es decir, `go test -json`), y se prueba primero:
+
+<GoJson />
+
+El nombre del Benchmark es el paquete, un `.` y el benchmark (es decir, `example.com/sort.BenchmarkSort`),
+sin su sufijo `-N` ni sus partes `key=value`.
+El sufijo `-N` se convierte en el Parámetro `@gomaxprocs`, que es `1` cuando Go no imprime sufijo,
+y cada parte `key=value` del nombre de un sub-benchmark se convierte en un Parámetro con esa clave, con un valor numérico como número.
+Una parte con la clave `@gomaxprocs` se cuenta como omitida en las advertencias del Informe.
+Con `GOMAXPROCS=1`, Go no imprime sufijo, así que el nombre de un sub-benchmark que termina en `-N` se lee como ese `@gomaxprocs`.
+
+La Medida `latency` (es decir, `ns/op`) se recoge en nanosegundos (ns).
+Con `-benchmem`, también se recogen las Medidas `allocated` (es decir, `B/op`) y `allocations` (es decir, `allocs/op`),
+y con `b.SetBytes`, la Medida `bytes-throughput` (es decir, `MB/s`) en bytes por segundo.
+Cada unidad personalizada de `b.ReportMetric` es una Medida nombrada por la unidad tal como la imprime Go.
+En una sola ejecución, cada valor por operación (es decir, una unidad que termina en `/op`) y la tasa `MB/s` es una `mean`, y un valor en cualquier otra unidad es un `value`.
+Con `-count`, las ejecuciones de cada Variante se combinan en su `mean`, `median`, `min`, `max` y `std_dev`.
+
+Con `-count`, pon un Umbral primero a la Métrica `median`, con `--threshold-metric median`.
+En una sola ejecución, pon un Umbral primero a `mean`, o a `value` para una unidad personalizada que no termina en `/op`.
+
+<details>
+<summary>BMF versión 0</summary>
+
+En la versión 0 de BMF, solo se lee la salida de texto, con el nombre tal como lo imprime Go como nombre del Benchmark.
+Solo se recoge la Medida `latency` (es decir, `nanoseconds (ns)`).
+Solo la media (es decir, `value`) está disponible.
+No se recogen ni `lower_value` ni `upper_value`.
+
+</details>

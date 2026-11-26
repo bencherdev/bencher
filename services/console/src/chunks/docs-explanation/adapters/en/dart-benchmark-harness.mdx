@@ -1,10 +1,31 @@
 import Dart from "../dart.mdx";
+import DartFlavor from "../dart-flavor.mdx";
 
 ## 🎯 Dart benchmark_harness
 
-The Dart benchmark_harness Adapter (`dart_benchmark_harness`) expects output from the Dart [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) package (default `PrintEmitter` lines: `Name(RunTime): <microseconds> us.`).
+The Dart benchmark_harness Adapter (`dart_benchmark_harness`) expects output from the Dart [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) package,
+the lines of its `PrintEmitter` (ie `Name(RunTime): <microseconds> us.`) and its `PrintEmitterV2`.
+
+<Dart />
+
+The Benchmark name is the name as printed.
+When run with `dart run benchmark_harness:bench`, each flavor's results carry the `@flavor` Parameter (ie `jit`, `aot`, `js`, or `wasm`):
+
+<DartFlavor />
+
+The `latency` Measure (ie `RunTime`) is gathered in nanoseconds (ns).
+From a `PerfBenchmarkBase`, the `cycles` (ie `CpuCycles`) and `page-faults` (ie `MajorPageFaults`) Measures are gathered too.
+Each is a `mean` per exercise of the benchmark.
+A `RunTime` in another unit (ie from a custom emitter), any other metric, and a line that repeats one already read are counted as skipped in the Report's warnings.
+
+Threshold the `mean` Metric first, with `--threshold-metric mean`.
+
+<details>
+<summary>BMF version 0</summary>
+
+At BMF version 0, only the `PrintEmitter` lines are read.
 The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
 Only the reported value (ie `value`) is available.
 Neither `lower_value` nor `upper_value` are collected.
 
-<Dart />
+</details>

@@ -1,13 +1,42 @@
 import CargoRustGungraun from "../cargo-rust-gungraun.mdx";
+import CargoRustGungraunJson from "../cargo-rust-gungraun-json.mdx";
 
 ## 🦀 Rust Gungraun
 
-Rust Gungraun アダプター（`rust_gungraun`）は [Gungraun](https://github.com/gungraun/gungraun) の出力を想定しています。`instructions`、`l1-hits`、`l2-hits`、`ram-hits`、`total-read-write`、および `estimated-cycles` の Measures はデフォルトで収集されます。Gungraun が生成できる追加の Callgrind、Cachegrind、DHAT メトリクスもサポートされています。
+Rust Gungraun アダプター（`rust_gungraun`）は [Gungraun](https://github.com/gungraun/gungraun) の出力を想定しています。
+最も完全な結果を得るには、Gungraun に JSON サマリー（つまり `GUNGRAUN_OUTPUT_FORMAT=json`）を出力させてください。
+アダプターはテキスト出力よりも先にそれを読み取ります。
+サマリースキーマ 6 と 7 が読み取られます。
 
-これらの Measures では、報告された値（つまり `value`）のみが利用可能です。`lower_value` も `upper_value` も収集されません。
+<CargoRustGungraunJson />
 
-このアダプター用の Measures はすべてのプロジェクトでデフォルト作成されるわけではありません。ただし、このアダプターを使用すると、これらの Measures はプロジェクトに対して自動的に作成されます。
-
-Gungraun は Iai-Callgrind の改名された後継です。
+Gungraun のテキスト出力も読み取られます:
 
 <CargoRustGungraun />
+
+JSON サマリーからは、各ベンチマークはモジュールパスで命名され、その `id` は `@id` パラメータになります。
+テキスト出力からは、各ベンチマークは最初の行全体で命名されます。
+そのため、二つの形式では同じベンチマークに異なる名前が付きます。どちらか一方を選び、それを使い続けてください。
+ベンチマークを実行する各ツール（`callgrind`、`cachegrind`、`dhat` など）は、`@tool` パラメータを持つ独自のバリアントです。
+テキスト出力のうち、ツールのヘッダーがないセクションは `callgrind` です。
+
+`instructions`、`l1-hits`、`l2-hits`、`ram-hits`、`total-read-write`、`estimated-cycles` の各メジャーはデフォルトで収集されます。
+Callgrind、Cachegrind、DHAT、Memcheck、Helgrind、DRD が報告するその他のすべてのカウンターも、それぞれ独自のメジャーとして収集されます。
+各カウンターは正確なカウントで、単一の `value` メトリックとして収集され、これが最初にしきい値を設定するメトリックです。
+`perf` イベントは、そのサンプルの `mean` として、または単一の `value` として収集され、そのメトリックが最初にしきい値を設定するメトリックです。
+スキーマ 7 では、各ツールの実行時間も `profile-time` メジャー（つまり `nanoseconds (ns)`）として収集されます。
+システムコールに費やされた時間は、出力にその単位が記載されていないためスキップされます。
+このアダプターのメジャーは、すべてのプロジェクトにデフォルトで作成されるわけではありません。
+ただし、このアダプターを使用すると、これらのメジャーはプロジェクトに自動的に作成されます。
+
+Gungraun は、Iai-Callgrind が名前を変えた後継です。
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+テキスト出力とスキーマ 6 の JSON サマリーが読み取られます。
+JSON サマリーからは、各ベンチマークはモジュールパスとその `id` を `::` で連結した名前になります。
+各カウンターは `value` として収集され、`lower_value` も `upper_value` も収集されません。
+複数のツールがベンチマークを実行する場合、ツール間で共有されるカウンターは一つのツールの値のみを保持します。
+
+</details>

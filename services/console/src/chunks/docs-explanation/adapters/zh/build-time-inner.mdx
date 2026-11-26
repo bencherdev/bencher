@@ -1,12 +1,19 @@
-### ⏱️ 构建时间
+### ⏱️ Build Time
 
-<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令可以用于使用 `--build-time` 标志来跟踪交付物的构建时间（即编译时间）。在底层，<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 将结果输出为 [Bencher Metric Format (BMF) JSON][bmf]。因此，明确使用 [the `json` adapter][json] 是一种良好的实践。更多详情请参见[如何跟踪构建时间][build time]。
+<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令可以通过 `--build-time` 标志来跟踪交付物的构建时间（即编译时间）。
+在底层，<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>
+会将结果输出为项目 BMF 版本的 [Bencher Metric Format (BMF) JSON][bmf]。
+因此，最好显式使用 [`json` 适配器][json]。
+更多详情请参见[如何跟踪构建时间][build time]。
 
-`build-time` 度量（即 `seconds (s)`）被收集。只有构建时间的值（即 `value`）是可用的。`lower_value` 和 `upper_value` 都不被收集。`build-time` 度量并非默认为所有项目创建。然而，当你使用 `--build-time` 标志时，这个度量将会自动为你的项目创建。
+`build-time` 度量（即 `seconds (s)`）作为单个 `value` 指标收集，
+它就是应首先设置阈值的指标。
+`build-time` 度量并不会默认为所有项目创建。
+但是，当您使用 `--build-time` 标志时，此度量会自动为您的项目创建。
 
 {props.children}
 
-[json]: #-json
+[json]: /zh/docs/explanation/adapters/#-json
 
 [bmf]: /zh/docs/reference/bencher-metric-format/
 [build time]: /zh/docs/how-to/track-build-time/

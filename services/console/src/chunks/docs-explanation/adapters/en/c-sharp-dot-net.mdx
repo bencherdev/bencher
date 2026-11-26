@@ -3,13 +3,44 @@ import Dotnet from "../dotnet.mdx";
 ## #️⃣ C# DotNet
 
 The C# DotNet Adapter (`c_sharp_dot_net`) expects [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) output in [JSON format (ie `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
-The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
+Both the brief and the full JSON exports are read.
 This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` option to specify that file path.
+BenchmarkDotNet names that file after the benchmark class and its namespace, so replace `Benchmarks` with your class's full name.
 
 <Dotnet />
 
-There are two options for the Metric:
+The Benchmark name is the full name up to its arguments (ie `Namespace.Type.Method`), and a nested type keeps its `+` (ie `Namespace.Outer+Type.Method`).
+Each `[Params]` and `[Arguments]` value becomes a Parameter, as a string as BenchmarkDotNet prints it.
+The job becomes the `@job` Parameter, its Id as BenchmarkDotNet's summary shows it (ie `DefaultJob` or `ShortRun`),
+and a job that names its runtime adds the `@runtime` Parameter.
+A case that BenchmarkDotNet prints the same as one already read is counted as skipped in the Report's warnings.
+
+The `latency` Measure is gathered in nanoseconds (ns), with every statistic BenchmarkDotNet reports:
+`mean`, `median`, `min`, `max`, `std_dev`, `std_err`, `p25`, `p75`, `iqr`, `lower_fence`, `upper_fence`,
+the percentiles (ie `p67`, `p80`, `p85`, `p90`, and `p95`),
+and the mean's interval with its level (ie `mean_ci99_9_lower`, `mean_ci99_9_upper`, and `mean_ci99_9_margin`).
+With a memory diagnoser, the `allocated` Measure (bytes per operation)
+and the `gen0-collects-per-1000-ops`, `gen1-collects-per-1000-ops`, and `gen2-collects-per-1000-ops` Measures are gathered too, each a `mean`.
+Each other metric of the full export, such as a diagnoser's, is a Measure named by its id, as a `value`.
+
+Threshold the `median` Metric first for `latency`, with `--threshold-metric median`, `mean` for the memory Measures, and `value` for the full export's other metrics.
+
+BenchmarkDotNet escapes nothing in what it prints, so a few cases read inexactly:
+a value that holds `&Name=` reads as two Parameters,
+a long value is cut as BenchmarkDotNet shows it (ie `head(...)tail [len]`),
+and a string that holds `, Runtime=` can read as the `@runtime`.
+Before BenchmarkDotNet 0.15.2, a job without an Id gets a random one on every run,
+so it starts new Variants each time: give the job an Id with `WithId`.
+
+<details>
+<summary>BMF version 0</summary>
+
+At BMF version 0, the Benchmark name is `Namespace.Method`, and the `latency` Measure (ie `nanoseconds (ns)`) is gathered.
+With a memory diagnoser, the `allocated`, `gen0-collects`, `gen1-collects`, `gen2-collects`, and `total-operations` Measures are gathered too, each a `value`.
+There are two options for the `latency` Metric:
 - `mean` (default):  The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
 - `median`: The `lower_value` and `upper_value` are one interquartile range below and above the median (ie `value`) respectively.
 
 This can be specified in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the `--average` option.
+
+</details>

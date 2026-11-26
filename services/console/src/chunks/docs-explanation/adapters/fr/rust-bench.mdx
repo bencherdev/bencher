@@ -1,9 +1,33 @@
 import CargoRustBench from "../cargo-rust-bench.mdx";
+import CargoRustBenchJson from "../cargo-rust-bench-json.mdx";
 
-## 🦀 Banc de test Rust
+## 🦀 Rust Bench
 
-L'adaptateur de banc de test Rust (`rust_bench`) attend la sortie du [banc de test libtest](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks).
-La mesure de `latence` (c'est-à-dire `nanosecondes (ns)`) est recueillie.
-Les valeurs `lower_value` et `upper_value` sont l'écart en dessous et au-dessus de la médiane (c'est-à-dire `valeur`) respectivement.
+L'adaptateur Rust Bench (`rust_bench`) attend une sortie [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks).
 
 <CargoRustBench />
+
+Sous Rust nightly, libtest peut aussi afficher ses résultats en JSON (c.-à-d. `-Z unstable-options --format json`),
+que l'adaptateur lit avant la sortie texte :
+
+<CargoRustBenchJson />
+
+Chaque Benchmark est nommé par son nom de test, sans Paramètres.
+La Mesure `latency` (c.-à-d. `nanoseconds (ns)`) est recueillie avec deux Métriques :
+- `median` : le temps médian par itération
+- `range` : la valeur `+/-` de libtest, l'écart entre le plus rapide et le plus lent de ses échantillons
+
+Lorsqu'un benchmark définit ses octets par itération (c.-à-d. `b.bytes`),
+la Mesure `bytes-throughput` (c.-à-d. `bytes / second (B/s)`) est aussi recueillie comme sa `median`.
+Placez d'abord un Seuil sur la Métrique `median`, avec `--threshold-metric median`.
+
+La sortie `--output-format bencher` de Criterion affiche les mêmes lignes que libtest,
+elle est donc lue par cet adaptateur, avec l'écart type de Criterion comme `range`.
+
+<details>
+<summary>BMF version 0</summary>
+
+Seule la sortie texte est lue, et seule la Mesure `latency` est recueillie.
+Les `lower_value` et `upper_value` sont l'écart en dessous et au-dessus de la médiane (c.-à-d. `value`) respectivement.
+
+</details>

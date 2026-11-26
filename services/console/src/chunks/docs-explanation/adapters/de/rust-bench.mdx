@@ -1,9 +1,33 @@
 import CargoRustBench from "../cargo-rust-bench.mdx";
+import CargoRustBenchJson from "../cargo-rust-bench-json.mdx";
 
 ## 🦀 Rust Bench
 
-Der Rust Bench Adapter (`rust_bench`) erwartet eine Ausgabe von [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks).
-Die `latency` Messung (d.h. `Nanosekunden (ns)`) wird erfasst.
-Der `lower_value` und `upper_value` sind die Abweichungen unterhalb und oberhalb des Medians (d.h. `value`) jeweils.
+Der Rust Bench Adapter (`rust_bench`) erwartet Ausgaben von [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks).
 
 <CargoRustBench />
+
+Unter Nightly Rust kann libtest seine Ergebnisse auch als JSON ausgeben (d.h. `-Z unstable-options --format json`),
+was der Adapter vor der Textausgabe liest:
+
+<CargoRustBenchJson />
+
+Jeder Benchmark wird nach seinem Testnamen benannt, ohne Parameter.
+Die `latency` Measure (d.h. `nanoseconds (ns)`) wird mit zwei Metriken erfasst:
+- `median`: die Medianzeit pro Iteration
+- `range`: der `+/-` Wert von libtest, die Spanne zwischen der schnellsten und der langsamsten seiner Stichproben
+
+Wenn ein Benchmark seine Bytes pro Iteration festlegt (d.h. `b.bytes`),
+wird auch die `bytes-throughput` Measure (d.h. `bytes / second (B/s)`) als ihr `median` erfasst.
+Legen Sie zuerst für die Metrik `median` einen Schwellenwert fest, mit `--threshold-metric median`.
+
+Die Ausgabe von Criterion mit `--output-format bencher` gibt dieselben Zeilen aus wie libtest,
+daher wird sie von diesem Adapter gelesen, mit der Standardabweichung von Criterion als `range`.
+
+<details>
+<summary>BMF Version 0</summary>
+
+Nur die Textausgabe wird gelesen, und nur die `latency` Measure wird erfasst.
+Die `lower_value` und `upper_value` sind die Abweichung unterhalb bzw. oberhalb des Medians (d.h. `value`).
+
+</details>

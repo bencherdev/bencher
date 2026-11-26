@@ -3,8 +3,37 @@ import MakeCppGoogle from "../make-cpp-google.mdx";
 ## ➕ C++ Google
 
 The C++ Google Adapter (`cpp_google`) expects [Google Benchmark](https://github.com/google/benchmark) output in [JSON format (ie `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
-The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
+
+<MakeCppGoogle />
+
+The Benchmark name is the run name without its arguments.
+The arguments become Parameters:
+a named argument (ie `size:64`) keeps its name,
+a positional argument is `@arg0`, `@arg1`, and so on by its position,
+and a trailing `threads:N` segment from `Threads()` is `@threads`.
+A named argument spelled like one of these keys is counted as skipped in the Report's warnings.
+
+The `latency` (real time) and `cpu-time` Measures are gathered in nanoseconds (ns).
+The `bytes_per_second` and `items_per_second` rates are gathered as the `bytes-throughput` and `throughput` Measures,
+and each user counter as a Measure named by the counter.
+For a single run, each time is a `mean`, and each rate and counter is a `value`.
+With repetitions (ie `--benchmark_repetitions`), the aggregates are gathered instead:
+`mean`, `median`, `std_dev`, and any statistic in time added with `ComputeStatistics`.
+A percentage aggregate (ie `cv`) is not gathered.
+With a memory manager, the `allocations` Measure (per iteration) is a `mean`,
+and `max_bytes_used`, `total_allocated_bytes`, and `net_heap_growth` are Measures in bytes, each a `value`.
+With repetitions, each memory Measure has the `mean`, `median`, `min`, `max`, and `std_dev` of its repetitions.
+
+BigO and RMS rows, errored and skipped runs, and every value that is not finite (ie `NaN` or `Infinity`) are also counted as skipped.
+
+With repetitions, threshold the `median` Metric first, with `--threshold-metric median`.
+For a single run, threshold `mean` first for the times and allocations, and `value` for the rates, counters, and byte counts.
+
+<details>
+<summary>BMF version 0</summary>
+
+At BMF version 0, only the `latency` Measure (ie `nanoseconds (ns)`) is gathered, with the name as Google Benchmark writes it as the Benchmark name.
 Only the mean (ie `value`) is available.
 Neither `lower_value` nor `upper_value` are collected.
 
-<MakeCppGoogle />
+</details>

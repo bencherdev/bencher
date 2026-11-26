@@ -1,9 +1,39 @@
 import MakeCppGoogle from "../make-cpp-google.mdx";
 
-## ➕ C++ 谷歌
+## ➕ C++ Google
 
-C++ 谷歌适配器 (`cpp_google`) 期望以 [JSON 格式（即 `--benchmark_format=json`）](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats) 接收 [Google Benchmark](https://github.com/google/benchmark) 输出。
-将收集 `延迟` 测量值（即 `纳秒 (ns)`）。
-只有平均值（即 `value`）可用。没有 `lower_value` 和 `upper_value`。
+C++ Google 适配器（`cpp_google`）接受 [JSON 格式（即 `--benchmark_format=json`）](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats)的 [Google Benchmark](https://github.com/google/benchmark) 输出。
 
 <MakeCppGoogle />
+
+基准测试名称是去掉其实参后的运行名称。
+实参会成为参数（Parameters）：
+具名实参（即 `size:64`）保留其名称，
+位置实参按其位置成为 `@arg0`、`@arg1` 等，
+由 `Threads()` 产生的末尾 `threads:N` 段成为 `@threads`。
+拼写与这些键相同的具名实参会在报告的警告中计为已跳过。
+
+`latency`（实际时间）和 `cpu-time` 度量以纳秒（ns）为单位收集。
+`bytes_per_second` 和 `items_per_second` 速率作为 `bytes-throughput` 和 `throughput` 度量收集，
+每个用户计数器作为以该计数器命名的度量收集。
+对于单次运行，每个时间都是 `mean`，每个速率和计数器都是 `value`。
+使用重复（即 `--benchmark_repetitions`）时，改为收集聚合值：
+`mean`、`median`、`std_dev`，以及通过 `ComputeStatistics` 添加的任何时间统计量。
+百分比聚合值（即 `cv`）不会被收集。
+使用内存管理器时，`allocations` 度量（每次迭代）为 `mean`，
+`max_bytes_used`、`total_allocated_bytes` 和 `net_heap_growth` 是以字节为单位的度量，各为 `value`。
+使用重复时，每个内存度量都有其各次重复的 `mean`、`median`、`min`、`max` 和 `std_dev`。
+
+BigO 和 RMS 行、出错和跳过的运行，以及所有非有限值（即 `NaN` 或 `Infinity`）也会计为已跳过。
+
+使用重复时，请首先为 `median` 指标设置阈值，使用 `--threshold-metric median`。
+对于单次运行，请首先为时间和分配的 `mean` 设置阈值，为速率、计数器和字节数的 `value` 设置阈值。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+在 BMF 版本 0 中，只收集 `latency` 度量（即 `nanoseconds (ns)`），并以 Google Benchmark 写出的名称作为基准测试名称。
+只有平均值（即 `value`）可用。
+`lower_value` 和 `upper_value` 都不会被收集。
+
+</details>

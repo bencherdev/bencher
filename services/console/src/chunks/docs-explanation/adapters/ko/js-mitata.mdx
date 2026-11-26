@@ -1,0 +1,33 @@
+import MitataJson from "../mitata-json.mdx";
+import NodeJsMitata from "../node-js-mitata.mdx";
+
+## 🕸 JavaScript mitata
+
+JavaScript mitata 어댑터(`js_mitata`)는 JSON 형식의 [mitata](https://github.com/evanwashere/mitata) 출력을 입력으로 받습니다.
+mitata의 JSON은 기본적으로 모든 샘플을 담고 있어 전송하기에 너무 커질 수 있으므로,
+샘플과 디버그 정보를 빼세요:
+
+<MitataJson />
+
+어댑터가 JSON만 읽도록 `stdout`에는 다른 것을 출력하지 마세요.
+
+<NodeJsMitata />
+
+각 벤치마크의 이름은 그룹 이름(있는 경우)과 작성한 그대로의 이름을 ` > `로 이은 것입니다.
+그 `args`가 매개변수가 되므로, `bench("fill $size", ...).args("size", [64, 128])`는
+벤치마크 `fill $size`에 매개변수가 `{"size": 64}`와 `{"size": 128}`인 두 개의 변형을 줍니다.
+문자열, 숫자, 불리언이 아닌 인수는 압축된 JSON 텍스트로 저장됩니다.
+오류를 던진 실행은 보고서의 warning에서 건너뛴 것으로 집계됩니다.
+
+다음 측정이 수집됩니다:
+- `latency`(즉, `nanoseconds (ns)`): `mean`, `median`, `min`, `max`, 그리고 백분위수 `p25`, `p75`, `p99`, `p99_9`
+- `heap`(즉, `bytes (B)`): mitata가 추정한 반복당 힙 사용량으로, `mean`, `min`, `max`
+- `gc-time`(즉, `nanoseconds (ns)`): 가비지 컬렉션 시간으로, `mean`, `min`, `max`
+- [`@mitata/counters`](https://www.npmjs.com/package/@mitata/counters)를 사용하면 반복당 하드웨어 카운터, 각각 `mean`, `min`, `max`:
+  `cycles`, `instructions`, `cache-references`, `cache-misses`, `branches`, `branch-misses`, `stall-cycles`, `loads-and-stores`, `l1-load-misses`, `l1-store-misses`
+
+`latency`에는 먼저 `median` 메트릭에 임계값을 설정하고(`--threshold-metric median`),
+그 밖의 모든 측정에는 `mean` 메트릭에 설정하세요.
+
+JavaScript mitata 어댑터는 BMF 버전 1에서만 결과를 읽습니다.
+BMF 버전 0인 프로젝트의 보고서는 프로젝트를 BMF 버전 1로 옮기는 방법을 알려 주는 오류와 함께 거부됩니다.

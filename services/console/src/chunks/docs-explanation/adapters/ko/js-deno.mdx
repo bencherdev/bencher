@@ -1,0 +1,24 @@
+import DenoBench from "../deno-bench.mdx";
+
+## 🕸 JavaScript Deno
+
+JavaScript Deno 어댑터(`js_deno`)는 JSON 형식(즉, `--json`)의 [`deno bench`](https://docs.deno.com/runtime/reference/cli/bench/) 출력을 입력으로 받습니다.
+어댑터가 JSON만 읽도록 벤치마크 파일의 최상위 수준에서는 아무것도 출력하지 마세요.
+
+<DenoBench />
+
+각 벤치마크의 이름은 JSON 출력에 있는 모든 파일의 공통 디렉터리를 기준으로 한 파일 경로,
+그다음 그룹(있는 경우)과 이름을 ` > `로 이은 것입니다.
+예를 들어 `sub/deep_bench.ts > noop`입니다.
+매개변수는 없습니다.
+`latency` 측정(즉, `nanoseconds (ns)`)은 다음 메트릭으로 수집됩니다:
+- `mean`, `min`, `max`
+- `p75`, `p99`, `p99_5`, `p99_9`: 75, 99, 99.5, 99.9 백분위수
+
+Deno는 중앙값을 보고하지 않으므로 먼저 `mean` 메트릭에 임계값을 설정하세요(`--threshold-metric mean`).
+실패한 벤치마크는 보고서의 warning에서 건너뛴 것으로 집계됩니다.
+두 벤치마크가 같은 이름을 가지면 Deno는 둘 다 첫 번째 이름 아래에 보고하므로, 첫 번째 결과만 유지되고 다른 하나는 건너뛴 것으로 집계됩니다.
+Deno JSON 형식의 버전 1만 읽습니다.
+
+JavaScript Deno 어댑터는 BMF 버전 1에서만 결과를 읽습니다.
+BMF 버전 0인 프로젝트의 보고서는 프로젝트를 BMF 버전 1로 옮기는 방법을 알려 주는 오류와 함께 거부됩니다.

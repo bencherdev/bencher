@@ -1,7 +1,36 @@
-Les adaptateurs convertissent la sortie de l'outil de benchmark en format JSON [Bencher Metric Format (BMF)][bmf]. Les adaptateurs sont exécutés sur le serveur API lorsqu'un nouveau rapport est reçu. Voir [l'aperçu du benchmarking][benchmarking overview] pour plus de détails. Un adaptateur peut être spécifié pour la sous-commande CLI [le `bencher run`][bencher run] avec l'option `--adapter`. Si aucun adaptateur n'est spécifié, [l'adaptateur `magic`][magic adapter] est utilisé par défaut.
+Les adaptateurs convertissent la sortie d'un harnais de benchmark en [Bencher Metric Format (BMF) JSON][bmf].
+Les adaptateurs sont exécutés sur le serveur API lorsqu'un nouveau rapport est reçu.
+Voir [l'aperçu du benchmarking][benchmarking overview] pour plus de détails.
+Un adaptateur peut être spécifié pour [la sous-commande CLI `bencher run`][bencher run]
+avec l'option `--adapter`.
+Si aucun adaptateur n'est spécifié, [l'adaptateur `magic`][magic adapter] est utilisé par défaut.
+
+Chaque adaptateur écrit ses résultats dans la version de BMF du Rapport,
+qui est la version de BMF du Projet, sauf si le Rapport en déclare une.
+Un nouveau Projet démarre en version 1 de BMF.
+En version 1 de BMF, un adaptateur écrit :
+- chaque statistique que le harnais rapporte, comme sa propre Métrique nommée, par exemple `mean`, `median` ou `p99`
+- des Paramètres issus de la structure propre du harnais, de sorte qu'un Benchmark peut avoir plusieurs Variantes
+- chaque Mesure que le harnais rapporte
+
+Pour ne stocker que certaines de ces Mesures, listez-les avec l'option `--measure` de la CLI `bencher run`.
+Le serveur API écarte toutes les autres Mesures avant de stocker le Rapport.
+Seules les 64 premières Mesures listées sont conservées, et le Rapport avertit du reste.
+
+Chaque adaptateur ci-dessous indique la Métrique sur laquelle placer un Seuil en premier.
+C'est la Métrique que la sortie de l'exécution et le commentaire de pull request affichent pour une Mesure qu'aucun Seuil ne vérifie encore.
+Indiquez-la avec l'option `--threshold-metric` lorsque vous [créez un Seuil][thresholds].
+Les options `--average` et `--fold` ne concernent que la version 0 de BMF.
+En version 1 de BMF, les deux sont ignorées avec un avertissement dans le Rapport.
+
+Les adaptateurs Rust Divan, JavaScript tinybench, JavaScript Deno, JavaScript mitata et Ruby benchmark-ips ne lisent les résultats qu'en version 1 de BMF.
+Le nom d'un Benchmark en version 1 de BMF peut différer de son nom en version 0 de BMF,
+donc un Projet qui passe de la version 0 de BMF à la version 1 de BMF peut recommencer certains de ses Benchmarks à zéro.
+Lorsqu'un adaptateur lit aussi les résultats en version 0 de BMF, sa section se termine par la manière dont il le fait.
 
 [bmf]: /fr/docs/reference/bencher-metric-format/
 [benchmarking overview]: /fr/docs/explanation/benchmarking/
 [bencher run]: /fr/docs/explanation/bencher-run/
+[thresholds]: /fr/docs/explanation/thresholds/
 
 [magic adapter]: #-magic-default

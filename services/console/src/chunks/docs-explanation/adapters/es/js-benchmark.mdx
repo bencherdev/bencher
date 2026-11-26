@@ -1,9 +1,22 @@
 import NodeJsBenchmark from "../node-js-benchmark.mdx";
 
-## 🕸 Prueba de rendimiento de JavaScript
+## 🕸 JavaScript Benchmark
 
-El Adaptador de Pruebas de Rendimiento de JavaScript (`js_benchmark`) espera salida de [Benchmark.js](https://github.com/bestiejs/benchmark.js).
-La Medida de `throughput` (es decir, `operaciones / segundo (ops/sec)`) es recopilada.
-Los valores `lower_value` y `upper_value` son el margen de error relativo por debajo y por encima de la mediana (es decir, `value`) respectivamente.
+El adaptador JavaScript Benchmark (`js_benchmark`) espera la salida de [Benchmark.js](https://github.com/bestiejs/benchmark.js).
+Cada Benchmark se nombra tal como lo imprime Benchmark.js, sin Parámetros.
+La Medida `throughput` (es decir, `operations / second (ops/s)`) se recoge con estas Métricas:
+- `mean`: la tasa que imprime Benchmark.js
+- `mean_ci95_lower` y `mean_ci95_upper`: el intervalo de confianza del 95 %, a partir del margen de error relativo que Benchmark.js imprime junto a la tasa
+
+Un Benchmark de una sola ejecución solo tiene su `mean`.
+Pon un Umbral primero a la Métrica `mean`, con `--threshold-metric mean`.
 
 <NodeJsBenchmark />
+
+<details>
+<summary>BMF versión 0</summary>
+
+Se recoge la Medida `throughput` (es decir, `operations / second (ops/s)`).
+El `lower_value` y el `upper_value` son el margen de error relativo por debajo y por encima de la mediana (es decir, `value`) respectivamente.
+
+</details>

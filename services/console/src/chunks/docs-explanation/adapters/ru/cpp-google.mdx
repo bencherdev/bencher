@@ -2,8 +2,38 @@ import MakeCppGoogle from "../make-cpp-google.mdx";
 
 ## ➕ C++ Google
 
-Адаптер C++ Google (`cpp_google`) ожидает вывод [Google Benchmark](https://github.com/google/benchmark) в [формате JSON (т.е. `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
-Измеряется `latency` (т.е. наносекунды (ns)).
-Доступно только среднее значение (т.е. `value`). `lower_value` и `upper_value` отсутствуют.
+Адаптер C++ Google (`cpp_google`) ожидает вывод [Google Benchmark](https://github.com/google/benchmark) в [формате JSON (то есть `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
 
 <MakeCppGoogle />
+
+Имя Бенчмарка является именем запуска без его аргументов.
+Аргументы становятся Параметрами:
+именованный аргумент (то есть `size:64`) сохраняет свое имя,
+позиционный аргумент становится `@arg0`, `@arg1` и так далее по своей позиции,
+а завершающий сегмент `threads:N` из `Threads()` становится `@threads`.
+Именованный аргумент, записанный так же, как один из этих ключей, учитывается как пропущенный в замечаниях Отчета.
+
+Измерения `latency` (реальное время) и `cpu-time` собираются в наносекундах (ns).
+Скорости `bytes_per_second` и `items_per_second` собираются как Измерения `bytes-throughput` и `throughput`,
+а каждый пользовательский счетчик как Измерение, названное по этому счетчику.
+Для одиночного запуска каждое время является `mean`, а каждая скорость и каждый счетчик являются `value`.
+С повторениями (то есть `--benchmark_repetitions`) вместо этого собираются агрегаты:
+`mean`, `median`, `std_dev` и любая статистика по времени, добавленная с помощью `ComputeStatistics`.
+Процентный агрегат (то есть `cv`) не собирается.
+С менеджером памяти Измерение `allocations` (на итерацию) является `mean`,
+а `max_bytes_used`, `total_allocated_bytes` и `net_heap_growth` являются Измерениями в байтах, каждое как `value`.
+С повторениями у каждого Измерения памяти есть `mean`, `median`, `min`, `max` и `std_dev` его повторений.
+
+Строки BigO и RMS, запуски с ошибкой и пропущенные запуски, а также каждое нефинитное значение (то есть `NaN` или `Infinity`) тоже учитываются как пропущенные.
+
+С повторениями в первую очередь задайте Порог для Метрики `median` с помощью `--threshold-metric median`.
+Для одиночного запуска в первую очередь задайте Порог для `mean` у времени и выделений памяти и для `value` у скоростей, счетчиков и количества байт.
+
+<details>
+<summary>BMF версия 0</summary>
+
+В BMF версии 0 собирается только Измерение `latency` (то есть `nanoseconds (ns)`), а именем Бенчмарка является имя в том виде, в каком его записывает Google Benchmark.
+Доступно только среднее (то есть `value`).
+Ни `lower_value`, ни `upper_value` не собираются.
+
+</details>

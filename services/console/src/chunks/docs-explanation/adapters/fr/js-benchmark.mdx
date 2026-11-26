@@ -1,9 +1,22 @@
 import NodeJsBenchmark from "../node-js-benchmark.mdx";
 
-## 🕸 Adaptateur de Benchmark JavaScript
+## 🕸 JavaScript Benchmark
 
-L'Adaptateur de Benchmark JavaScript (`js_benchmark`) attend une sortie de [Benchmark.js](https://github.com/bestiejs/benchmark.js).
-La mesure de `throughput` (c'est-à-dire `opérations / seconde (ops/sec)`) est recueillie.
-Les valeurs `lower_value` et `upper_value` sont la marge d'erreur relative en dessous et au-dessus de la médiane (c'est-à-dire `value`) respectivement.
+L'adaptateur JavaScript Benchmark (`js_benchmark`) attend une sortie [Benchmark.js](https://github.com/bestiejs/benchmark.js).
+Chaque Benchmark est nommé tel que Benchmark.js l'affiche, sans Paramètres.
+La Mesure `throughput` (c.-à-d. `operations / second (ops/s)`) est recueillie avec ces Métriques :
+- `mean` : le taux que Benchmark.js affiche
+- `mean_ci95_lower` et `mean_ci95_upper` : l'intervalle de confiance à 95 %, calculé à partir de la marge d'erreur relative que Benchmark.js affiche à côté du taux
+
+Un Benchmark d'une seule exécution n'a que sa `mean`.
+Placez d'abord un Seuil sur la Métrique `mean`, avec `--threshold-metric mean`.
 
 <NodeJsBenchmark />
+
+<details>
+<summary>BMF version 0</summary>
+
+La Mesure `throughput` (c.-à-d. `operations / second (ops/s)`) est recueillie.
+Les `lower_value` et `upper_value` sont la marge d'erreur relative en dessous et au-dessus de la médiane (c.-à-d. `value`) respectivement.
+
+</details>

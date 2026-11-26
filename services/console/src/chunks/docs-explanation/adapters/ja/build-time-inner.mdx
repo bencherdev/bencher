@@ -1,12 +1,20 @@
-### ⏱️ ビルド時間
+### ⏱️ Build Time
 
-<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドを使用して、`--build-time` フラグを指定することで、成果物のビルド時間（すなわちコンパイル時間）を追跡できます。内部的には、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> は結果を [Bencher Metric Format (BMF) JSON][bmf] として出力します。したがって、明示的に [the `json` adapter][json] を使用することが推奨されます。詳細については、[ビルド時間を追跡する方法][build time] を参照してください。
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドは、
+`--build-time` フラグを使用して、成果物のビルド時間（つまりコンパイル時間）を追跡するために使用できます。
+内部的には、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> は、
+結果をプロジェクトの BMF バージョンの [Bencher Metric Format (BMF) JSON][bmf] として出力します。
+そのため、明示的に [`json` アダプター][json]を使用することをお勧めします。
+詳細については、[ビルド時間を追跡する方法][build time]を参照してください。
 
-`build-time` 測定値（すなわち `秒 (s)`）が収集されます。ビルド時間の値（すなわち `value`）のみが利用可能です。`lower_value` や `upper_value` は収集されません。`build-time` 測定値はすべてのプロジェクトにデフォルトで作成されるわけではありません。しかし、`--build-time` フラグを使用する場合、この測定値は自動的にプロジェクトに作成されます。
+`build-time` メジャー（つまり `seconds (s)`）は単一の `value` メトリックとして収集され、
+これが最初にしきい値を設定するメトリックです。
+`build-time` メジャーは、すべてのプロジェクトにデフォルトで作成されるわけではありません。
+ただし、`--build-time` フラグを使用すると、このメジャーはプロジェクトに自動的に作成されます。
 
 {props.children}
 
-[json]: #-json
+[json]: /ja/docs/explanation/adapters/#-json
 
 [bmf]: /ja/docs/reference/bencher-metric-format/
 [build time]: /ja/docs/how-to/track-build-time/

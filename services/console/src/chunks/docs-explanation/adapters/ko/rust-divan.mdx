@@ -1,0 +1,30 @@
+import CargoRustDivan from "../cargo-rust-divan.mdx";
+
+## 🦀 Rust Divan
+
+Rust Divan 어댑터(`rust_divan`)는 [Divan](https://github.com/nvzqz/divan) 출력을 입력으로 받습니다.
+
+<CargoRustDivan />
+
+각 벤치마크의 이름은 Divan 트리에서의 경로로, 벤치마크 타깃부터 해당 행까지를 `::`로 이은 것입니다.
+예를 들어 `shapes::generic_args::Vec<u32>::4` 또는 `alloc::threaded_alloc::t=2`입니다.
+Divan은 타입, 상수, 인수, 스레드 수를 모듈과 같은 방식으로 출력하므로,
+이들은 모두 이름에 남고 매개변수는 없습니다.
+타입 이름은 Rust의 `std::any::type_name`에서 오며, 이는 Rust 툴체인에 따라 바뀔 수 있고,
+그러면 벤치마크의 이름도 함께 바뀝니다.
+
+`latency` 측정(즉, `nanoseconds (ns)`)은 `min`, `max`, `median`, `mean` 메트릭으로 수집됩니다.
+Divan의 처리율과 할당 횟수는 각각 별도의 측정으로 수집됩니다:
+- 처리율: `bytes-throughput`, `throughput`(항목), `chars-throughput`, `cycles-throughput`, 모두 초당 값
+- 할당: `allocations`와 `allocated`, `deallocations`와 `deallocated`, `grows`와 `grown`, `shrinks`와 `shrunk`, `max-allocations`와 `max-allocated`, 각각 횟수와 그 바이트 수
+
+이 측정들은 Divan 자체의 열 이름을 메트릭으로 유지합니다: `fastest`, `slowest`, `median`, `mean`.
+여기서 `fastest`와 `slowest`는 시간 기준으로 가장 빠른 샘플과 가장 느린 샘플에서의 값이며,
+측정의 최솟값과 최댓값이 아닙니다.
+먼저 `median` 메트릭에 임계값을 설정하세요(`--threshold-metric median`).
+
+Divan 트리 안에 있지만 Divan이 출력하지 않은 줄(예: 벤치마크 자체의 출력)은 보고서의 warning에서 건너뛴 것으로 집계됩니다.
+대신 `stderr`로 출력하고, `bencher run` 한 번에는 벤치마크 하네스를 하나만 실행하세요.
+
+Rust Divan 어댑터는 BMF 버전 1에서만 결과를 읽습니다.
+BMF 버전 0인 프로젝트의 보고서는 프로젝트를 BMF 버전 1로 옮기는 방법을 알려 주는 오류와 함께 거부됩니다.

@@ -1,9 +1,39 @@
 import Go from "../go.mdx";
+import GoJson from "../go-json.mdx";
 
 ## 🕳 Go Bench
 
-Go Bench 어댑터(`go_bench`)는 [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks) 출력을 기대합니다.
-`지연시간(latency)` 측정값(예: `나노초(ns)`)이 수집됩니다.
-`평균(mean)`값(예: `value`)만 사용 가능합니다. `하한값(lower_value)`과 `상한값(upper_value)`은 없습니다.
+Go Bench 어댑터(`go_bench`)는 [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks) 출력을 입력으로 받습니다.
 
 <Go />
+
+JSON 출력(즉, `go test -json`)도 읽으며, 이를 먼저 시도합니다:
+
+<GoJson />
+
+벤치마크 이름은 패키지, `.`, 벤치마크를 이은 것입니다(즉, `example.com/sort.BenchmarkSort`).
+이때 `-N` 접미사와 `key=value` 부분은 뺍니다.
+`-N` 접미사는 `@gomaxprocs` 매개변수가 되며, Go가 접미사를 출력하지 않으면 `1`입니다.
+하위 벤치마크 이름의 각 `key=value` 부분은 그 키의 매개변수가 되며, 숫자 값은 숫자로 다룹니다.
+키가 `@gomaxprocs`인 부분은 보고서의 warning에서 건너뛴 것으로 집계됩니다.
+`GOMAXPROCS=1`에서는 Go가 접미사를 출력하지 않으므로, 이름 자체가 `-N`으로 끝나는 하위 벤치마크는 그 값이 `@gomaxprocs`로 읽힙니다.
+
+`latency` 측정(즉, `ns/op`)은 나노초(ns) 단위로 수집됩니다.
+`-benchmem`을 사용하면 `allocated`(즉, `B/op`)와 `allocations`(즉, `allocs/op`) 측정도 수집되며,
+`b.SetBytes`를 사용하면 `bytes-throughput` 측정(즉, `MB/s`)이 초당 바이트 단위로 수집됩니다.
+`b.ReportMetric`의 각 사용자 정의 단위는 Go가 출력한 단위의 이름을 딴 측정이 됩니다.
+단일 실행에서는 연산당 각 값(즉, `/op`로 끝나는 단위)과 `MB/s` 처리율은 `mean`이며, 그 밖의 단위의 값은 `value`입니다.
+`-count`를 사용하면 각 변형의 실행이 `mean`, `median`, `min`, `max`, `std_dev`로 합쳐집니다.
+
+`-count`를 사용하는 경우 먼저 `median` 메트릭에 임계값을 설정하세요(`--threshold-metric median`).
+단일 실행에서는 먼저 `mean`에, `/op`로 끝나지 않는 사용자 정의 단위에는 `value`에 임계값을 설정하세요.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+BMF 버전 0에서는 텍스트 출력만 읽으며, Go가 출력한 이름이 그대로 벤치마크 이름이 됩니다.
+`latency` 측정(즉, `nanoseconds (ns)`)만 수집됩니다.
+평균(즉, `value`)만 사용할 수 있습니다.
+`lower_value`와 `upper_value`는 모두 수집되지 않습니다.
+
+</details>

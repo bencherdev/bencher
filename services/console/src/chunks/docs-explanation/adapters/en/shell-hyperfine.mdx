@@ -5,12 +5,35 @@ import Hyperfine from "../hyperfine.mdx";
 The Shell Hyperfine Adapter (`shell_hyperfine`) expects [Hyperfine](https://github.com/sharkdp/hyperfine) output in [JSON format (ie `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
 This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` option to specify that file path.
 Both Hyperfine v1 and v2 JSON output is supported.
-The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
 
 <Hyperfine />
 
+Each Benchmark is named by its `--command-name`, or else by its command.
+Its `--parameter-scan` or `--parameter-list` values and its `--env` variables are its Parameters, as strings.
+For example, `--command-name sleep --parameter-list n 1,2 'sleep 0.00{n}'` gives the Benchmark `sleep` two Variants,
+with the Parameters `{"n": "1"}` and `{"n": "2"}`.
+Without `--command-name`, each value's command is its own Benchmark, such as `sleep 0.001`.
+A variable set to nothing, such as `--env 'MODE='`, is the Parameter `{"MODE": ""}`.
+
+These Measures are gathered, each with the Metrics `mean`, `median`, `min`, `max`, and `std_dev`:
+- `latency` (ie `nanoseconds (ns)`): the wall clock time
+- `user-time` and `system-time` (ie `nanoseconds (ns)`)
+- With Hyperfine v2: `cpu-time` (ie `nanoseconds (ns)`) and `peak-memory` (ie `bytes (B)`),
+  and with `--metrics all`, the hardware counters `cycles`, `instructions`, `cache-references`, `cache-misses`, and `branch-misses`
+
+With Hyperfine v1, `user-time` and `system-time` have only their `mean`,
+and `peak-memory` is gathered when the export holds it.
+Threshold the `median` Metric first, with `--threshold-metric median`,
+except for Hyperfine v1's `user-time` and `system-time`, where the `mean` is first.
+
+<details>
+<summary>BMF version 0</summary>
+
+The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
 There are two options for the Metric:
 - `mean` (default):  The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
 - `median`: The `lower_value` and `upper_value` are `min` and `max` values respectively.
 
 This can be specified in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the `--average` option.
+
+</details>

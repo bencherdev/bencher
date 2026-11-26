@@ -2,14 +2,45 @@ import Dotnet from "../dotnet.mdx";
 
 ## #️⃣ C# DotNet
 
-C# DotNet 어댑터(`c_sharp_dot_net`)는 [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) 출력을 [JSON 포맷(즉 `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson)으로 기대합니다.
-`latency` 측정값(즉 `나노초(ns)`)이 수집됩니다.
-이 JSON 출력은 파일로 저장되므로 파일 경로를 지정하기 위해 `bencher run` CLI의 `--file` 인자를 사용해야 합니다.
+C# DotNet 어댑터(`c_sharp_dot_net`)는 [JSON 형식(즉, `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson)의 [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) 출력을 입력으로 받습니다.
+간략(brief) JSON 내보내기와 전체(full) JSON 내보내기를 모두 읽습니다.
+이 JSON 출력은 파일로 저장되므로, `bencher run` CLI의 `--file` 옵션으로 그 파일 경로를 지정해야 합니다.
+BenchmarkDotNet은 그 파일의 이름을 벤치마크 클래스와 그 네임스페이스를 따라 붙이므로, `Benchmarks`를 클래스의 전체 이름으로 바꾸세요.
 
 <Dotnet />
 
-메트릭에는 두 가지 옵션이 있습니다:
-- `mean`(기본값): `lower_value`와 `upper_value`는 평균(즉 `value`)보다 표준편차 하나 아래와 위에 각각 있습니다.
-- `median`: `lower_value`와 `upper_value`는 중앙값(즉 `value`)보다 사분위수 범위 하나 아래와 위에 각각 있습니다.
+벤치마크 이름은 인수 앞까지의 전체 이름(즉, `Namespace.Type.Method`)이며, 중첩 타입은 `+`를 유지합니다(즉, `Namespace.Outer+Type.Method`).
+각 `[Params]`와 `[Arguments]` 값은 BenchmarkDotNet이 출력한 그대로의 문자열로 매개변수가 됩니다.
+작업(job)은 `@job` 매개변수가 되며, 그 값은 BenchmarkDotNet의 요약에 표시되는 작업의 Id입니다(즉, `DefaultJob` 또는 `ShortRun`).
+런타임을 지정하는 작업은 `@runtime` 매개변수를 추가합니다.
+BenchmarkDotNet이 이미 읽은 케이스와 똑같이 출력하는 케이스는 보고서의 warning에서 건너뛴 것으로 집계됩니다.
 
-이는 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령어에서 `--average` 옵션으로 지정할 수 있습니다.
+`latency` 측정은 나노초(ns) 단위로 수집되며, BenchmarkDotNet이 보고하는 모든 통계를 가집니다:
+`mean`, `median`, `min`, `max`, `std_dev`, `std_err`, `p25`, `p75`, `iqr`, `lower_fence`, `upper_fence`,
+백분위수(즉, `p67`, `p80`, `p85`, `p90`, `p95`),
+그리고 수준이 붙은 평균의 구간(즉, `mean_ci99_9_lower`, `mean_ci99_9_upper`, `mean_ci99_9_margin`)입니다.
+메모리 진단기(memory diagnoser)를 사용하면 `allocated` 측정(연산당 바이트)과
+`gen0-collects-per-1000-ops`, `gen1-collects-per-1000-ops`, `gen2-collects-per-1000-ops` 측정도 수집되며, 각각 `mean`입니다.
+전체 내보내기의 그 밖의 각 지표(예: 진단기의 지표)는 그 ID의 이름을 딴 측정이 되며 `value`로 수집됩니다.
+
+`latency`에는 `median` 메트릭에(`--threshold-metric median`), 메모리 측정에는 `mean`에, 전체 내보내기의 그 밖의 지표에는 `value`에 먼저 임계값을 설정하세요.
+
+BenchmarkDotNet은 출력에서 아무것도 이스케이프하지 않으므로, 몇몇 경우는 정확하게 읽히지 않습니다:
+`&Name=`을 포함한 값은 두 개의 매개변수로 읽히고,
+긴 값은 BenchmarkDotNet이 표시하는 대로 잘리며(즉, `head(...)tail [len]`),
+`, Runtime=`을 포함한 문자열은 `@runtime`으로 읽힐 수 있습니다.
+BenchmarkDotNet 0.15.2 이전에는 Id가 없는 작업이 실행할 때마다 무작위 Id를 받으므로,
+매번 새로운 변형이 시작됩니다. `WithId`로 작업에 Id를 지정하세요.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+BMF 버전 0에서는 벤치마크 이름이 `Namespace.Method`이며, `latency` 측정(즉, `nanoseconds (ns)`)이 수집됩니다.
+메모리 진단기를 사용하면 `allocated`, `gen0-collects`, `gen1-collects`, `gen2-collects`, `total-operations` 측정도 수집되며, 각각 `value`입니다.
+`latency` 메트릭에는 두 가지 옵션이 있습니다:
+- `mean`(기본값): `lower_value`와 `upper_value`는 각각 평균(즉, `value`)보다 표준 편차 하나만큼 아래와 위의 값입니다.
+- `median`: `lower_value`와 `upper_value`는 각각 중앙값(즉, `value`)보다 사분위 범위 하나만큼 아래와 위의 값입니다.
+
+이는 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드의 `--average` 옵션으로 지정할 수 있습니다.
+
+</details>

@@ -1,0 +1,22 @@
+import TinybenchJson from "../tinybench-json.mdx";
+import NodeJsTinybench from "../node-js-tinybench.mdx";
+
+## 🕸 JavaScript tinybench
+
+JavaScript tinybench 适配器（`js_tinybench`）接受 JSON 格式的 [tinybench](https://github.com/tinylibs/tinybench) 6 任务。
+tinybench 自身不输出任何内容，因此请在 `await bench.run()` 之后用这一行打印其任务：
+
+<TinybenchJson />
+
+不要向 `stdout` 打印任何其他内容，使适配器读取的只有 JSON。
+
+<NodeJsTinybench />
+
+每个基准测试以其任务名称命名，没有参数。
+重复已读取名称的任务，或没有统计数据的任务，会在报告的警告中计为已跳过。
+`latency` 度量（即 `nanoseconds (ns)`）和 `throughput` 度量（即 `operations / second (ops/s)`）都会收集，
+其指标与 [Vitest 5](#-javascript-vitest) 相同。
+请首先为 `median` 指标设置阈值，使用 `--threshold-metric median`。
+
+JavaScript tinybench 适配器仅读取 BMF 版本 1 的结果。
+对于 BMF 版本 0 的项目，其报告会被拒绝，错误信息会说明如何将项目迁移到 BMF 版本 1。

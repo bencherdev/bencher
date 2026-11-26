@@ -2,9 +2,29 @@ import Ruby from "../ruby.mdx";
 
 ## ♦️ Ruby Benchmark
 
-Der Ruby Benchmark Adapter (`ruby_benchmark`) erwartet die Ausgabe des [Benchmark-Moduls](https://github.com/ruby/benchmark) für die Methoden `#bm`, `#bmbm` und `#benchmark`.
-Ein Label ist für jeden Benchmark erforderlich.
-Die `Latenz`-Messung (d.h. `Nanosekunden (ns)`) wird erfasst.
-Nur der berichtete Wert (d.h. `Wert`) ist verfügbar. Es gibt keinen `unteren_wert` und `oberen_wert`.
+Der Ruby Benchmark Adapter (`ruby_benchmark`) erwartet Ausgaben des [Benchmark-Moduls](https://github.com/ruby/benchmark) für die Methoden `#bm`, `#bmbm` und `#benchmark`.
+Für jeden Benchmark ist ein Label erforderlich.
+Jeder Benchmark wird nach seinem Label benannt, ohne Parameter.
+Diese Measures werden erfasst, jeweils mit einer einzelnen Metrik `value`: der Zeit, die Ruby in dieser Spalte ausgibt.
+- `latency` (d.h. `nanoseconds (ns)`): die `real` Zeit
+- `user-time` (d.h. `nanoseconds (ns)`): die `user` Zeit
+- `system-time` (d.h. `nanoseconds (ns)`): die `system` Zeit
+- `cpu-time` (d.h. `nanoseconds (ns)`): die `total` Zeit
+
+Legen Sie zuerst für die Metrik `value` einen Schwellenwert fest, mit `--threshold-metric value`.
+
+Die Ausgabe wird nach bestem Bemühen gelesen.
+Ruby gibt das Label einer Zeile aus, führt ihren Block aus und gibt dann ihre Zeiten aus,
+daher teilt ein Block, der etwas ausgibt, seine Zeile: Diese Zeile wird in den Warnungen des Berichts als übersprungen gezählt, und die Zeilen danach werden weiterhin gelesen.
+Geben Sie innerhalb eines Benchmarks auf `stderr` aus, um jede Zeile zu behalten.
 
 <Ruby />
+
+<details>
+<summary>BMF Version 0</summary>
+
+Die `latency` Measure (d.h. `nanoseconds (ns)`) wird erfasst.
+Nur der gemeldete Wert (d.h. `value`) ist verfügbar.
+Weder `lower_value` noch `upper_value` werden erfasst.
+
+</details>

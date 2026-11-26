@@ -1,11 +1,28 @@
 import CargoRustIai from "../cargo-rust-iai.mdx";
+import CargoRustIaiValgrind from "../cargo-rust-iai-valgrind.mdx";
 
 ## 🦀 Rust Iai
 
-Rust Iai 适配器（`rust_iai`）期望 [Iai](https://github.com/bheisler/iai) 输出。
-将收集 `instructions`、`l1-accesses`、`l2-accesses`、`ram-accesses` 和 `estimated-cycles` 测量值。
-只有这些测量值（即 `value`）可用。没有 `lower_value` 和 `upper_value` 测量值。
-对于所有项目，这个适配器的测量值默认不会被创建。
-然而，当你使用这个适配器时，这些测量值将会为你的项目自动创建。
+Rust Iai 适配器（`rust_iai`）接受 [Iai](https://github.com/bheisler/iai) 的输出。
 
 <CargoRustIai />
+
+每个基准测试以其函数名命名，没有参数。
+收集 `instructions`、`l1-accesses`、`l2-accesses`、`ram-accesses` 和 `estimated-cycles` 度量。
+每一项都是精确计数，作为单个 `value` 指标收集，它就是应首先设置阈值的指标。
+此适配器的度量并不会默认为所有项目创建。
+但是，当您使用此适配器时，这些度量会自动为您的项目创建。
+
+除非开启 Valgrind 的缓存模拟，否则 Iai 0.1.1 在 Valgrind 3.21 及更高版本（例如 Ubuntu 24.04）上会 panic。
+请为基准测试命令设置 `VALGRIND_OPTS=--cache-sim=yes`，
+并在使用它进行首次运行之前删除 `target/iai`：
+
+<CargoRustIaiValgrind />
+
+<details>
+<summary>BMF 版本 0</summary>
+
+收集相同的五个度量，每个都作为 `value`。
+`lower_value` 和 `upper_value` 都不会被收集。
+
+</details>

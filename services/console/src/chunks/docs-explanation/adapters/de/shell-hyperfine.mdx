@@ -2,15 +2,38 @@ import Hyperfine from "../hyperfine.mdx";
 
 ## ❯_️ Shell Hyperfine
 
-Der Shell Hyperfine Adapter (`shell_hyperfine`) erwartet [Hyperfine](https://github.com/sharkdp/hyperfine)-Ausgaben im [JSON-Format (dh `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
-Diese JSON-Ausgabe wird in einer Datei gespeichert, daher müssen Sie das `--file` Argument der `bencher run` CLI verwenden, um diesen Dateipfad anzugeben.
-Die `latency` Messung (dh `Nanosekunden (ns)`) wird erfasst.
-
+Der Shell Hyperfine Adapter (`shell_hyperfine`) erwartet Ausgaben von [Hyperfine](https://github.com/sharkdp/hyperfine) im [JSON-Format (d.h. `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
+Diese JSON-Ausgabe wird in einer Datei gespeichert, daher müssen Sie die Option `--file` des `bencher run` CLI verwenden, um diesen Dateipfad anzugeben.
+Sowohl die JSON-Ausgabe von Hyperfine v1 als auch die von v2 wird unterstützt.
 
 <Hyperfine />
 
-Es gibt zwei Optionen für die Metrik:
-- `mean` (Standard):  Der `lower_value` und `upper_value` liegen jeweils eine Standardabweichung unter bzw. über dem Mittelwert (dh `value`).
-- `median`: Der `lower_value` und `upper_value` sind jeweils die `min` und `max` Werte.
+Jeder Benchmark wird nach seinem `--command-name` benannt, oder andernfalls nach seinem Befehl.
+Seine `--parameter-scan` oder `--parameter-list` Werte und seine `--env` Variablen sind seine Parameter, als Strings.
+Zum Beispiel gibt `--command-name sleep --parameter-list n 1,2 'sleep 0.00{n}'` dem Benchmark `sleep` zwei Varianten,
+mit den Parametern `{"n": "1"}` und `{"n": "2"}`.
+Ohne `--command-name` ist der Befehl jedes Werts ein eigener Benchmark, zum Beispiel `sleep 0.001`.
+Eine Variable, die auf nichts gesetzt ist, zum Beispiel `--env 'MODE='`, ist der Parameter `{"MODE": ""}`.
 
-Dies kann im <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl mit der `--average` Option angegeben werden.
+Diese Measures werden erfasst, jeweils mit den Metriken `mean`, `median`, `min`, `max` und `std_dev`:
+- `latency` (d.h. `nanoseconds (ns)`): die Echtzeit (Wall-Clock-Zeit)
+- `user-time` und `system-time` (d.h. `nanoseconds (ns)`)
+- Mit Hyperfine v2: `cpu-time` (d.h. `nanoseconds (ns)`) und `peak-memory` (d.h. `bytes (B)`),
+  und mit `--metrics all` die Hardwarezähler `cycles`, `instructions`, `cache-references`, `cache-misses` und `branch-misses`
+
+Mit Hyperfine v1 haben `user-time` und `system-time` nur ihren `mean`,
+und `peak-memory` wird erfasst, wenn der Export ihn enthält.
+Legen Sie zuerst für die Metrik `median` einen Schwellenwert fest, mit `--threshold-metric median`,
+außer bei `user-time` und `system-time` von Hyperfine v1, wo der `mean` zuerst kommt.
+
+<details>
+<summary>BMF Version 0</summary>
+
+Die `latency` Measure (d.h. `nanoseconds (ns)`) wird erfasst.
+Es gibt zwei Optionen für die Metrik:
+- `mean` (Standard): Die `lower_value` und `upper_value` liegen eine Standardabweichung unterhalb bzw. oberhalb des Mittelwerts (d.h. `value`).
+- `median`: Die `lower_value` und `upper_value` sind die Werte `min` bzw. `max`.
+
+Dies kann im <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl mit der Option `--average` angegeben werden.
+
+</details>

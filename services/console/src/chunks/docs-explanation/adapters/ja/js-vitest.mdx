@@ -1,16 +1,49 @@
+import NodeJsVitestV5 from "../node-js-vitest-v5.mdx";
 import NodeJsVitest from "../node-js-vitest.mdx";
 
 ## 🕸 JavaScript Vitest
 
-The JavaScript Vitest Adapter (`js_vitest`) expects [Vitest `bench`](https://vitest.dev/api/#bench) output in JSON format (ie `--outputJson results.json`).
-This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` option to specify that file path.
-Both the `latency` Measure (ie `nanoseconds (ns)`) and the `throughput` Measure (ie `operations / second (ops/sec)`) are gathered.
-For the `throughput` Measure, the `lower_value` and `upper_value` are the relative margin of error below and above the `value` respectively.
+JavaScript Vitest アダプター（`js_vitest`）は、JSON 形式の [Vitest `bench`](https://vitest.dev/api/#bench) の出力を想定しています。
+この JSON 出力はファイルに保存されるため、`bencher run` CLI の `--file` オプションでそのファイルパスを指定する必要があります。
+Vitest 5 以降では、JSON レポーター（つまり `--reporter=json --outputFile=results.json`）を使用してください:
+
+<NodeJsVitestV5 />
+
+Vitest 1 から 4 では、`--outputJson results.json` を使用してください:
 
 <NodeJsVitest />
 
-There are two options for the `latency` Metric:
-- `mean` (default): The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
-- `median`: Only the median (ie `value`) is available. Neither `lower_value` nor `upper_value` are collected, as Vitest does not provide an interquartile range.
+各ベンチマークは、JSON 出力内のすべてのファイルに共通するディレクトリからの相対パスで表したファイル、
+その `describe` ブロック、テスト、グループ（デフォルトでない場合）、タスクを ` > ` で連結した名前になります。
+例えば、`sub/sort.bench.ts > sorting > arrays > normal` です。
+ベンチマークファイルの一部だけを実行すると、その共通ディレクトリが変わり、ベンチマークの名前が変わる場合があります。
+パラメータはありません。
 
-This can be specified in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the `--average` option.
+`latency` メジャー（つまり `nanoseconds (ns)`）と `throughput` メジャー（つまり `operations / second (ops/s)`）の両方が、次のメトリックで収集されます:
+- `mean`、`median`、`min`、`max`
+- `p75`、`p99`、`p99_5`、`p99_9`: 75、99、99.5、99.9 パーセンタイル
+- `std_dev`、`std_err`、`median_abs_dev`、`mean_abs_dev`: 標準偏差、平均の標準誤差、中央絶対偏差、平均絶対偏差
+- `mean_ci95_lower`、`mean_ci95_upper`、`mean_ci95_margin`: 平均の 95% 信頼区間とその誤差範囲
+
+Vitest 1 から 4 では、`latency` メジャーは JSON 出力が持つ統計量を持ち、
+`throughput` メジャーは `mean` と `mean_ci95_lower` および `mean_ci95_upper` を持ちます。
+まず `median` メトリックにしきい値を設定してください（`--threshold-metric median`）。
+Vitest 1 から 4 の `throughput` や Vitest 1 の `latency` のように `median` がない場合は、まず `mean` にしきい値を設定してください。
+
+二つの Vitest プロジェクトが同じファイルを実行すると、Vitest 5 の JSON 出力はそのファイルを一つのパスの下に二回保持します。
+最初のコピーが保持され、繰り返しはそれぞれレポートの警告でスキップとして数えられます。
+単一のプロジェクトを実行するには、Vitest に `--project` を渡してください。
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+Vitest 1 から 4 の `--outputJson` 形式のみが読み取られます。
+`throughput` メジャーでは、`lower_value` と `upper_value` は、それぞれ `value` から相対誤差範囲分下と上の値です。
+
+`latency` のメトリックには二つのオプションがあります:
+- `mean`（デフォルト）: `lower_value` と `upper_value` は、それぞれ平均（つまり `value`）から標準偏差一つ分下と上の値です。
+- `median`: 中央値（つまり `value`）のみが利用可能です。Vitest は四分位範囲を提供しないため、`lower_value` も `upper_value` も収集されません。
+
+これは、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドの `--average` オプションで指定できます。
+
+</details>

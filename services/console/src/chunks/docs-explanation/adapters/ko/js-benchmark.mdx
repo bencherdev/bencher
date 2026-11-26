@@ -1,9 +1,22 @@
 import NodeJsBenchmark from "../node-js-benchmark.mdx";
 
-## 🕸 JavaScript 벤치마크
+## 🕸 JavaScript Benchmark
 
-JavaScript 벤치마크 어댑터(`js_benchmark`)는 [Benchmark.js](https://github.com/bestiejs/benchmark.js) 출력을 기대합니다.
-`throughput` 측정치(즉, `초당 연산(ops/sec)`)가 수집됩니다.
-`lower_value`와 `upper_value`는 각각 중앙값(즉, `value`) 아래와 위의 상대적 오차 범위입니다.
+JavaScript Benchmark 어댑터(`js_benchmark`)는 [Benchmark.js](https://github.com/bestiejs/benchmark.js) 출력을 입력으로 받습니다.
+각 벤치마크의 이름은 Benchmark.js가 출력한 그대로이며, 매개변수는 없습니다.
+`throughput` 측정(즉, `operations / second (ops/s)`)은 다음 메트릭으로 수집됩니다:
+- `mean`: Benchmark.js가 출력하는 처리율
+- `mean_ci95_lower`와 `mean_ci95_upper`: 95% 신뢰 구간으로, Benchmark.js가 처리율 옆에 출력하는 상대 오차 범위에서 구합니다
+
+한 번만 실행된 벤치마크는 `mean`만 가집니다.
+먼저 `mean` 메트릭에 임계값을 설정하세요(`--threshold-metric mean`).
 
 <NodeJsBenchmark />
+
+<details>
+<summary>BMF 버전 0</summary>
+
+`throughput` 측정(즉, `operations / second (ops/s)`)이 수집됩니다.
+`lower_value`와 `upper_value`는 각각 중앙값(즉, `value`)보다 상대 오차 범위만큼 아래와 위의 값입니다.
+
+</details>

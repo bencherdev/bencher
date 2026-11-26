@@ -1,9 +1,28 @@
 import NodeJsTime from "../node-js-time.mdx";
 
-## 🕸 JavaScript 时间
+## 🕸 JavaScript Time
 
-JavaScript 时间适配器（`js_time`）期望 [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd) 的输出。
-收集的是 `延迟` 测量值（即 `纳秒 (ns)`）。
-仅提供操作时间（即 `value`），没有 `lower_value` 和 `upper_value`。
+JavaScript Time 适配器（`js_time`）接受来自 Firefox、Node.js、Deno 或 Bun 的
+[console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd) 输出。
+Bun 将其计时器打印到 `stderr`，因此请使用 `2>&1` 运行它。
+每个基准测试以其计时器的标签命名，没有参数。
+`latency` 度量（即 `nanoseconds (ns)`）以单个指标 `value` 收集，即计时器的持续时间。
+请首先为 `value` 指标设置阈值，使用 `--threshold-metric value`。
+
+当一个标签被打印多次时（如 `console.timeLog` 所做的那样），只保留其最后一行，
+之前的每一行都会在报告的警告中计为已跳过。
+Node.js 和 Deno 以 `label: duration` 的形式打印计时器，
+因此任何其他具有该形式的行（例如 `retry in: 5s`）也会被读作计时器。
+同样，Bun 的 `console.timeLog` 调用打印的额外数据也可能被读作一个独立的计时器。
+请勿将任何其他输出写入基准测试命令的 `stdout`。
 
 <NodeJsTime />
+
+<details>
+<summary>BMF 版本 0</summary>
+
+只读取 Firefox 的 `label: duration - timer ended` 行。
+只有操作时间（即 `value`）可用。
+`lower_value` 和 `upper_value` 都不会被收集。
+
+</details>

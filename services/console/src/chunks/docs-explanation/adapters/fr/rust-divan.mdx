@@ -1,0 +1,30 @@
+import CargoRustDivan from "../cargo-rust-divan.mdx";
+
+## 🦀 Rust Divan
+
+L'adaptateur Rust Divan (`rust_divan`) attend une sortie [Divan](https://github.com/nvzqz/divan).
+
+<CargoRustDivan />
+
+Chaque Benchmark est nommé par son chemin dans l'arbre de Divan, de la cible de benchmark jusqu'à sa ligne, joint par `::`.
+Par exemple, `shapes::generic_args::Vec<u32>::4` ou `alloc::threaded_alloc::t=2`.
+Divan affiche un type, une constante, un argument et un nombre de threads de la même façon qu'un module,
+donc chacun d'eux reste dans le nom, et il n'y a pas de Paramètres.
+Le nom d'un type vient de `std::any::type_name` de Rust, qui peut changer d'une toolchain Rust à l'autre,
+et le nom du Benchmark change alors avec lui.
+
+La Mesure `latency` (c.-à-d. `nanoseconds (ns)`) est recueillie avec les Métriques `min`, `max`, `median` et `mean`.
+Les taux et les comptes d'allocation de Divan sont recueillis chacun comme leur propre Mesure :
+- taux : `bytes-throughput`, `throughput` (éléments), `chars-throughput` et `cycles-throughput`, chacun par seconde
+- allocations : `allocations` et `allocated`, `deallocations` et `deallocated`, `grows` et `grown`, `shrinks` et `shrunk`, et `max-allocations` et `max-allocated`, chaque paire étant un compte et ses octets
+
+Ces Mesures gardent les noms de colonne propres à Divan comme Métriques : `fastest`, `slowest`, `median` et `mean`.
+Leurs `fastest` et `slowest` sont les valeurs à l'échantillon le plus rapide et le plus lent en temps,
+et non les valeurs les plus basses et les plus hautes de la Mesure.
+Placez d'abord un Seuil sur la Métrique `median`, avec `--threshold-metric median`.
+
+Une ligne à l'intérieur de l'arbre de Divan que Divan n'a pas affichée, comme la sortie propre de votre benchmark, est comptée comme ignorée dans les avertissements du Rapport.
+Écrivez plutôt sur `stderr`, et n'exécutez qu'un seul harnais de benchmark par `bencher run`.
+
+L'adaptateur Rust Divan ne lit les résultats qu'en version 1 de BMF.
+Un Rapport pour un Projet en version 0 de BMF est refusé avec une erreur qui explique comment passer le Projet en version 1 de BMF.

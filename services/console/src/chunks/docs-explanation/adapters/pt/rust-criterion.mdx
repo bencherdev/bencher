@@ -1,9 +1,46 @@
 import CargoRustCriterion from "../cargo-rust-criterion.mdx";
+import CargoRustCriterionJson from "../cargo-rust-criterion-json.mdx";
 
-## 🦀 Critério Rust
+## 🦀 Rust Criterion
 
-O Adaptador Criterion Rust (`rust_criterion`) espera a saída do [Criterion](https://github.com/bheisler/criterion.rs).
-A Medida de `latência` (ou seja, `nanossegundos (ns)`) é coletada.
-O `valor_inferior` e o `valor_superior` são os limites inferior e superior da inclinação (se disponível) ou da média (se não) (ou seja, `valor`) respectivamente.
+O Adaptador Rust Criterion (`rust_criterion`) espera a saída do [Criterion](https://github.com/bheisler/criterion.rs).
+Para os resultados mais completos, use as mensagens JSON do [cargo-criterion](https://github.com/bheisler/cargo-criterion) (ou seja, `--message-format=json`),
+que o adaptador lê antes da saída de texto:
+
+<CargoRustCriterionJson />
+
+A saída de texto do Criterion também é lida:
 
 <CargoRustCriterion />
+
+Cada Benchmark é nomeado pelo seu id de benchmark do Criterion, como `fib 20` ou `checksum/fold/1024`, sem Parâmetros.
+A partir das mensagens JSON, a Medida `latency` (ou seja, `nanoseconds (ns)`) é coletada com estas Métricas,
+cada uma com os limites do seu intervalo de confiança (ou seja, `mean_ci_lower` e `mean_ci_upper`):
+- `typical`: a própria estimativa do Criterion, a `slope` quando o Criterion calcula uma e a `mean` caso contrário
+- `mean` e `median`, e a `slope` quando o Criterion calcula uma
+- `median_abs_dev`: o desvio absoluto mediano
+
+A partir da saída de texto, a Medida `latency` é coletada como `typical` com `typical_ci_lower` e `typical_ci_upper`.
+Com `--verbose`, o Criterion também imprime os intervalos de `slope`, `mean`, `std_dev`, `median` e `median_abs_dev`,
+que são coletados como seus limites (ou seja, `mean_ci_lower` e `mean_ci_upper`).
+
+Um benchmark com uma vazão coleta sua taxa como `typical` com os limites do seu intervalo:
+bytes na Medida `bytes-throughput` (ou seja, `bytes / second (B/s)`),
+e elementos na Medida `throughput` (ou seja, `operations / second (ops/s)`).
+Um plugin de medição do Criterion que conta ciclos escreve na Medida `cycles`,
+e qualquer outra unidade escreve em uma Medida própria, nomeada pela sua unidade.
+
+Defina primeiro um Limiar para a Métrica `median` nas mensagens JSON, com `--threshold-metric median`,
+e para a Métrica `typical` na saída de texto, com `--threshold-metric typical`.
+Uma taxa tem apenas `typical` e seus limites, então defina o Limiar para `typical` nas Medidas `bytes-throughput` e `throughput`.
+
+O adaptador [Rust Divan](/pt/docs/explanation/adapters/#-rust-divan) é tentado antes da saída de texto do Criterion,
+então execute apenas um harness de benchmark por `bencher run`.
+
+<details>
+<summary>BMF versão 0</summary>
+
+Apenas a saída de texto é lida, e apenas a Medida `latency` é coletada.
+O `lower_value` e o `upper_value` são os limites inferior e superior da inclinação (se disponível) ou da média (se não) (ou seja, `value`), respectivamente.
+
+</details>

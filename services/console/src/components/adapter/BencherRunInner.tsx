@@ -19,6 +19,11 @@ const BencherRunInner = (props) => {
 					{props.rust_bench_bash}
 				</Show>
 			</Match>
+			<Match when={adapter() === Adapter.RustDivan}>
+				<Show when={bash()} fallback={props.rust_divan_powershell}>
+					{props.rust_divan_bash}
+				</Show>
+			</Match>
 			<Match when={adapter() === Adapter.RustCriterion}>
 				<Show when={bash()} fallback={props.rust_criterion_powershell}>
 					{props.rust_criterion_bash}
@@ -79,6 +84,21 @@ const BencherRunInner = (props) => {
 					{props.js_vitest_bash}
 				</Show>
 			</Match>
+			<Match when={adapter() === Adapter.JsDeno}>
+				<Show when={bash()} fallback={props.js_deno_powershell}>
+					{props.js_deno_bash}
+				</Show>
+			</Match>
+			<Match when={adapter() === Adapter.JsMitata}>
+				<Show when={bash()} fallback={props.js_mitata_powershell}>
+					{props.js_mitata_bash}
+				</Show>
+			</Match>
+			<Match when={adapter() === Adapter.JsTinybench}>
+				<Show when={bash()} fallback={props.js_tinybench_powershell}>
+					{props.js_tinybench_bash}
+				</Show>
+			</Match>
 			<Match when={adapter() === Adapter.PythonAsv}>
 				<Show when={bash()} fallback={props.python_asv_powershell}>
 					{props.python_asv_bash}
@@ -92,6 +112,11 @@ const BencherRunInner = (props) => {
 			<Match when={adapter() === Adapter.RubyBenchmark}>
 				<Show when={bash()} fallback={props.ruby_benchmark_powershell}>
 					{props.ruby_benchmark_bash}
+				</Show>
+			</Match>
+			<Match when={adapter() === Adapter.RubyBenchmarkIps}>
+				<Show when={bash()} fallback={props.ruby_benchmark_ips_powershell}>
+					{props.ruby_benchmark_ips_bash}
 				</Show>
 			</Match>
 			<Match when={adapter() === Adapter.ShellHyperfine}>

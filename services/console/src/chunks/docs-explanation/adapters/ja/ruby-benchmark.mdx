@@ -1,10 +1,30 @@
 import Ruby from "../ruby.mdx";
 
-## ♦️ Ruby ベンチマーク
+## ♦️ Ruby Benchmark
 
-Ruby ベンチマークアダプター（`ruby_benchmark`）は、`#bm`、`#bmbm`、そして `#benchmark` メソッドの出力として[Benchmark モジュール](https://github.com/ruby/benchmark)を期待しています。
+Ruby Benchmark アダプター（`ruby_benchmark`）は、`#bm`、`#bmbm`、`#benchmark` メソッドの [Benchmark モジュール](https://github.com/ruby/benchmark) の出力を想定しています。
 各ベンチマークにはラベルが必要です。
-`latency` 測定値（つまり `ナノ秒 (ns)`）が収集されます。
-報告された値（つまり `value`）のみが利用可能です。`lower_value` や `upper_value` はありません。
+各ベンチマークはそのラベルで命名され、パラメータはありません。
+次のメジャーが収集され、それぞれ単一のメトリック `value`（Ruby がその列に出力する時間）を持ちます。
+- `latency`（つまり `nanoseconds (ns)`）: `real` 時間
+- `user-time`（つまり `nanoseconds (ns)`）: `user` 時間
+- `system-time`（つまり `nanoseconds (ns)`）: `system` 時間
+- `cpu-time`（つまり `nanoseconds (ns)`）: `total` 時間
+
+まず `value` メトリックにしきい値を設定してください（`--threshold-metric value`）。
+
+出力はベストエフォートで読み取られます。
+Ruby は行のラベルを出力し、そのブロックを実行してから、時間を出力します。
+そのため、出力を行うブロックはその行を分断します。その行はレポートの警告でスキップとして数えられ、それ以降の行は引き続き読み取られます。
+すべての行を保持するには、ベンチマーク内からは `stderr` に出力してください。
 
 <Ruby />
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+`latency` メジャー（つまり `nanoseconds (ns)`）が収集されます。
+報告された値（つまり `value`）のみが利用可能です。
+`lower_value` も `upper_value` も収集されません。
+
+</details>

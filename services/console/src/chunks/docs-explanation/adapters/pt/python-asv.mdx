@@ -1,9 +1,47 @@
+import AsvJson from "../asv-json.mdx";
 import Asv from "../asv.mdx";
 
 ## 🐍 Python ASV
 
-O Adaptador Python ASV (`python_asv`) espera a saída do CLI [airspeed velocity](https://github.com/airspeed-velocity/asv) [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run).
-A Medida de `latência` (ou seja, `nanossegundos (ns)`) é coletada.
-Os valores `lower_value` e `upper_value` são o intervalo interquartílico abaixo e acima da mediana (ou seja, `value`), respectivamente.
+O Adaptador Python ASV (`python_asv`) espera a saída da CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run) do [airspeed velocity](https://github.com/airspeed-velocity/asv).
+Para os resultados mais completos, leia o arquivo de resultados que o `asv run` escreve para o commit e o ambiente,
+com a opção `--file` da CLI `bencher run`:
+
+<AsvJson />
+
+O arquivo fica sob o `results_dir` do asv (`results` por padrão),
+em um diretório com o nome da máquina, e seu nome começa com os primeiros 8 caracteres do hash do commit.
+
+O arquivo de resultados é lido sozinho, no formato que o asv 0.5 e posteriores escrevem.
+Execute `asv update` para converter resultados escritos por um asv mais antigo.
+O texto que o `asv run` imprime também é lido:
 
 <Asv />
+
+Cada Benchmark é nomeado pelo seu nome com pontos, como `benchmarks.TimeSuite.time_sort`.
+Um benchmark parametrizado tem uma Variante para cada combinação dos seus parâmetros.
+A partir do arquivo de resultados, as chaves dos Parâmetros são sua posição, como `@param0`, `@param1` e assim por diante.
+A partir do texto, as chaves são os nomes de parâmetros que o asv imprime.
+Então os dois formatos dão Variantes diferentes ao mesmo benchmark: escolha um e mantenha-o.
+
+Estas Medidas são coletadas:
+- `latency` (ou seja, `nanoseconds (ns)`), para um benchmark `time_`: a partir do arquivo de resultados, `median`, `p25`, `p75` e o intervalo de confiança de 99% da mediana como `median_ci99_lower` e `median_ci99_upper`; a partir do texto, `median` e `iqr`, o intervalo interquartil
+- `memory` (ou seja, `bytes (B)`), para um benchmark `mem_`: `value`
+- `peak-memory` (ou seja, `bytes (B)`), para um benchmark `peakmem_`: `value`
+
+Um benchmark `track_` é contado como ignorado nos avisos do Relatório, já que sua unidade não está no arquivo de resultados nem no texto.
+Defina primeiro um Limiar para a Métrica `median` em `latency`, com `--threshold-metric median`,
+e para a Métrica `value` em `memory` e `peak-memory`.
+
+O `asv run` termina com um código diferente de zero quando algum benchmark falha, e então o `bencher run` também falha.
+Com a flag `--allow-failure` da CLI `bencher run`, a execução continua,
+mas a saída do comando que falhou não é enviada, então o Relatório não contém resultados dele.
+
+<details>
+<summary>BMF versão 0</summary>
+
+Apenas o texto que o `asv run` imprime é lido.
+A Medida `latency` (ou seja, `nanoseconds (ns)`) é coletada.
+O `lower_value` e o `upper_value` são o intervalo interquartil abaixo e acima da mediana (ou seja, `value`), respectivamente.
+
+</details>

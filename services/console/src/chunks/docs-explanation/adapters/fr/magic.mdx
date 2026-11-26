@@ -1,10 +1,17 @@
-## 🪄 Magic <small>(par défaut)</small>
+## 🪄 Magic <small>(default)</small>
 
 L'adaptateur Magic (`magic`) est un sur-ensemble de tous les autres adaptateurs.
 Pour cette raison, c'est l'adaptateur par défaut pour `bencher run`.
-Cependant, l'adaptateur `magic` devrait être utilisé uniquement pour l'exploration.
+Cependant, l'adaptateur `magic` ne devrait être utilisé que pour l'exploration.
 
-Pour de meilleurs résultats, vous devriez spécifier un adaptateur pour le framework de benchmark :
+En version 1 de BMF, l'adaptateur `magic` essaie d'abord [l'adaptateur `json`](#-json),
+puis chaque adaptateur de harnais dans l'ordre de la liste ci-dessous,
+en lisant la sortie structurée d'un harnais avant sa sortie texte.
+Le premier adaptateur qui lit des résultats est utilisé,
+donc n'exécutez qu'un seul harnais de benchmark par `bencher run`.
+Une charge utile en version 0 de BMF pour un Projet en version 1 de BMF est refusée avec une erreur qui nomme les deux versions.
+
+Pour de meilleurs résultats, vous devriez spécifier un adaptateur de harnais de benchmark :
 
 - [\{...\} JSON](#-json)
 - [#️⃣ C# BenchmarkDotNet](#%EF%B8%8F%E2%83%A3-c-dotnet)
@@ -16,10 +23,15 @@ Pour de meilleurs résultats, vous devriez spécifier un adaptateur pour le fram
 - [🕸 JavaScript Benchmark.js](#-javascript-benchmark)
 - [🕸 JavaScript console.time/console.timeEnd](#-javascript-time)
 - [🕸 JavaScript Vitest](#-javascript-vitest)
+- [🕸 JavaScript Deno bench](#-javascript-deno)
+- [🕸 JavaScript mitata](#-javascript-mitata)
+- [🕸 JavaScript tinybench](#-javascript-tinybench)
 - [🐍 Python airspeed velocity (asv)](#-python-asv)
 - [🐍 Python pytest-benchmark](#-python-pytest)
 - [♦️ Ruby Benchmark](#%EF%B8%8F-ruby-benchmark)
+- [♦️ Ruby benchmark-ips](#%EF%B8%8F-ruby-benchmark-ips)
 - [🦀 Rust libtest bench](#-rust-bench)
+- [🦀 Rust Divan](#-rust-divan)
 - [🦀 Rust Criterion](#-rust-criterion)
 - [🦀 Rust Iai](#-rust-iai)
 - [🦀 Rust Gungraun](#-rust-gungraun)

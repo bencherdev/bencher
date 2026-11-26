@@ -1,9 +1,28 @@
 import NodeJsTime from "../node-js-time.mdx";
 
-## 🕸 JavaScript 時間
+## 🕸 JavaScript Time
 
-JavaScript 時間アダプタ (`js_time`) は [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd) の出力を期待しています。
-`latency` 測定値（つまり `ナノ秒 (ns)`）が収集されます。
-利用可能なのは操作時間（つまり `value`）のみで、`lower_value` と `upper_value` はありません。
+JavaScript Time アダプター（`js_time`）は、Firefox、Node.js、Deno、または Bun による
+[console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd) の出力を想定しています。
+Bun はタイマーを `stderr` に出力するため、`2>&1` を付けて実行してください。
+各ベンチマークはタイマーのラベルで命名され、パラメータはありません。
+`latency` メジャー（つまり `nanoseconds (ns)`）は、単一のメトリック `value`（タイマーの所要時間）で収集されます。
+まず `value` メトリックにしきい値を設定してください（`--threshold-metric value`）。
+
+`console.timeLog` のようにラベルが複数回出力された場合は、最後の行のみが保持され、
+それより前の各行はレポートの警告でスキップとして数えられます。
+Node.js と Deno はタイマーを `label: duration` の形で出力するため、
+`retry in: 5s` のような同じ形のその他の行もタイマーとして読み取られます。
+同様に、Bun の `console.timeLog` 呼び出しが出力する追加データも、独立したタイマーとして読み取られる場合があります。
+その他の出力は、ベンチマークコマンドの `stdout` に含めないでください。
 
 <NodeJsTime />
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+Firefox の `label: duration - timer ended` の行のみが読み取られます。
+操作時間（つまり `value`）のみが利用可能です。
+`lower_value` も `upper_value` も収集されません。
+
+</details>

@@ -1,9 +1,46 @@
 import CargoRustCriterion from "../cargo-rust-criterion.mdx";
+import CargoRustCriterionJson from "../cargo-rust-criterion-json.mdx";
 
-## 🦀 러스트 Criterion
+## 🦀 Rust Criterion
 
-러스트 Criterion 어댑터(`rust_criterion`)는 [Criterion](https://github.com/bheisler/criterion.rs)의 출력을 기대합니다.
-`latency` 측정값(즉, `나노초(ns)`)이 수집됩니다.
-`lower_value`와 `upper_value`는 각각 기울기(가능한 경우) 또는 평균(그렇지 않은 경우)의 하한선과 상한선(즉, `값`)입니다.
+Rust Criterion 어댑터(`rust_criterion`)는 [Criterion](https://github.com/bheisler/criterion.rs) 출력을 입력으로 받습니다.
+가장 완전한 결과를 얻으려면 [cargo-criterion](https://github.com/bheisler/cargo-criterion)의 JSON 메시지(즉, `--message-format=json`)를 사용하세요.
+어댑터는 텍스트 출력보다 이를 먼저 읽습니다:
+
+<CargoRustCriterionJson />
+
+Criterion의 텍스트 출력도 읽습니다:
 
 <CargoRustCriterion />
+
+각 벤치마크의 이름은 `fib 20`이나 `checksum/fold/1024` 같은 Criterion 벤치마크 ID이며, 매개변수는 없습니다.
+JSON 메시지에서는 `latency` 측정(즉, `nanoseconds (ns)`)이 다음 메트릭으로 수집되며,
+각각 신뢰 구간의 경계(즉, `mean_ci_lower`와 `mean_ci_upper`)가 함께 수집됩니다:
+- `typical`: Criterion 자체의 추정값으로, Criterion이 `slope`를 계산하면 그 값이고 그렇지 않으면 `mean`
+- `mean`과 `median`, 그리고 Criterion이 계산하는 경우 `slope`
+- `median_abs_dev`: 중앙 절대 편차
+
+텍스트 출력에서는 `latency` 측정이 `typical_ci_lower`, `typical_ci_upper`와 함께 `typical`로 수집됩니다.
+`--verbose`를 사용하면 Criterion은 `slope`, `mean`, `std_dev`, `median`, `median_abs_dev`의 구간도 출력하며,
+이는 그 경계(즉, `mean_ci_lower`와 `mean_ci_upper`)로 수집됩니다.
+
+처리량이 있는 벤치마크는 그 처리율을 구간 경계와 함께 `typical`로 수집합니다:
+바이트는 `bytes-throughput` 측정(즉, `bytes / second (B/s)`)에,
+요소는 `throughput` 측정(즉, `operations / second (ops/s)`)에 수집됩니다.
+사이클을 세는 Criterion 계측 플러그인은 `cycles` 측정에 기록하며,
+그 밖의 단위는 그 단위의 이름을 딴 별도의 측정에 기록합니다.
+
+JSON 메시지의 경우 먼저 `median` 메트릭에 임계값을 설정하고(`--threshold-metric median`),
+텍스트 출력의 경우 먼저 `typical` 메트릭에 임계값을 설정하세요(`--threshold-metric typical`).
+처리율에는 `typical`과 그 경계만 있으므로, `bytes-throughput` 및 `throughput` 측정에는 `typical`에 임계값을 설정하세요.
+
+[Rust Divan](/ko/docs/explanation/adapters/#-rust-divan) 어댑터가 Criterion의 텍스트 출력보다 먼저 시도되므로,
+`bencher run` 한 번에는 벤치마크 하네스를 하나만 실행하세요.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+텍스트 출력만 읽으며, `latency` 측정만 수집됩니다.
+`lower_value`와 `upper_value`는 각각 기울기(사용 가능한 경우) 또는 평균(그렇지 않은 경우)(즉, `value`)의 하한과 상한입니다.
+
+</details>

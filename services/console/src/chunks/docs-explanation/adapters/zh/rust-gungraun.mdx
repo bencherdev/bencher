@@ -1,14 +1,42 @@
 import CargoRustGungraun from "../cargo-rust-gungraun.mdx";
+import CargoRustGungraunJson from "../cargo-rust-gungraun-json.mdx";
 
 ## 🦀 Rust Gungraun
 
-Rust Gungraun 适配器（`rust_gungraun`）期望接收 [Gungraun](https://github.com/gungraun/gungraun) 的输出。
-`instructions`、`l1-hits`、`l2-hits`、`ram-hits`、`total-read-write` 和 `estimated-cycles` 这些 Measures 默认会被收集。Gungraun 还支持生成的额外 Callgrind、Cachegrind 和 DHAT 指标。
-对于这些 Measures，仅上报的值（即 `value`）可用。
-不会收集 `lower_value` 或 `upper_value`。
-该适配器的 Measures 不会在所有项目中默认创建。
-不过，当你使用此适配器时，这些 Measures 会自动为你的项目创建。
+Rust Gungraun 适配器（`rust_gungraun`）接受 [Gungraun](https://github.com/gungraun/gungraun) 的输出。
+要获得最完整的结果，请让 Gungraun 打印其 JSON 摘要（即 `GUNGRAUN_OUTPUT_FORMAT=json`），
+适配器会先于文本输出读取它们。
+支持读取摘要模式 6 和 7。
 
-Gungraun 是 Iai-Callgrind 的更名继任者。
+<CargoRustGungraunJson />
+
+Gungraun 的文本输出也会被读取：
 
 <CargoRustGungraun />
+
+从 JSON 摘要中，每个基准测试以其模块路径命名，其 `id` 作为 `@id` 参数。
+从文本输出中，每个基准测试以其完整的第一行命名。
+因此这两种格式会给同一个基准测试不同的名称：请选定一种并坚持使用。
+运行基准测试的每个工具（例如 `callgrind`、`cachegrind` 或 `dhat`）都是独立的变体，带有 `@tool` 参数。
+文本输出中没有工具标题的部分为 `callgrind`。
+
+默认收集 `instructions`、`l1-hits`、`l2-hits`、`ram-hits`、`total-read-write` 和 `estimated-cycles` 度量。
+Callgrind、Cachegrind、DHAT、Memcheck、Helgrind 或 DRD 报告的所有其他计数器也各自作为独立的度量收集。
+每个计数器都是精确计数，作为单个 `value` 指标收集，它就是应首先设置阈值的指标。
+`perf` 事件作为其样本的 `mean` 或作为单个 `value` 收集，该指标就是应首先设置阈值的指标。
+模式 7 还会将每个工具的运行时间作为 `profile-time` 度量（即 `nanoseconds (ns)`）收集。
+系统调用所花费的时间会被跳过，因为输出没有说明其单位。
+此适配器的度量并不会默认为所有项目创建。
+但是，当您使用此适配器时，这些度量会自动为您的项目创建。
+
+Gungraun 是 Iai-Callgrind 更名后的后继项目。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+读取文本输出和模式 6 的 JSON 摘要。
+从 JSON 摘要中，每个基准测试以其模块路径和 `id` 用 `::` 连接后命名。
+每个计数器作为 `value` 收集，`lower_value` 和 `upper_value` 都不会被收集。
+当多个工具运行同一个基准测试时，这些工具共有的计数器只保留其中一个工具的值。
+
+</details>

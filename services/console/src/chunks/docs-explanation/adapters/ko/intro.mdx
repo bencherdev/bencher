@@ -1,11 +1,36 @@
 어댑터는 벤치마크 하네스 출력을 [Bencher Metric Format (BMF) JSON][bmf]으로 변환합니다.
-새 보고서가 수신될 때 API 서버에서 어댑터가 실행됩니다.
+어댑터는 새 보고서가 수신될 때 API 서버에서 실행됩니다.
 자세한 내용은 [벤치마킹 개요][benchmarking overview]를 참조하세요.
-어댑터는 `--adapter` 옵션으로 [the `bencher run` CLI 서브커맨드][bencher run]에 대해 지정할 수 있습니다.
-어댑터가 지정되지 않은 경우 기본적으로 [the `magic` 어댑터][magic adapter]가 사용됩니다.
+어댑터는 [`bencher run` CLI 서브커맨드][bencher run]에서
+`--adapter` 옵션으로 지정할 수 있습니다.
+어댑터를 지정하지 않으면 기본적으로 [`magic` 어댑터][magic adapter]가 사용됩니다.
+
+모든 어댑터는 보고서의 BMF 버전으로 결과를 기록하며,
+보고서가 버전을 선언하지 않는 한 이는 프로젝트의 BMF 버전입니다.
+새 프로젝트는 BMF 버전 1로 시작합니다.
+BMF 버전 1에서 어댑터는 다음을 기록합니다:
+- 하네스가 보고하는 모든 통계를 `mean`, `median`, `p99`처럼 각각 이름이 있는 메트릭으로
+- 하네스 자체의 구조에서 얻은 매개변수. 따라서 하나의 벤치마크가 여러 변형을 가질 수 있습니다
+- 하네스가 보고하는 모든 측정
+
+그중 일부 측정만 저장하려면 `bencher run` CLI의 `--measure` 옵션으로 나열하세요.
+API 서버는 보고서를 저장하기 전에 나머지 모든 측정을 버립니다.
+나열된 처음 64개의 측정만 유지되며, 나머지는 보고서가 warning으로 알립니다.
+
+아래의 각 어댑터는 먼저 임계값을 설정할 메트릭을 알려 줍니다.
+이는 아직 어떤 임계값도 검사하지 않는 측정에 대해 실행 출력과 풀 리퀘스트 댓글이 보여 주는 메트릭입니다.
+[임계값을 생성할][thresholds] 때 `--threshold-metric` 옵션으로 이 메트릭을 지정하세요.
+`--average` 및 `--fold` 옵션은 BMF 버전 0 전용입니다.
+BMF 버전 1에서는 둘 다 무시되며 보고서에 warning이 남습니다.
+
+Rust Divan, JavaScript tinybench, JavaScript Deno, JavaScript mitata, Ruby benchmark-ips 어댑터는 BMF 버전 1에서만 결과를 읽습니다.
+BMF 버전 1의 벤치마크 이름은 BMF 버전 0의 이름과 다를 수 있으므로,
+BMF 버전 0에서 BMF 버전 1로 옮기는 프로젝트는 일부 벤치마크를 새로 시작할 수 있습니다.
+어댑터가 BMF 버전 0에서도 결과를 읽는 경우, 그 섹션의 끝에서 그 방식을 설명합니다.
 
 [bmf]: /ko/docs/reference/bencher-metric-format/
 [benchmarking overview]: /ko/docs/explanation/benchmarking/
 [bencher run]: /ko/docs/explanation/bencher-run/
+[thresholds]: /ko/docs/explanation/thresholds/
 
 [magic adapter]: #-magic-default

@@ -1,16 +1,49 @@
+import NodeJsVitestV5 from "../node-js-vitest-v5.mdx";
 import NodeJsVitest from "../node-js-vitest.mdx";
 
 ## 🕸 JavaScript Vitest
 
-The JavaScript Vitest Adapter (`js_vitest`) expects [Vitest `bench`](https://vitest.dev/api/#bench) output in JSON format (ie `--outputJson results.json`).
-This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` option to specify that file path.
-Both the `latency` Measure (ie `nanoseconds (ns)`) and the `throughput` Measure (ie `operations / second (ops/sec)`) are gathered.
-For the `throughput` Measure, the `lower_value` and `upper_value` are the relative margin of error below and above the `value` respectively.
+JavaScript Vitest 어댑터(`js_vitest`)는 JSON 형식의 [Vitest `bench`](https://vitest.dev/api/#bench) 출력을 입력으로 받습니다.
+이 JSON 출력은 파일로 저장되므로, `bencher run` CLI의 `--file` 옵션으로 그 파일 경로를 지정해야 합니다.
+Vitest 5 이상에서는 JSON 리포터(즉, `--reporter=json --outputFile=results.json`)를 사용하세요:
+
+<NodeJsVitestV5 />
+
+Vitest 1부터 4까지는 `--outputJson results.json`을 사용하세요:
 
 <NodeJsVitest />
 
-There are two options for the `latency` Metric:
-- `mean` (default): The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
-- `median`: Only the median (ie `value`) is available. Neither `lower_value` nor `upper_value` are collected, as Vitest does not provide an interquartile range.
+각 벤치마크의 이름은 JSON 출력에 있는 모든 파일의 공통 디렉터리를 기준으로 한 파일 경로,
+그다음 `describe` 블록, 테스트, 그룹(기본 그룹이 아닌 경우), 태스크를 ` > `로 이은 것입니다.
+예를 들어 `sub/sort.bench.ts > sorting > arrays > normal`입니다.
+벤치마크 파일 중 일부만 실행하면 그 공통 디렉터리가 바뀌어 벤치마크의 이름이 바뀔 수 있습니다.
+매개변수는 없습니다.
 
-This can be specified in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the `--average` option.
+`latency` 측정(즉, `nanoseconds (ns)`)과 `throughput` 측정(즉, `operations / second (ops/s)`) 모두 다음 메트릭으로 수집됩니다:
+- `mean`, `median`, `min`, `max`
+- `p75`, `p99`, `p99_5`, `p99_9`: 75, 99, 99.5, 99.9 백분위수
+- `std_dev`, `std_err`, `median_abs_dev`, `mean_abs_dev`: 표준 편차, 평균의 표준 오차, 중앙 절대 편차, 평균 절대 편차
+- `mean_ci95_lower`, `mean_ci95_upper`, `mean_ci95_margin`: 평균의 95% 신뢰 구간과 그 오차 범위
+
+Vitest 1부터 4까지는 `latency` 측정이 JSON 출력에 담긴 통계를 가지며,
+`throughput` 측정은 `mean`과 함께 `mean_ci95_lower`, `mean_ci95_upper`를 가집니다.
+먼저 `median` 메트릭에 임계값을 설정하세요(`--threshold-metric median`).
+Vitest 1부터 4까지의 `throughput`이나 Vitest 1의 `latency`처럼 `median`이 없는 경우에는 먼저 `mean`에 임계값을 설정하세요.
+
+두 Vitest 프로젝트가 같은 파일을 실행하면, Vitest 5의 JSON 출력은 그 파일을 하나의 경로 아래에 두 번 담습니다.
+첫 번째 사본이 유지되며, 각 반복은 보고서의 warning에서 건너뛴 것으로 집계됩니다.
+하나의 프로젝트만 실행하려면 Vitest에 `--project`를 전달하세요.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+Vitest 1부터 4까지의 `--outputJson` 형식만 읽습니다.
+`throughput` 측정의 경우 `lower_value`와 `upper_value`는 각각 `value`보다 상대 오차 범위만큼 아래와 위의 값입니다.
+
+`latency` 메트릭에는 두 가지 옵션이 있습니다:
+- `mean`(기본값): `lower_value`와 `upper_value`는 각각 평균(즉, `value`)보다 표준 편차 하나만큼 아래와 위의 값입니다.
+- `median`: 중앙값(즉, `value`)만 사용할 수 있습니다. Vitest는 사분위 범위를 제공하지 않으므로 `lower_value`와 `upper_value`는 모두 수집되지 않습니다.
+
+이는 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드의 `--average` 옵션으로 지정할 수 있습니다.
+
+</details>

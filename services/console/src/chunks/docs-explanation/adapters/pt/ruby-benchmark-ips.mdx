@@ -1,0 +1,26 @@
+import BenchmarkIpsJson from "../benchmark-ips-json.mdx";
+import RubyBenchmarkIps from "../ruby-benchmark-ips.mdx";
+
+## ♦️ Ruby benchmark-ips
+
+O Adaptador Ruby benchmark-ips (`ruby_benchmark_ips`) espera a saída do [benchmark-ips](https://github.com/evanphx/benchmark-ips) em formato JSON.
+Escreva-a em um arquivo com `x.json!`:
+
+<BenchmarkIpsJson />
+
+Essa saída JSON é salva em um arquivo, então você deve usar a opção `--file` da CLI `bencher run` para especificar o caminho desse arquivo.
+
+<RubyBenchmarkIps />
+
+Cada Benchmark é nomeado pelo seu rótulo.
+Um rótulo que não é uma string, como um Hash, é nomeado pelo seu texto JSON compacto.
+Todo Benchmark tem um Parâmetro, `@stats`, o modo de estatísticas que a execução usou: `sd` (o padrão) ou `bootstrap` (ou seja, `x.config(stats: :bootstrap)`).
+A Medida `throughput` (ou seja, `operations / second (ops/s)`) é coletada com estas Métricas:
+- `mean`: a taxa que o benchmark-ips informa
+- Com `@stats` `sd`, `std_dev`: o desvio padrão da taxa
+- Com `@stats` `bootstrap`, `mean_ci_lower` e `mean_ci_upper`: o intervalo de confiança bootstrap da taxa
+
+Defina primeiro um Limiar para a Métrica `mean`, com `--threshold-metric mean`.
+
+O Adaptador Ruby benchmark-ips lê resultados apenas na versão 1 do BMF.
+Um Relatório para um Projeto na versão 0 do BMF é recusado com um erro que explica como mudar o Projeto para a versão 1 do BMF.

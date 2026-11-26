@@ -1,10 +1,17 @@
-## 🪄 Magic <small>(기본)</small>
+## 🪄 Magic <small>(default)</small>
 
-매직 어댑터(`magic`)는 다른 모든 어댑터의 상위 집합입니다.
-따라서 `bencher run`의 기본 어댑터입니다.
-다만, `magic` 어댑터는 탐색용으로만 사용해야 합니다.
+Magic 어댑터(`magic`)는 다른 모든 어댑터의 상위 집합입니다.
+그래서 `bencher run`의 기본 어댑터입니다.
+하지만 `magic` 어댑터는 탐색 용도로만 사용해야 합니다.
 
-최적의 결과를 얻으려면 벤치마크 하네스 어댑터를 지정하는 것이 좋습니다:
+BMF 버전 1에서 `magic` 어댑터는 먼저 [`json` 어댑터](#-json)를 시도하고,
+그다음 아래 목록의 순서대로 각 하네스 어댑터를 시도하며,
+하네스의 텍스트 출력보다 구조화된 출력을 먼저 읽습니다.
+결과를 하나라도 읽은 첫 번째 어댑터가 사용되므로,
+`bencher run` 한 번에는 벤치마크 하네스를 하나만 실행하세요.
+BMF 버전 1인 프로젝트에 대한 BMF 버전 0 페이로드는 두 버전을 모두 밝히는 오류와 함께 거부됩니다.
+
+최상의 결과를 얻으려면 벤치마크 하네스 어댑터를 지정해야 합니다:
 
 - [\{...\} JSON](#-json)
 - [#️⃣ C# BenchmarkDotNet](#%EF%B8%8F%E2%83%A3-c-dotnet)
@@ -12,14 +19,19 @@
 - [➕ C++ Google Benchmark](#-c-google)
 - [🎯 Dart benchmark_harness](#-dart-benchmark_harness)
 - [🕳 Go test -bench](#-go-bench)
-- [☕️ Java 마이크로벤치마크 하네스 (JMH)](#%EF%B8%8F-java-jmh)
+- [☕️ Java Microbenchmark Harness (JMH)](#%EF%B8%8F-java-jmh)
 - [🕸 JavaScript Benchmark.js](#-javascript-benchmark)
 - [🕸 JavaScript console.time/console.timeEnd](#-javascript-time)
 - [🕸 JavaScript Vitest](#-javascript-vitest)
+- [🕸 JavaScript Deno bench](#-javascript-deno)
+- [🕸 JavaScript mitata](#-javascript-mitata)
+- [🕸 JavaScript tinybench](#-javascript-tinybench)
 - [🐍 Python airspeed velocity (asv)](#-python-asv)
 - [🐍 Python pytest-benchmark](#-python-pytest)
 - [♦️ Ruby Benchmark](#%EF%B8%8F-ruby-benchmark)
+- [♦️ Ruby benchmark-ips](#%EF%B8%8F-ruby-benchmark-ips)
 - [🦀 Rust libtest bench](#-rust-bench)
+- [🦀 Rust Divan](#-rust-divan)
 - [🦀 Rust Criterion](#-rust-criterion)
 - [🦀 Rust Iai](#-rust-iai)
 - [🦀 Rust Gungraun](#-rust-gungraun)

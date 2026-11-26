@@ -1,9 +1,41 @@
+import CppCatch2Xml from "../cpp-catch2-xml.mdx";
 import MakeCppCatch2 from "../make-cpp-catch2.mdx";
 
 ## ➕ C++ Catch2
 
 O Adaptador C++ Catch2 (`cpp_catch2`) espera a saída do [Catch2](https://github.com/catchorg/Catch2).
-A Medida de `latency` (ou seja, `nanosegundos (ns)`) é coletada.
-Os valores `lower_value` e `upper_value` estão um desvio padrão abaixo e acima da média (ou seja, `value`), respectivamente.
+O reporter XML do Catch2 (ou seja, `-r xml`) é lido primeiro e dá os resultados mais confiáveis, por isso é o recomendado:
+
+<CppCatch2Xml />
+
+A saída de console do Catch2 também é lida, na medida do possível:
 
 <MakeCppCatch2 />
+
+A própria saída do seu programa dentro da tabela do Catch2 nem sempre pode ser distinguida da saída do Catch2,
+então o benchmark em que ela cai é contado como ignorado nos avisos do Relatório.
+Em vez disso, imprima em `stderr` ou use o reporter XML.
+Em um console com menos de 59 colunas, o Catch2 quebra o título da tabela, então todo benchmark é contado como ignorado.
+
+O nome do Benchmark é o caso de teste, cada seção e o benchmark, separados por barras (ou seja, `Case / Section / Bench`).
+Não há Parâmetros.
+A Medida `latency` é coletada em nanossegundos (ns),
+com a `mean` e o `std_dev`, cada um com os limites do seu intervalo bootstrap.
+O XML nomeia cada intervalo com seu nível de confiança (ou seja, `mean_ci95_lower` e `mean_ci95_upper`),
+enquanto a saída de console não informa nível (ou seja, `mean_ci_lower` e `mean_ci_upper`).
+Com `--benchmark-no-analysis`, apenas a `mean` é coletada.
+
+Defina primeiro um Limiar para a Métrica `mean`, com `--threshold-metric mean`.
+
+O Catch2 termina com um erro quando um benchmark falha, e então o `bencher run` também falha.
+Com a flag `--allow-failure`, o `bencher run` continua, mas descarta a saída dessa iteração,
+então nenhum dos seus resultados é enviado.
+
+<details>
+<summary>BMF versão 0</summary>
+
+Na versão 0 do BMF, apenas a saída de console do Catch2 é lida.
+A Medida `latency` (ou seja, `nanoseconds (ns)`) é coletada.
+O `lower_value` e o `upper_value` ficam um desvio padrão abaixo e acima da média (ou seja, `value`), respectivamente.
+
+</details>

@@ -4,8 +4,27 @@ import Ruby from "../ruby.mdx";
 
 The Ruby Benchmark Adapter (`ruby_benchmark`) expects [Benchmark module](https://github.com/ruby/benchmark) output for the `#bm`, `#bmbm`, and `#benchmark` methods.
 A label is required for each benchmark.
+Each Benchmark is named by its label, with no Parameters.
+These Measures are gathered, each with a single Metric, `value`: the time Ruby prints in that column.
+- `latency` (ie `nanoseconds (ns)`): the `real` time
+- `user-time` (ie `nanoseconds (ns)`): the `user` time
+- `system-time` (ie `nanoseconds (ns)`): the `system` time
+- `cpu-time` (ie `nanoseconds (ns)`): the `total` time
+
+Threshold the `value` Metric first, with `--threshold-metric value`.
+
+The output is read on a best-effort basis.
+Ruby prints a row's label, runs its block, and then prints its times,
+so a block that prints splits its row: that row is counted as skipped in the Report's warnings, and the rows after it are still read.
+Print to `stderr` from inside a benchmark to keep every row.
+
+<Ruby />
+
+<details>
+<summary>BMF version 0</summary>
+
 The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
 Only the reported value (ie `value`) is available.
 Neither `lower_value` nor `upper_value` are collected.
 
-<Ruby />
+</details>

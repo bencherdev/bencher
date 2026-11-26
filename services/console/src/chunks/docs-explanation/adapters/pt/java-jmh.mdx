@@ -1,11 +1,36 @@
 import Java from "../java.mdx";
 
-## ☕ Java JMH
+## ☕️ Java JMH
 
 O Adaptador Java JMH (`java_jmh`) espera a saída do [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) em [formato JSON (ou seja, `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
-Essa saída JSON é salva em um arquivo, então você deve usar o argumento `--file` da CLI `bencher run` para especificar o caminho desse arquivo.
-Medidas de `latência` e `vazão` (ou seja, `nanosegundos (ns)` e `operações / segundo (ops/sec)`) podem ser coletadas.
-Os `valores_inferior` e `superior` são os intervalos de confiança inferior e superior para a média (ou seja, `valor`) respectivamente.
-
+Essa saída JSON é salva em um arquivo, então você deve usar a opção `--file` da CLI `bencher run` para especificar o caminho desse arquivo.
 
 <Java />
+
+O nome do Benchmark é o benchmark como o JMH o nomeia (ou seja, `org.example.MyBenchmark.hash`).
+Cada `@Param` se torna um Parâmetro, com seu valor como string,
+e o modo se torna o Parâmetro `@mode` (ou seja, `thrpt`, `avgt`, `sample` ou `ss`).
+Uma Variante com mais de 8 Parâmetros é contada como ignorada nos avisos do Relatório.
+
+A pontuação principal é coletada na Medida do seu modo:
+`throughput` (ou seja, `operations / second (ops/s)`) para `thrpt`,
+e `latency`, `sample-time` e `single-shot-time` (ou seja, `nanoseconds (ns)`) para `avgt`, `sample` e `ss`, respectivamente.
+Suas Métricas são a `mean` com o intervalo de 99,9% do JMH (ou seja, `mean_ci99_9_lower` e `mean_ci99_9_upper`),
+e os percentis que o JMH informa: `min`, `median`, `p90`, `p95`, `p99`, `p99_9`, `p99_99`, `p99_999`, `p99_9999` e `max`.
+
+Um resultado secundário na unidade da pontuação principal, um contador de operações `@AuxCounters` ou um membro de `@Group`,
+é coletado na mesma Medida em sua própria Variante, com seu rótulo como o Parâmetro `@label`.
+Todo outro resultado secundário, como os de `-prof gc`, é uma Medida nomeada pelo seu rótulo, na sua unidade como o JMH a escreve.
+Um resultado secundário que o JMH soma tem uma Métrica `sum` no lugar da `mean` e do seu intervalo.
+Um resultado secundário sem valor finito é descartado,
+e um rotulado como uma Medida da pontuação principal (ou seja, `latency`) é contado como ignorado.
+
+Defina primeiro um Limiar para a Métrica `median`, com `--threshold-metric median`.
+
+<details>
+<summary>BMF versão 0</summary>
+
+Na versão 0 do BMF, tanto a Medida `latency` quanto a `throughput` (ou seja, `nanoseconds (ns)` e `operations / second (ops/s)`) podem ser coletadas.
+O `lower_value` e o `upper_value` são os limites inferior e superior do intervalo de confiança da média (ou seja, `value`), respectivamente.
+
+</details>

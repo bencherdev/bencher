@@ -1,0 +1,22 @@
+import TinybenchJson from "../tinybench-json.mdx";
+import NodeJsTinybench from "../node-js-tinybench.mdx";
+
+## 🕸 JavaScript tinybench
+
+JavaScript tinybench 어댑터(`js_tinybench`)는 JSON 형식의 [tinybench](https://github.com/tinylibs/tinybench) 6 태스크를 입력으로 받습니다.
+tinybench는 자체 출력을 전혀 내지 않으므로, `await bench.run()` 다음에 이 한 줄로 태스크를 출력하세요:
+
+<TinybenchJson />
+
+어댑터가 JSON만 읽도록 `stdout`에는 다른 것을 출력하지 마세요.
+
+<NodeJsTinybench />
+
+각 벤치마크의 이름은 태스크의 이름이며, 매개변수는 없습니다.
+이미 읽은 이름을 반복하는 태스크나 통계가 없는 태스크는 보고서의 warning에서 건너뛴 것으로 집계됩니다.
+`latency` 측정(즉, `nanoseconds (ns)`)과 `throughput` 측정(즉, `operations / second (ops/s)`) 모두
+[Vitest 5](#-javascript-vitest)와 같은 메트릭으로 수집됩니다.
+먼저 `median` 메트릭에 임계값을 설정하세요(`--threshold-metric median`).
+
+JavaScript tinybench 어댑터는 BMF 버전 1에서만 결과를 읽습니다.
+BMF 버전 0인 프로젝트의 보고서는 프로젝트를 BMF 버전 1로 옮기는 방법을 알려 주는 오류와 함께 거부됩니다.

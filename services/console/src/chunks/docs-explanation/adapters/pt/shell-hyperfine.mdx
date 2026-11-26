@@ -2,14 +2,38 @@ import Hyperfine from "../hyperfine.mdx";
 
 ## ❯_️ Shell Hyperfine
 
-O Adaptador Shell Hyperfine (`shell_hyperfine`) espera a saída do [Hyperfine](https://github.com/sharkdp/hyperfine) no [formato JSON (por exemplo, `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
-Essa saída JSON é salva em um arquivo, então você deve usar o argumento `--file` da CLI `bencher run` para especificar o caminho desse arquivo.
-A Medida de `latência` (por exemplo, `nanosegundos (ns)`) é coletada.
+O Adaptador Shell Hyperfine (`shell_hyperfine`) espera a saída do [Hyperfine](https://github.com/sharkdp/hyperfine) em [formato JSON (ou seja, `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
+Essa saída JSON é salva em um arquivo, então você deve usar a opção `--file` da CLI `bencher run` para especificar o caminho desse arquivo.
+A saída JSON tanto do Hyperfine v1 quanto do v2 é suportada.
 
 <Hyperfine />
 
+Cada Benchmark é nomeado pelo seu `--command-name`, ou, na falta dele, pelo seu comando.
+Seus valores de `--parameter-scan` ou `--parameter-list` e suas variáveis de `--env` são seus Parâmetros, como strings.
+Por exemplo, `--command-name sleep --parameter-list n 1,2 'sleep 0.00{n}'` dá ao Benchmark `sleep` duas Variantes,
+com os Parâmetros `{"n": "1"}` e `{"n": "2"}`.
+Sem `--command-name`, o comando de cada valor é seu próprio Benchmark, como `sleep 0.001`.
+Uma variável definida como vazia, como `--env 'MODE='`, é o Parâmetro `{"MODE": ""}`.
+
+Estas Medidas são coletadas, cada uma com as Métricas `mean`, `median`, `min`, `max` e `std_dev`:
+- `latency` (ou seja, `nanoseconds (ns)`): o tempo de relógio decorrido
+- `user-time` e `system-time` (ou seja, `nanoseconds (ns)`)
+- Com o Hyperfine v2: `cpu-time` (ou seja, `nanoseconds (ns)`) e `peak-memory` (ou seja, `bytes (B)`),
+  e com `--metrics all`, os contadores de hardware `cycles`, `instructions`, `cache-references`, `cache-misses` e `branch-misses`
+
+Com o Hyperfine v1, `user-time` e `system-time` têm apenas sua `mean`,
+e `peak-memory` é coletada quando a exportação a contém.
+Defina primeiro um Limiar para a Métrica `median`, com `--threshold-metric median`,
+exceto para `user-time` e `system-time` do Hyperfine v1, em que a `mean` vem primeiro.
+
+<details>
+<summary>BMF versão 0</summary>
+
+A Medida `latency` (ou seja, `nanoseconds (ns)`) é coletada.
 Existem duas opções para a Métrica:
-- `mean` (padrão): Os valores `lower_value` e `upper_value` são um desvio padrão abaixo e acima da média (por exemplo, `value`) respectivamente.
-- `median`: Os valores `lower_value` e `upper_value` são os valores `min` e `max` respectivamente.
+- `mean` (padrão): O `lower_value` e o `upper_value` ficam um desvio padrão abaixo e acima da média (ou seja, `value`), respectivamente.
+- `median`: O `lower_value` e o `upper_value` são os valores `min` e `max`, respectivamente.
 
 Isso pode ser especificado no subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> com a opção `--average`.
+
+</details>

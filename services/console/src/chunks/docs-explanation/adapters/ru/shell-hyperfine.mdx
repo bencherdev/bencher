@@ -2,14 +2,38 @@ import Hyperfine from "../hyperfine.mdx";
 
 ## ❯_️ Shell Hyperfine
 
-Адаптер Shell Hyperfine (`shell_hyperfine`) ожидает вывод [Hyperfine](https://github.com/sharkdp/hyperfine) в [формате JSON (т.е. `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
-Этот вывод JSON сохраняется в файл, поэтому вы должны использовать аргумент `--file` CLI `bencher run`, чтобы указать путь к этому файлу.
-Измеряется `latency` (т.е. `наносекунды (ns)`).
+Адаптер Shell Hyperfine (`shell_hyperfine`) ожидает вывод [Hyperfine](https://github.com/sharkdp/hyperfine) в [формате JSON (то есть `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
+Этот JSON-вывод сохраняется в файл, поэтому вы должны использовать опцию `--file` команды CLI `bencher run`, чтобы указать путь к этому файлу.
+Поддерживается JSON-вывод как Hyperfine v1, так и v2.
 
 <Hyperfine />
 
-Существует два варианта для метрики:
-- `mean` (по умолчанию): `lower_value` и `upper_value` находятся на одно стандартное отклонение ниже и выше среднего значения (т.е. `value`) соответственно.
-- `median`: `lower_value` и `upper_value` являются соответственно `min` и `max` значениями.
+Каждый Бенчмарк называется по своему `--command-name`, а иначе по своей команде.
+Его значения `--parameter-scan` или `--parameter-list` и его переменные `--env` являются его Параметрами, в виде строк.
+Например, `--command-name sleep --parameter-list n 1,2 'sleep 0.00{n}'` дает Бенчмарку `sleep` два Варианта
+с Параметрами `{"n": "1"}` и `{"n": "2"}`.
+Без `--command-name` команда для каждого значения является отдельным Бенчмарком, например `sleep 0.001`.
+Переменная, заданная пустой, например `--env 'MODE='`, является Параметром `{"MODE": ""}`.
 
-Это можно указать в подкоманде CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> с опцией `--average`.
+Собираются следующие Измерения, каждое с Метриками `mean`, `median`, `min`, `max` и `std_dev`:
+- `latency` (то есть `nanoseconds (ns)`): время по настенным часам
+- `user-time` и `system-time` (то есть `nanoseconds (ns)`)
+- С Hyperfine v2: `cpu-time` (то есть `nanoseconds (ns)`) и `peak-memory` (то есть `bytes (B)`),
+  а с `--metrics all` аппаратные счетчики `cycles`, `instructions`, `cache-references`, `cache-misses` и `branch-misses`
+
+С Hyperfine v1 у `user-time` и `system-time` есть только `mean`,
+а `peak-memory` собирается, если экспорт его содержит.
+В первую очередь задайте Порог для Метрики `median` с помощью `--threshold-metric median`,
+кроме `user-time` и `system-time` в Hyperfine v1, где первым идет `mean`.
+
+<details>
+<summary>BMF версия 0</summary>
+
+Собирается Измерение `latency` (то есть `nanoseconds (ns)`).
+Для Метрики есть два варианта:
+- `mean` (по умолчанию): `lower_value` и `upper_value` находятся на одно стандартное отклонение ниже и выше среднего (то есть `value`) соответственно.
+- `median`: `lower_value` и `upper_value` являются значениями `min` и `max` соответственно.
+
+Это можно указать в подкоманде CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> с помощью опции `--average`.
+
+</details>

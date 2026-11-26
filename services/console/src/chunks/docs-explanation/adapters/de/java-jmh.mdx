@@ -2,9 +2,35 @@ import Java from "../java.mdx";
 
 ## ☕️ Java JMH
 
-Der Java-JMH-Adapter (`java_jmh`) erwartet Ausgaben des [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) im [JSON-Format (d.h. `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
-Diese JSON-Ausgabe wird in einer Datei gespeichert, daher müssen Sie das `bencher run` CLI `--file` Argument verwenden, um diesen Dateipfad anzugeben.
-Es können sowohl `latency` als auch `throughput` Messungen (d.h. `Nanosekunden (ns)` und `Operationen / Sekunde (ops/sec)`) erfasst werden.
-Die `lower_value` und `upper_value` sind die unteren und oberen Konfidenzintervalle für den Mittelwert (d.h. `value`) bzw.
+Der Java JMH Adapter (`java_jmh`) erwartet Ausgaben des [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) im [JSON-Format (d.h. `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
+Diese JSON-Ausgabe wird in einer Datei gespeichert, daher müssen Sie die Option `--file` des `bencher run` CLI verwenden, um diesen Dateipfad anzugeben.
 
 <Java />
+
+Der Name des Benchmarks ist der Benchmark, wie JMH ihn benennt (d.h. `org.example.MyBenchmark.hash`).
+Jeder `@Param` wird zu einem Parameter, mit seinem Wert als String,
+und der Modus wird zum Parameter `@mode` (d.h. `thrpt`, `avgt`, `sample` oder `ss`).
+Eine Variante mit mehr als 8 Parametern wird in den Warnungen des Berichts als übersprungen gezählt.
+
+Der primäre Score wird in der Measure seines Modus erfasst:
+`throughput` (d.h. `operations / second (ops/s)`) für `thrpt`
+sowie `latency`, `sample-time` und `single-shot-time` (d.h. `nanoseconds (ns)`) für `avgt`, `sample` bzw. `ss`.
+Seine Metriken sind der `mean` mit dem 99,9-%-Intervall von JMH (d.h. `mean_ci99_9_lower` und `mean_ci99_9_upper`)
+und die Perzentile, die JMH meldet: `min`, `median`, `p90`, `p95`, `p99`, `p99_9`, `p99_99`, `p99_999`, `p99_9999` und `max`.
+
+Ein sekundäres Ergebnis in der Einheit des primären Scores, ein `@AuxCounters` Operationszähler oder ein `@Group` Mitglied,
+wird in derselben Measure in einer eigenen Variante erfasst, mit seinem Label als Parameter `@label`.
+Jedes andere sekundäre Ergebnis, zum Beispiel die von `-prof gc`, ist eine Measure, die nach seinem Label benannt ist, in seiner Einheit, wie JMH sie schreibt.
+Ein sekundäres Ergebnis, das JMH summiert, hat statt des `mean` und seines Intervalls eine Metrik `sum`.
+Ein sekundäres Ergebnis ohne endlichen Wert wird verworfen,
+und eines, das wie eine Measure des primären Scores benannt ist (d.h. `latency`), wird als übersprungen gezählt.
+
+Legen Sie zuerst für die Metrik `median` einen Schwellenwert fest, mit `--threshold-metric median`.
+
+<details>
+<summary>BMF Version 0</summary>
+
+In BMF Version 0 können sowohl die `latency` als auch die `throughput` Measure (d.h. `nanoseconds (ns)` und `operations / second (ops/s)`) erfasst werden.
+Die `lower_value` und `upper_value` sind die untere bzw. obere Grenze des Konfidenzintervalls für den Mittelwert (d.h. `value`).
+
+</details>

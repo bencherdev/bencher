@@ -2,9 +2,35 @@ import Java from "../java.mdx";
 
 ## ☕️ Java JMH
 
-Java JMH アダプター (`java_jmh`) は、[Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) の出力を [JSON形式 (つまり `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java)で期待しています。
-この JSON 出力はファイルに保存されるため、ファイルパスを指定するために `bencher run` CLI の `--file` 引数を使用する必要があります。
-`latency` と `throughput` の測定値（つまり `ナノ秒 (ns)` と `秒間操作数 (ops/sec)`）が収集されることがあります。
-`lower_value` と `upper_value` は、それぞれ平均（つまり `value`）の下限および上限の信頼区間です。
+Java JMH アダプター（`java_jmh`）は、[JSON 形式（つまり `-rf json`）](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java)の [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) の出力を想定しています。
+この JSON 出力はファイルに保存されるため、`bencher run` CLI の `--file` オプションでそのファイルパスを指定する必要があります。
 
 <Java />
+
+ベンチマーク名は、JMH が名付けたとおりのベンチマークです（つまり `org.example.MyBenchmark.hash`）。
+各 `@Param` は値を文字列とするパラメータになり、
+モードは `@mode` パラメータになります（つまり `thrpt`、`avgt`、`sample`、`ss`）。
+パラメータが 8 個を超えるバリアントは、レポートの警告でスキップとして数えられます。
+
+主スコアは、そのモードのメジャーに収集されます:
+`thrpt` では `throughput`（つまり `operations / second (ops/s)`）、
+`avgt`、`sample`、`ss` ではそれぞれ `latency`、`sample-time`、`single-shot-time`（つまり `nanoseconds (ns)`）です。
+そのメトリックは、JMH の 99.9% 区間付きの `mean`（つまり `mean_ci99_9_lower` と `mean_ci99_9_upper`）と、
+JMH が報告するパーセンタイル（`min`、`median`、`p90`、`p95`、`p99`、`p99_9`、`p99_99`、`p99_999`、`p99_9999`、`max`）です。
+
+主スコアと同じ単位の副次結果（`@AuxCounters` の操作カウンターや `@Group` のメンバー）は、
+同じメジャーの独自のバリアントに収集され、そのラベルが `@label` パラメータになります。
+`-prof gc` によるものなど、その他のすべての副次結果は、そのラベルにちなんで名付けられたメジャーになり、単位は JMH が書き込むとおりです。
+JMH が合計する副次結果は、`mean` とその区間の代わりに `sum` メトリックを持ちます。
+有限の値を持たない副次結果は破棄され、
+主スコアのメジャーと同じラベル（つまり `latency`）を持つ副次結果はスキップとして数えられます。
+
+まず `median` メトリックにしきい値を設定してください（`--threshold-metric median`）。
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+BMF バージョン 0 では、`latency` と `throughput` の両方のメジャー（つまり `nanoseconds (ns)` と `operations / second (ops/s)`）が収集される場合があります。
+`lower_value` と `upper_value` は、それぞれ平均（つまり `value`）の信頼区間の下限と上限です。
+
+</details>

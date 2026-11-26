@@ -1,15 +1,36 @@
 import Pytest from "../pytest.mdx";
 
-## 🐍 파이썬 Pytest
+## 🐍 Python Pytest
 
-파이썬 Pytest 어댑터 (`python_pytest`)는 [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) 출력을 [JSON 형식 (`--benchmark-json results.json`옵션을 사용하여)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options)으로 기대합니다.
-이 JSON 출력은 파일로 저장되므로 파일 경로를 지정하기 위해 `bencher run` CLI의 `--file` 인자를 사용해야 합니다.
-`latency` 측정값은 (예: `나노초 (ns)`) 수집됩니다.
+Python Pytest 어댑터(`python_pytest`)는 [JSON 형식(즉, `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options)의 [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) 출력을 입력으로 받습니다.
+이 JSON 출력은 파일로 저장되므로, `bencher run` CLI의 `--file` 옵션으로 그 파일 경로를 지정해야 합니다.
+JSON은 모든 라운드의 시간을 담으므로, 긴 실행은 API 서버의 요청 본문 한도(기본값 4 MiB)를 넘을 수 있습니다.
+파일을 작게 유지하려면 `--benchmark-max-time`으로 각 벤치마크에 쓰는 시간을 제한하세요:
 
 <Pytest />
 
-메트릭에는 두 가지 옵션이 있습니다:
-- `mean` (기본값): `lower_value`와 `upper_value`는 각각 평균(예: `value`) 아래와 위에 한 표준편차입니다.
-- `median`: `lower_value`와 `upper_value`는 각각 중앙값(예: `value`) 아래와 위에 하나의 사분위 범위입니다.
+각 벤치마크의 이름은 `benchmarks.py::test_sort`처럼 `[param]` 접미사를 뺀 전체 이름이며,
+매개변수화된 테스트의 `params`는 `{"size": 64}`처럼 그 매개변수가 됩니다.
+`params`의 값이 문자열, 숫자, 불리언이 아니거나 8개를 넘으면,
+벤치마크는 전체 이름을 유지하며 매개변수가 없습니다.
 
-이는 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드에서 선택적 `--average` 인자를 사용하여 지정할 수 있습니다.
+다음 측정이 수집됩니다:
+- `latency`(즉, `nanoseconds (ns)`): `mean`, `median`, `min`, `max`, `std_dev`, 사분위수 `p25`와 `p75`, `iqr`(사분위 범위),
+  pytest-benchmark가 계산하는 `lower_whisker`와 `upper_whisker`, 그리고 모든 라운드의 총 시간인 `sum`
+- `throughput`(즉, `operations / second (ops/s)`): pytest-benchmark가 `ops`로 보고하는 처리율인 `mean`
+
+한 라운드만 실행된 벤치마크에는 `std_dev`가 없습니다.
+`latency`에는 먼저 `median` 메트릭에 임계값을 설정하고(`--threshold-metric median`),
+`throughput`에는 `mean` 메트릭에 설정하세요.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+`latency` 측정(즉, `nanoseconds (ns)`)이 수집됩니다.
+메트릭에는 두 가지 옵션이 있습니다:
+- `mean`(기본값): `lower_value`와 `upper_value`는 각각 평균(즉, `value`)보다 표준 편차 하나만큼 아래와 위의 값입니다.
+- `median`: `lower_value`와 `upper_value`는 각각 중앙값(즉, `value`)보다 사분위 범위 하나만큼 아래와 위의 값입니다.
+
+이는 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드의 `--average` 옵션으로 지정할 수 있습니다.
+
+</details>

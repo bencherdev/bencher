@@ -1,10 +1,39 @@
 import Go from "../go.mdx";
+import GoJson from "../go-json.mdx";
 
 ## 🕳 Go Bench
 
 The Go Bench Adapter (`go_bench`) expects [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks) output.
-The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
+
+<Go />
+
+Its JSON output (ie `go test -json`) is also read, and it is tried first:
+
+<GoJson />
+
+The Benchmark name is the package, a `.`, and the benchmark (ie `example.com/sort.BenchmarkSort`),
+without its `-N` suffix and its `key=value` parts.
+The `-N` suffix becomes the `@gomaxprocs` Parameter, which is `1` when Go prints no suffix,
+and each `key=value` part of a sub-benchmark name becomes a Parameter of that key, with a numeric value as a number.
+A part with the key `@gomaxprocs` is counted as skipped in the Report's warnings.
+At `GOMAXPROCS=1`, Go prints no suffix, so a sub-benchmark name that itself ends in `-N` reads as that `@gomaxprocs`.
+
+The `latency` Measure (ie `ns/op`) is gathered in nanoseconds (ns).
+With `-benchmem`, the `allocated` (ie `B/op`) and `allocations` (ie `allocs/op`) Measures are gathered too,
+and with `b.SetBytes`, the `bytes-throughput` Measure (ie `MB/s`) in bytes per second.
+Each custom unit from `b.ReportMetric` is a Measure named by the unit as Go prints it.
+For a single run, each value per operation (ie a unit ending in `/op`) and the `MB/s` rate is a `mean`, and a value in any other unit is a `value`.
+With `-count`, the runs of each Variant are combined into their `mean`, `median`, `min`, `max`, and `std_dev`.
+
+With `-count`, threshold the `median` Metric first, with `--threshold-metric median`.
+For a single run, threshold `mean` first, or `value` for a custom unit that does not end in `/op`.
+
+<details>
+<summary>BMF version 0</summary>
+
+At BMF version 0, only the text output is read, with the name as Go prints it as the Benchmark name.
+Only the `latency` Measure (ie `nanoseconds (ns)`) is gathered.
 Only the mean (ie `value`) is available.
 Neither `lower_value` nor `upper_value` are collected.
 
-<Go />
+</details>

@@ -2,14 +2,35 @@ import Pytest from "../pytest.mdx";
 
 ## 🐍 Python Pytest
 
-El Adaptador Pytest de Python (`python_pytest`) espera la salida de [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) en [formato JSON (es decir, `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
-Esta salida JSON se guarda en un archivo, por lo que debes usar el argumento `--file` de la CLI `bencher run` para especificar la ruta de ese archivo.
-Se recopila la Medida `latency` (es decir, `nanosegundos (ns)`).
+El adaptador Python Pytest (`python_pytest`) espera la salida de [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) en [formato JSON (es decir, `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
+Esta salida JSON se guarda en un archivo, así que debes usar la opción `--file` de la CLI `bencher run` para especificar la ruta de ese archivo.
+El JSON contiene el tiempo de cada ronda, así que una ejecución larga puede superar el límite del cuerpo de la petición del servidor API (4 MiB por defecto).
+Limita el tiempo dedicado a cada benchmark con `--benchmark-max-time` para mantener el archivo pequeño:
 
 <Pytest />
 
-Hay dos opciones para la Métrica:
-- `mean` (predeterminado): Los valores `lower_value` y `upper_value` son una desviación estándar por debajo y por encima de la media (es decir, `value`) respectivamente.
-- `median`: Los valores `lower_value` y `upper_value` son un rango intercuartílico por debajo y por encima de la mediana (es decir, `value`) respectivamente.
+Cada Benchmark se nombra por su nombre completo sin su sufijo `[param]`, como `benchmarks.py::test_sort`,
+y los `params` de un test parametrizado son sus Parámetros, como `{"size": 64}`.
+Cuando un valor de `params` no es una cadena, un número o un booleano, o hay más de 8,
+el Benchmark conserva su nombre completo y no tiene Parámetros.
 
-Esto se puede especificar en el subcomando CLI de <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> con el argumento opcional `--average`.
+Se recogen estas Medidas:
+- `latency` (es decir, `nanoseconds (ns)`): `mean`, `median`, `min`, `max`, `std_dev`, los cuartiles `p25` y `p75`, `iqr` (el rango intercuartílico),
+  `lower_whisker` y `upper_whisker` tal como los calcula pytest-benchmark, y `sum`, el tiempo total de todas las rondas
+- `throughput` (es decir, `operations / second (ops/s)`): `mean`, la tasa que pytest-benchmark informa como `ops`
+
+Un benchmark de una sola ronda no tiene `std_dev`.
+Pon un Umbral primero a la Métrica `median` para `latency`, con `--threshold-metric median`,
+y a la Métrica `mean` para `throughput`.
+
+<details>
+<summary>BMF versión 0</summary>
+
+Se recoge la Medida `latency` (es decir, `nanoseconds (ns)`).
+Hay dos opciones para la Métrica:
+- `mean` (predeterminada): El `lower_value` y el `upper_value` están una desviación estándar por debajo y por encima de la media (es decir, `value`) respectivamente.
+- `median`: El `lower_value` y el `upper_value` están un rango intercuartílico por debajo y por encima de la mediana (es decir, `value`) respectivamente.
+
+Esto se puede especificar en el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> con la opción `--average`.
+
+</details>

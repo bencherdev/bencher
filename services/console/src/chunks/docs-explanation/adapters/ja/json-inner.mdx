@@ -2,13 +2,33 @@ import BencherMock from "../bencher-mock.mdx";
 
 ## \{...\} JSON
 
-JSON アダプタ（`json`）は、[Bencher Metric Format (BMF) JSON][bmf]を期待しています。
-これは、カスタムベンチマークハーネスをBencherと統合するのに最適です。
+JSON アダプター（`json`）は [Bencher Metric Format (BMF) JSON][bmf] を想定しています。
+カスタムベンチマークハーネスを Bencher と統合するのに最適です。
 詳細については、[カスタムベンチマークの追跡方法][custom benchmarks]と
-[BMF JSON リファレンス][bmf]をご覧ください。
+[BMF JSON リファレンス][bmf]を参照してください。
 
 {props.children}
 
+`json` アダプターは、レポートの BMF バージョンでペイロードを読み取ります。
+レポートがバージョンを宣言しない限り、それはプロジェクトの BMF バージョンです。
+BMF バージョン 1 では、バリアントの各メジャーが名前付きのメトリックを保持します。
+どのプロジェクトでもペイロードのバージョンを宣言するには、二つのバージョンの `json` アダプターのいずれかを使用します:
+- `json_v1`: `bencher run --adapter json_v1` は BMF バージョン 1 を宣言します
+- `json_v0`: `bencher run --adapter json_v0` は BMF バージョン 0 を宣言します
+
+期待されるバージョンで解析できないペイロードは、
+解析されたバージョンと、期待されるバージョンがどこから来たかを示すエラーで拒否されます。
+最初にしきい値を設定するメトリックは、メジャーにあれば `value`、
+次に `median`、次に `mean`、それ以外の場合はアルファベット順で最初のメトリック名です。
+その際、`mean_ci_lower` のような区間の境界よりも、素の統計量が先になります。
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+BMF バージョン 0 では、各メジャーは `value` と、省略可能な `lower_value` および `upper_value` を保持します。
+メジャー内のそれ以外の名前は無視されます。
+
+</details>
+
 [bmf]: /ja/docs/reference/bencher-metric-format/
-[bencher run]: /ja/docs/explanation/bencher-run/#benchmark-command
 [custom benchmarks]: /ja/docs/how-to/track-custom-benchmarks/

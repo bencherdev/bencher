@@ -2,9 +2,35 @@ import Java from "../java.mdx";
 
 ## ☕️ Java JMH
 
-Адаптер Java JMH (`java_jmh`) ожидает вывод [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) в [формате JSON (т.е. `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
-Этот вывод в формате JSON сохраняется в файл, поэтому вы должны использовать аргумент `--file` командной строки `bencher run`, чтобы указать путь к этому файлу.
-Могут быть собраны показатели как `latency`, так и `throughput` (т.е. `наносекунды (ns)` и `операции в секунду (ops/sec)`).
-`lower_value` и `upper_value` являются нижним и верхним доверительными интервалами для среднего значения (т.е. `value`) соответственно.
+Адаптер Java JMH (`java_jmh`) ожидает вывод [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) в [формате JSON (то есть `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
+Этот JSON-вывод сохраняется в файл, поэтому вы должны использовать опцию `--file` команды CLI `bencher run`, чтобы указать путь к этому файлу.
 
 <Java />
+
+Имя Бенчмарка является именем бенчмарка в том виде, в каком его дает JMH (то есть `org.example.MyBenchmark.hash`).
+Каждый `@Param` становится Параметром со значением в виде строки,
+а режим становится Параметром `@mode` (то есть `thrpt`, `avgt`, `sample` или `ss`).
+Вариант с более чем 8 Параметрами учитывается как пропущенный в замечаниях Отчета.
+
+Основной результат собирается в Измерение своего режима:
+`throughput` (то есть `operations / second (ops/s)`) для `thrpt`,
+и `latency`, `sample-time` и `single-shot-time` (то есть `nanoseconds (ns)`) для `avgt`, `sample` и `ss` соответственно.
+Его Метриками являются `mean` с интервалом JMH 99.9% (то есть `mean_ci99_9_lower` и `mean_ci99_9_upper`)
+и перцентили, которые сообщает JMH: `min`, `median`, `p90`, `p95`, `p99`, `p99_9`, `p99_99`, `p99_999`, `p99_9999` и `max`.
+
+Вторичный результат в единице основного результата (счетчик операций `@AuxCounters` или участник `@Group`)
+собирается в то же Измерение в собственном Варианте, а его метка становится Параметром `@label`.
+Каждый другой вторичный результат, например результаты `-prof gc`, является Измерением, названным по его метке, в единице, которую записывает JMH.
+Вторичный результат, который JMH суммирует, имеет Метрику `sum` вместо `mean` и его интервала.
+Вторичный результат без конечного значения отбрасывается,
+а результат с меткой, совпадающей с Измерением основного результата (то есть `latency`), учитывается как пропущенный.
+
+В первую очередь задайте Порог для Метрики `median` с помощью `--threshold-metric median`.
+
+<details>
+<summary>BMF версия 0</summary>
+
+В BMF версии 0 могут собираться оба Измерения `latency` и `throughput` (то есть `nanoseconds (ns)` и `operations / second (ops/s)`).
+`lower_value` и `upper_value` являются нижней и верхней границами доверительного интервала для среднего (то есть `value`) соответственно.
+
+</details>

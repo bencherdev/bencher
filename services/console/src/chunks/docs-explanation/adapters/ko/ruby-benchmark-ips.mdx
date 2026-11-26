@@ -1,0 +1,26 @@
+import BenchmarkIpsJson from "../benchmark-ips-json.mdx";
+import RubyBenchmarkIps from "../ruby-benchmark-ips.mdx";
+
+## ♦️ Ruby benchmark-ips
+
+Ruby benchmark-ips 어댑터(`ruby_benchmark_ips`)는 JSON 형식의 [benchmark-ips](https://github.com/evanphx/benchmark-ips) 출력을 입력으로 받습니다.
+`x.json!`으로 파일에 기록하세요:
+
+<BenchmarkIpsJson />
+
+이 JSON 출력은 파일로 저장되므로, `bencher run` CLI의 `--file` 옵션으로 그 파일 경로를 지정해야 합니다.
+
+<RubyBenchmarkIps />
+
+각 벤치마크의 이름은 그 레이블입니다.
+Hash처럼 문자열이 아닌 레이블은 압축된 JSON 텍스트가 이름이 됩니다.
+모든 벤치마크는 하나의 매개변수 `@stats`를 가지며, 이는 실행에 쓰인 통계 모드로 `sd`(기본값) 또는 `bootstrap`(즉, `x.config(stats: :bootstrap)`)입니다.
+`throughput` 측정(즉, `operations / second (ops/s)`)은 다음 메트릭으로 수집됩니다:
+- `mean`: benchmark-ips가 보고하는 처리율
+- `@stats`가 `sd`이면 `std_dev`: 처리율의 표준 편차
+- `@stats`가 `bootstrap`이면 `mean_ci_lower`와 `mean_ci_upper`: 처리율의 부트스트랩 신뢰 구간
+
+먼저 `mean` 메트릭에 임계값을 설정하세요(`--threshold-metric mean`).
+
+Ruby benchmark-ips 어댑터는 BMF 버전 1에서만 결과를 읽습니다.
+BMF 버전 0인 프로젝트의 보고서는 프로젝트를 BMF 버전 1로 옮기는 방법을 알려 주는 오류와 함께 거부됩니다.

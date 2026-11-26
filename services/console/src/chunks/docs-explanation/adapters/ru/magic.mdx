@@ -1,10 +1,17 @@
-## 🪄 Magic <small>(по умолчанию)</small>
+## 🪄 Magic <small>(default)</small>
 
-Адаптер Magic (`magic`) — это надмножество всех остальных адаптеров.
-По этой причине он является адаптером по умолчанию для `bencher run`.
-Однако адаптер `magic` следует использовать только для ознакомительных целей.
+Адаптер Magic (`magic`) является надмножеством всех остальных адаптеров.
+Поэтому он является адаптером по умолчанию для `bencher run`.
+Однако адаптер `magic` следует использовать только для ознакомления.
 
-Для наилучших результатов следует указать адаптер фреймворка бенчмарков:
+В BMF версии 1 адаптер `magic` сначала пробует [адаптер `json`](#-json),
+затем каждый адаптер оболочки в порядке приведенного ниже списка,
+причем структурированный вывод оболочки читается раньше ее текстового вывода.
+Используется первый адаптер, который прочитал хоть какие-то результаты,
+поэтому запускайте только одну оболочку бенчмаркинга за один `bencher run`.
+Данные в BMF версии 0 для Проекта с BMF версией 1 отклоняются с ошибкой, в которой названы обе версии.
+
+Для лучших результатов следует указать адаптер оболочки бенчмаркинга:
 
 - [\{...\} JSON](#-json)
 - [#️⃣ C# BenchmarkDotNet](#%EF%B8%8F%E2%83%A3-c-dotnet)
@@ -16,10 +23,15 @@
 - [🕸 JavaScript Benchmark.js](#-javascript-benchmark)
 - [🕸 JavaScript console.time/console.timeEnd](#-javascript-time)
 - [🕸 JavaScript Vitest](#-javascript-vitest)
+- [🕸 JavaScript Deno bench](#-javascript-deno)
+- [🕸 JavaScript mitata](#-javascript-mitata)
+- [🕸 JavaScript tinybench](#-javascript-tinybench)
 - [🐍 Python airspeed velocity (asv)](#-python-asv)
 - [🐍 Python pytest-benchmark](#-python-pytest)
 - [♦️ Ruby Benchmark](#%EF%B8%8F-ruby-benchmark)
+- [♦️ Ruby benchmark-ips](#%EF%B8%8F-ruby-benchmark-ips)
 - [🦀 Rust libtest bench](#-rust-bench)
+- [🦀 Rust Divan](#-rust-divan)
 - [🦀 Rust Criterion](#-rust-criterion)
 - [🦀 Rust Iai](#-rust-iai)
 - [🦀 Rust Gungraun](#-rust-gungraun)

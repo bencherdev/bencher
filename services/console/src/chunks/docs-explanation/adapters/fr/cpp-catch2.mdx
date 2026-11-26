@@ -1,9 +1,41 @@
+import CppCatch2Xml from "../cpp-catch2-xml.mdx";
 import MakeCppCatch2 from "../make-cpp-catch2.mdx";
 
 ## ➕ C++ Catch2
 
 L'adaptateur C++ Catch2 (`cpp_catch2`) attend une sortie [Catch2](https://github.com/catchorg/Catch2).
-La mesure de `latency` (c'est-à-dire `nanosecondes (ns)`) est recueillie.
-Les `lower_value` et `upper_value` sont une déviation standard en dessous et au-dessus de la moyenne (c'est-à-dire `value`) respectivement.
+Le reporter XML de Catch2 (c.-à-d. `-r xml`) est lu en premier et donne les résultats les plus fiables, il est donc recommandé :
+
+<CppCatch2Xml />
+
+La sortie console de Catch2 est aussi lue, au mieux :
 
 <MakeCppCatch2 />
+
+La sortie propre de votre programme à l'intérieur du tableau de Catch2 ne peut pas toujours être distinguée de celle de Catch2,
+donc le benchmark dans lequel elle tombe est compté comme ignoré dans les avertissements du Rapport.
+Écrivez plutôt sur `stderr` ou utilisez le reporter XML.
+Sur une console de moins de 59 colonnes, Catch2 coupe le titre du tableau, donc chaque benchmark est compté comme ignoré.
+
+Le nom du Benchmark est le cas de test, chaque section et le benchmark, séparés par des barres obliques (c.-à-d. `Case / Section / Bench`).
+Il n'y a pas de Paramètres.
+La Mesure `latency` est recueillie en nanosecondes (ns),
+avec la `mean` et le `std_dev`, chacun avec les bornes de son intervalle bootstrap.
+Le XML nomme chaque intervalle avec son niveau de confiance (c.-à-d. `mean_ci95_lower` et `mean_ci95_upper`),
+tandis que la sortie console n'indique aucun niveau (c.-à-d. `mean_ci_lower` et `mean_ci_upper`).
+Avec `--benchmark-no-analysis`, seule la `mean` est recueillie.
+
+Placez d'abord un Seuil sur la Métrique `mean`, avec `--threshold-metric mean`.
+
+Catch2 se termine avec une erreur lorsqu'un benchmark échoue, et `bencher run` échoue alors aussi.
+Avec le drapeau `--allow-failure`, `bencher run` continue, mais il écarte la sortie de cette itération,
+donc aucun de ses résultats n'est envoyé.
+
+<details>
+<summary>BMF version 0</summary>
+
+En version 0 de BMF, seule la sortie console de Catch2 est lue.
+La Mesure `latency` (c.-à-d. `nanoseconds (ns)`) est recueillie.
+Les `lower_value` et `upper_value` sont à un écart type en dessous et au-dessus de la moyenne (c.-à-d. `value`) respectivement.
+
+</details>

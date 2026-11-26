@@ -1,10 +1,30 @@
 import Ruby from "../ruby.mdx";
 
-## ♦️ Benchmark Ruby
+## ♦️ Ruby Benchmark
 
-L'adaptateur Benchmark Ruby (`ruby_benchmark`) attend la sortie du [module Benchmark](https://github.com/ruby/benchmark) pour les méthodes `#bm`, `#bmbm` et `#benchmark`.
+L'adaptateur Ruby Benchmark (`ruby_benchmark`) attend la sortie du [module Benchmark](https://github.com/ruby/benchmark) pour les méthodes `#bm`, `#bmbm` et `#benchmark`.
 Un libellé est requis pour chaque benchmark.
-La mesure de `latence` (c'est-à-dire `nanosecondes (ns)`) est recueillie.
-Seule la valeur rapportée (c'est-à-dire `valeur`) est disponible. Il n'y a ni `valeur_inférieure` ni `valeur_supérieure`.
+Chaque Benchmark est nommé d'après son libellé, sans Paramètres.
+Ces Mesures sont recueillies, chacune avec une seule Métrique, `value` : le temps que Ruby affiche dans cette colonne.
+- `latency` (c.-à-d. `nanoseconds (ns)`) : le temps `real`
+- `user-time` (c.-à-d. `nanoseconds (ns)`) : le temps `user`
+- `system-time` (c.-à-d. `nanoseconds (ns)`) : le temps `system`
+- `cpu-time` (c.-à-d. `nanoseconds (ns)`) : le temps `total`
+
+Placez d'abord un Seuil sur la Métrique `value`, avec `--threshold-metric value`.
+
+La sortie est lue au mieux.
+Ruby affiche le libellé d'une ligne, exécute son bloc, puis affiche ses temps,
+donc un bloc qui affiche quelque chose coupe sa ligne : cette ligne est comptée comme ignorée dans les avertissements du Rapport, et les lignes suivantes sont toujours lues.
+Écrivez sur `stderr` depuis l'intérieur d'un benchmark pour garder chaque ligne.
 
 <Ruby />
+
+<details>
+<summary>BMF version 0</summary>
+
+La Mesure `latency` (c.-à-d. `nanoseconds (ns)`) est recueillie.
+Seule la valeur rapportée (c.-à-d. `value`) est disponible.
+Ni `lower_value` ni `upper_value` ne sont recueillies.
+
+</details>
