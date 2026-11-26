@@ -1565,6 +1565,70 @@ async fn channel_failed_whole_job_fails_under_allow_failure() {
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
+/// A whole Job an older server sent as 1 execution parses run by run, as its gaps are formed:
+/// under `allow_failure`, the stdout of a run that exited non-zero is never parsed, and a clean
+/// run whose output Bencher cannot read fails the Job, named by its iteration.
+///
+/// Kills: a parse on arrival that skips a whole Job, parses its gaps, or names its first iteration.
+#[tokio::test]
+async fn channel_completed_whole_job_parses_each_run() {
+    let server = TestServer::new().await;
+    let (mut ws, job_uuid, _report_id) =
+        setup_reconnect_with_job_in(&server, "whole-parse", JobStatus::Running).await;
+    diesel::sql_query(
+        "UPDATE job SET config = json_set(config, '$.allow_failure', json('true'), '$.iter', 3)
+            WHERE uuid = ?",
+    )
+    .bind::<diesel::sql_types::Text, _>(job_uuid.to_string())
+    .execute(&mut server.db_conn())
+    .expect("Failed to allow failure");
+
+    let run = |exit_code: i32, stdout: &str| JsonIterationOutput {
+        exit_code,
+        stdout: Some(stdout.to_owned()),
+        stderr: None,
+        output: None,
+    };
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            job: job_uuid,
+            results: vec![
+                run(0, r#"{"bench":{"latency":{"value":1.0}}}"#),
+                run(1, "the benchmark crashed"),
+                run(0, "this is not benchmark output"),
+            ],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+
+    let config: bencher_json::JsonJobConfig = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::config)
+        .first(&mut server.db_conn())
+        .expect("Failed to get the job's config");
+    let output = server
+        .context()
+        .oci_storage()
+        .job_output()
+        .get(config.project, job_uuid)
+        .await
+        .expect("Failed to read the job's output")
+        .expect("the job's output is stored");
+    let error = output.error.expect("the job's error");
+    assert!(
+        error.starts_with(
+            "Failed to parse the output of iteration 2: Failed to convert results with adapter"
+        ),
+        "{error}"
+    );
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
 /// Failed with multiple iterations (partial results before failure).
 /// The job should transition to Failed.
 #[tokio::test]

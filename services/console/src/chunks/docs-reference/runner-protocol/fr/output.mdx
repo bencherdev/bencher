@@ -12,7 +12,9 @@ Chaque itération enregistre son `exit_code`, son `stdout`, son `stderr`,
 ainsi qu'une carte de tous les fichiers de sortie collectés avec leur contenu.
 Avec `allow_failure`, une itération dont l'exécution a échoué ne garde que son `exit_code` et son `stderr`,
 de sorte qu'elle garde sa place et qu'aucune Metric n'en atteint le Report.
-Une fois la sortie stockée, le serveur exécute l'[adaptateur du harnais de benchmark][adapters] sur les résultats
+La sortie de chaque exécution est analysée avec l'[adaptateur du harnais de benchmark][adapters] dès qu'elle est stockée,
+et une sortie qui ne peut pas être lue fait échouer le Job aussitôt, même avec `allow_failure`.
+Une fois la sortie du Job stockée, le serveur exécute l'[adaptateur du harnais de benchmark][adapters] sur les résultats
 pour analyser les Metrics et les Alerts dans le Report, faisant passer le Job à `processed`.
 
 La sortie est renvoyée lorsqu'un Job est interrogé avec l'[API `GET /v0/projects/{project}/jobs/{job}`][job query api].

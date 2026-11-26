@@ -23,11 +23,12 @@ use bencher_schema::{
     error::resource_conflict_err,
     model::{
         organization::OrganizationId,
+        project::report::results::ParseRecord,
         runner::{
             ExecutionStatus, InsertJobExecution, JobExecutionId, JobExecutions, JobId, JobTimeout,
             QueryJob, QueryJobExecution, QueryRunner, QueryRunnerStatus, RunnerId, RunnerReport,
-            StatusChange, UpdateJob, UpdateJobExecution, end_job, end_job_now, finish_failed_job,
-            job_execution::is_in_progress, settle_job, sync_job_status,
+            StatusChange, UpdateJob, UpdateJobExecution, end_job, end_job_now, execution_runs,
+            finish_failed_job, job_execution::is_in_progress, settle_job, sync_job_status,
         },
         spec::QuerySpec,
     },
@@ -625,12 +626,13 @@ enum RunResult {
 
 /// Handle a runner's result for an execution, from its channel or resent after a reconnect.
 ///
-/// A run that completed has its output stored as the execution's own blob at once, and its job
-/// goes on: to its next execution, or to its outcome once every iteration has one. A `Failed`
-/// fails its job. A completed run that failed fails its job too, unless the job allows failure, in
-/// which case its iteration is a gap. A runner that acknowledges a cancel ends the execution, and
-/// the job if it has no outcome yet.
-/// A result for an execution or job that already has its outcome is acknowledged and discarded.
+/// A run that completed has its output stored as the execution's own blob at once, and parsed,
+/// and its job goes on: to its next execution, or to its outcome once every iteration has one. A
+/// `Failed` fails its job. A completed run that failed fails its job too, unless the job allows
+/// failure, in which case its iteration is a gap. Output that Bencher cannot read fails its job,
+/// with or without `allow_failure`. A runner that acknowledges a cancel ends the execution, and
+/// the job if it has no outcome yet. A result for an execution or job that already has its outcome
+/// is acknowledged and discarded.
 ///
 /// Uses status filters on the UPDATEs to avoid TOCTOU races.
 async fn handle_result(
@@ -714,29 +716,24 @@ async fn handle_result(
     } else {
         ExecutionStatus::Completed
     };
+    let job_failure = if let Some(error) = failure.filter(|_| fails_job) {
+        Some(JobFailure::Run(error))
+    } else {
+        // Parsed before the write lock, so a parse never holds it.
+        let runs = execution_runs(job, &execution, status, output);
+        job.output_parser(context)
+            .await?
+            .parse_execution(execution.iteration, runs)
+            .err()
+            .map(JobFailure::Unreadable)
+    };
     // 1 transaction, so neither a claim nor a restart finds a failed execution whose job has an
     // iteration to send.
     let recorded = write_transaction!(context, |conn| {
         // Read after the store, under the lock, so a heartbeat of another execution of the job
         // never bills to a later time than this execution's end.
         let now = context.clock.now();
-        let updated = UpdateJobExecution::end(status, now).execute_if_any_status(
-            conn,
-            execution_id,
-            &ExecutionStatus::IN_FLIGHT,
-        )?;
-        Ok::<_, diesel::result::Error>(if updated == 0 {
-            Recorded::Late
-        } else if let Some(error) = failure.filter(|_| fails_job) {
-            if end_job(conn, job.id, JobStatus::Failed, now)? {
-                Recorded::JobFailed(Box::new(JobExecutions::get(conn, job.id)?), error)
-            } else {
-                Recorded::JobEnded
-            }
-        } else {
-            sync_job_status(conn, job.id, now)?;
-            Recorded::Ended
-        })
+        record_result(conn, execution_id, job, status, job_failure, now)
     })?;
 
     match recorded {
@@ -752,6 +749,51 @@ async fn handle_result(
     Ok(())
 }
 
+/// End an execution with `status`, and fail its job with `job_failure`, if any, or else bring the
+/// job's status up to date.
+fn record_result(
+    conn: &mut bencher_schema::context::DbConnection,
+    execution_id: JobExecutionId,
+    job: &QueryJob,
+    status: ExecutionStatus,
+    job_failure: Option<JobFailure>,
+    now: bencher_json::DateTime,
+) -> diesel::QueryResult<Recorded> {
+    let updated = UpdateJobExecution::end(status, now).execute_if_any_status(
+        conn,
+        execution_id,
+        &ExecutionStatus::IN_FLIGHT,
+    )?;
+    Ok(if updated == 0 {
+        Recorded::Late
+    } else if let Some(job_failure) = job_failure {
+        if end_job(conn, job.id, JobStatus::Failed, now)? {
+            let error = match job_failure {
+                JobFailure::Run(error) => error,
+                JobFailure::Unreadable(error) => {
+                    ParseRecord::FAILED.update(conn, job.report_id)?;
+                    error
+                },
+            };
+            Recorded::JobFailed(Box::new(JobExecutions::get(conn, job.id)?), error)
+        } else {
+            Recorded::JobEnded
+        }
+    } else {
+        sync_job_status(conn, job.id, now)?;
+        Recorded::Ended
+    })
+}
+
+/// Why an execution's result fails its job.
+enum JobFailure {
+    /// The runner sent `Failed`, or a completed run failed without `allow_failure`.
+    Run(String),
+    /// Bencher cannot read the run's output, and its report records that its results did not
+    /// parse.
+    Unreadable(String),
+}
+
 /// What recording an execution's result did.
 enum Recorded {
     /// The execution was no longer in flight, so its result is late.
@@ -760,7 +802,7 @@ enum Recorded {
     Ended,
     /// The execution failed its job, with this error.
     JobFailed(Box<JobExecutions>, String),
-    /// The execution failed, and its job already had its outcome.
+    /// The execution would have failed its job, which already had its outcome.
     JobEnded,
 }
 

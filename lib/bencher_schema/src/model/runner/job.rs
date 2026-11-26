@@ -33,7 +33,11 @@ use crate::{
         project::{
             ProjectId, QueryProject,
             linked_repository::QueryLinkedRepository,
-            report::{QueryReport, ReportId, results::ReportBmfVersion, warning::ReportWarnings},
+            report::{
+                QueryReport, ReportId,
+                results::{ReportBmfVersion, parse_payloads},
+                warning::ReportWarnings,
+            },
         },
         runner::{
             InsertJobCallback, QueryJobCallbackView, QueryRunner, RunnerId, SourceIp,
@@ -150,26 +154,17 @@ impl QueryJob {
         let api_actor = ApiActor::Public(PublicUser::Public(None));
         let plan_kind = PlanKind::new_for_job_results(context, &query_project, &api_actor).await?;
 
-        // Each runner iteration is one report iteration, holding its files in the job's
-        // file order, or else its stdout. Each file parses on its own and merges into its
-        // iteration, so with fold, the iterations fold and not the files.
-        let file_paths = self.config.file_paths.as_deref().unwrap_or_default();
+        // Each runner iteration is one report iteration. Each file parses on its own and merges
+        // into its iteration, so with fold, the iterations fold and not the files.
+        let parser = OutputParser::new(self, &query_report);
         let iterations: Vec<Vec<String>> = results
             .into_iter()
-            .map(|r| {
-                if let Some(output) = r.output {
-                    in_file_order(output, file_paths)
-                } else {
-                    r.stdout.into_iter().collect()
-                }
-            })
+            .map(|run| parser.payloads(run))
             .collect();
         let iterations: Vec<Vec<&str>> = iterations
             .iter()
             .map(|files| files.iter().map(String::as_str).collect())
             .collect();
-
-        let settings = self.report_settings(query_report.adapter);
 
         // Process results (adapter parsing, metrics, alerts, usage)
         query_report
@@ -178,9 +173,9 @@ impl QueryJob {
                 context,
                 branch_id,
                 &iterations,
-                query_report.adapter,
-                settings,
-                ReportBmfVersion::job(query_report.bmf_version, self.config.bmf_version),
+                parser.adapter,
+                parser.settings,
+                parser.report_version,
                 ReportWarnings::default(),
                 plan_kind,
                 #[cfg(feature = "otel")]
@@ -264,14 +259,13 @@ impl QueryJob {
         .clock(now))
     }
 
-    /// The settings the job's run reported with, from its config.
-    fn report_settings(&self, adapter: Adapter) -> JsonReportSettings {
-        JsonReportSettings {
-            adapter: Some(adapter),
-            average: self.config.average,
-            fold: self.config.fold,
-            measures: self.config.measures.clone(),
-        }
+    /// How the job's output parses, from its report.
+    pub async fn output_parser(&self, context: &ApiContext) -> Result<OutputParser, HttpError> {
+        let query_report: QueryReport = schema::report::table
+            .filter(schema::report::id.eq(self.report_id))
+            .first(auth_conn!(context))
+            .map_err(resource_not_found_err!(Report, self.report_id))?;
+        Ok(OutputParser::new(self, &query_report))
     }
 
     /// Convert to JSON for public API (config is not included); the caller selects `report_uuid`
@@ -306,6 +300,66 @@ impl QueryJob {
             modified: self.modified,
             output: None,
         })
+    }
+}
+
+/// How a job's output parses: with its report's adapter, at the job's BMF version and settings.
+pub struct OutputParser {
+    adapter: Adapter,
+    settings: JsonReportSettings,
+    report_version: ReportBmfVersion,
+    file_paths: Vec<Utf8PathBuf>,
+}
+
+impl OutputParser {
+    fn new(job: &QueryJob, report: &QueryReport) -> Self {
+        Self {
+            adapter: report.adapter,
+            settings: JsonReportSettings {
+                adapter: Some(report.adapter),
+                average: job.config.average,
+                fold: job.config.fold,
+                measures: job.config.measures.clone(),
+            },
+            report_version: ReportBmfVersion::job(report.bmf_version, job.config.bmf_version),
+            file_paths: job.config.file_paths.clone().unwrap_or_default(),
+        }
+    }
+
+    /// Parse the runs of 1 execution, numbered from `iteration`, as the job's results parse, and
+    /// keep nothing. The error names the first run whose output Bencher cannot read.
+    pub fn parse_execution(
+        &self,
+        iteration: i32,
+        runs: Vec<JsonIterationOutput>,
+    ) -> Result<(), String> {
+        for (iteration, run) in (iteration..).zip(runs) {
+            let payloads = self.payloads(run);
+            let payloads: Vec<&str> = payloads.iter().map(String::as_str).collect();
+            parse_payloads(
+                &payloads,
+                self.adapter,
+                &self.settings,
+                self.report_version,
+                &mut ReportWarnings::default(),
+            )
+            .map_err(|e| {
+                format!(
+                    "Failed to parse the output of iteration {iteration}: {}",
+                    e.external_message
+                )
+            })?;
+        }
+        Ok(())
+    }
+
+    /// A run's payloads: its files in the job's file order, or else its stdout.
+    fn payloads(&self, run: JsonIterationOutput) -> Vec<String> {
+        if let Some(output) = run.output {
+            in_file_order(output, &self.file_paths)
+        } else {
+            run.stdout.into_iter().collect()
+        }
     }
 }
 

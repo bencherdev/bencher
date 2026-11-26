@@ -14,12 +14,12 @@ Job은 첫 번째 실행부터 결과가 정해질 때까지, 실행 사이에�
 | claimed   | unknown     | 서버가 Runner와의 연결을 잃습니다                                                  |
 | claimed   | canceled    | 사용자가 Job을 취소합니다                                              |
 | running   | completed   | Job의 모든 반복의 결과가 정해집니다                                    |
-| running   | failed      | 실행이 `allow_failure` 없이 실패하거나, Job의 시간이 다 됩니다         |
+| running   | failed      | Runner가 `failed`를 보내거나, 실행이 `allow_failure` 없이 실패하거나, 그 출력을 읽을 수 없거나, Job의 시간이 다 됩니다 |
 | running   | unknown     | 서버가 진행 중인 유일한 실행의 Runner와의 연결을 잃습니다              |
 | running   | canceled    | 사용자가 Job을 취소하거나, 강제(hard) Job 타임아웃을 초과합니다       |
 | unknown   | running     | Runner가 결과를 다시 보내고, Job에 반복이 남아 있습니다                |
 | unknown   | completed   | Runner가 결과를 다시 보내고, 모든 반복의 결과가 정해집니다             |
-| unknown   | failed      | Runner가 `failed`를 보냅니다                                                 |
+| unknown   | failed      | Runner가 `failed`를 보내거나, 읽을 수 없는 출력을 다시 보냅니다 |
 | unknown   | canceled    | 사용자가 Job을 취소하거나, 강제(hard) Job 타임아웃을 초과합니다                              |
 | completed | processed   | 서버가 결과를 성공적으로 처리합니다                                    |
 | completed | failed      | 서버가 결과 처리에 실패합니다                                                       |

@@ -12,7 +12,9 @@
 以及任何收集到的输出文件到其内容的映射。
 在 `allow_failure` 下，运行失败的迭代只保留其 `exit_code` 和 `stderr`，
 因此它保留自己的位置，且其中的 Metric 不会进入 Report。
-在输出被存储后，服务器对结果运行 [基准测试工具适配器][adapters]，
+每次执行的输出一经存储，就由 [基准测试工具适配器][adapters] 解析，
+无法读取的输出会立即使 Job 失败，即使在 `allow_failure` 下也是如此。
+在 Job 的输出被存储后，服务器对结果运行 [基准测试工具适配器][adapters]，
 将 Metric 和 Alert 解析到 Report 中，并将 Job 转换为 `processed`。
 
 当使用 [`GET /v0/projects/{project}/jobs/{job}` API][job query api] 查询 Job 时会返回该输出。

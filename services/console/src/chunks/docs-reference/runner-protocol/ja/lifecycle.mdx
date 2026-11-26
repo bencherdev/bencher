@@ -14,12 +14,12 @@ Job は最初の実行から結果が確定するまで、実行の合間も含�
 | claimed   | unknown     | サーバーが Runner との接続を失う                                                   |
 | claimed   | canceled    | ユーザーが Job をキャンセルする                                         |
 | running   | completed   | Job のすべての反復の結果が確定する                                      |
-| running   | failed      | 実行が `allow_failure` なしで失敗する、または Job の時間が尽きる        |
+| running   | failed      | Runner が `failed` を送信する、実行が `allow_failure` なしで失敗する、その出力を読み取れない、または Job の時間が尽きる |
 | running   | unknown     | サーバーが、進行中の唯一の実行の Runner との接続を失う                  |
 | running   | canceled    | ユーザーが Job をキャンセルする、またはハードな Job タイムアウトを超過する                             |
 | unknown   | running     | Runner が結果を再送し、Job に反復が残っている                          |
 | unknown   | completed   | Runner が結果を再送し、すべての反復の結果が確定する                    |
-| unknown   | failed      | Runner が `failed` を送信する                                                |
+| unknown   | failed      | Runner が `failed` を送信する、または読み取れない出力を再送する |
 | unknown   | canceled    | ユーザーが Job をキャンセルする、またはハードな Job タイムアウトを超過する                             |
 | completed | processed   | サーバーが結果を正常に処理する                                          |
 | completed | failed      | サーバーが結果の処理に失敗する                                                        |

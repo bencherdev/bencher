@@ -12,7 +12,9 @@ Jede Iteration zeichnet ihren `exit_code`, `stdout`, `stderr`
 und eine Zuordnung aller erfassten Ausgabedateien zu ihren Inhalten auf.
 Mit `allow_failure` behält eine Iteration, deren Lauf fehlgeschlagen ist, nur ihren `exit_code` und `stderr`,
 sodass sie ihren Platz hält und keine Metrics daraus in den Report gelangen.
-Nachdem die Ausgabe gespeichert ist, führt der Server den [Benchmark-Harness-Adapter][adapters] auf den Ergebnissen aus,
+Die Ausgabe jeder Ausführung wird mit dem [Benchmark-Harness-Adapter][adapters] geparst, sobald sie gespeichert ist,
+und eine Ausgabe, die nicht gelesen werden kann, lässt den Job sofort fehlschlagen, auch mit `allow_failure`.
+Nachdem die Ausgabe des Jobs gespeichert ist, führt der Server den [Benchmark-Harness-Adapter][adapters] auf den Ergebnissen aus,
 um Metrics und Alerts in den Report zu parsen, wodurch der Job in `processed` übergeht.
 
 Die Ausgabe wird zurückgegeben, wenn ein Job mit der [`GET /v0/projects/{project}/jobs/{job}`-API][job query api] abgefragt wird.

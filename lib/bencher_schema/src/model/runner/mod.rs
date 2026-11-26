@@ -45,7 +45,7 @@ pub use job_execution::{
     UpdateJobExecution, end_job, end_job_now, in_flight_executions, jobs_between_executions,
     mark_orphaned_sent_executions_unknown, sync_job_status,
 };
-pub use job_outcome::{finish_failed_job, settle_job};
+pub use job_outcome::{execution_runs, finish_failed_job, settle_job};
 pub use runner_spec::{InsertRunnerSpec, QueryRunnerSpec, RunnerSpecId};
 pub use source_ip::SourceIp;
 pub use status::{PAUSE_NOTICE_HOURS, QueryRunnerStatus, RunnerNotice, RunnerReport, StatusChange};

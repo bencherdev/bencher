@@ -12,6 +12,7 @@ use bencher_api_tests::{TestServer, TestServerOptions, TestUser};
 use bencher_config::spawn_job_recovery;
 use bencher_json::{
     DateTime, JobStatus, JobUuid, JsonClaimedJob, PollTimeout, Priority, RunnerUuid,
+    project::report::{Adapter, ParseOutcome},
     runner::{JsonIterationOutput, JsonReady},
 };
 use bencher_schema::schema;
@@ -959,6 +960,345 @@ async fn the_callback_fires_once_per_job() {
 }
 
 // =============================================================================
+// Parse on arrival
+// =============================================================================
+
+/// A job whose first execution's output Bencher cannot read fails after that execution: no
+/// second execution goes out, and the job's error names iteration 0 and the parse error.
+///
+/// Kills: a server that parses a job's output only once every iteration has run.
+#[tokio::test]
+async fn an_unreadable_first_execution_fails_the_job() {
+    unreadable_first_execution_fails_the_job(Job::plus().iterations(3), "unreadable").await;
+}
+
+/// `allow_failure` covers a run that fails, not output Bencher cannot read, so the job still fails
+/// after its first execution.
+///
+/// Kills: a server that makes unreadable output a gap under `allow_failure`.
+#[tokio::test]
+async fn an_unreadable_first_execution_fails_the_job_under_allow_failure() {
+    unreadable_first_execution_fails_the_job(
+        Job::plus().iterations(3).allow_failure(),
+        "unreadable-allow",
+    )
+    .await;
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn unreadable_first_execution_fails_the_job(job: Job, label: &str) {
+    let lab = Lab::new(label).await;
+    let job = lab.job(job);
+    let mut runner = lab.runner("Runner").await;
+    insert_pending_callback(&lab.server, job);
+
+    let execution = runner.claim().await;
+    runner.running().await;
+    let ack = runner
+        .send(RunnerMessage::Completed {
+            job: execution.uuid,
+            results: vec![unreadable()],
+        })
+        .await;
+    assert!(matches!(ack, ServerMessage::Ack { .. }), "{ack:?}");
+
+    assert_eq!(
+        get_status(&lab.server, job),
+        JobStatus::Failed,
+        "the job fails after its first execution"
+    );
+    assert!(runner.poll().await.is_none(), "no second execution");
+    assert_eq!(lab.stored(job), Vec::new(), "a failed job is not processed");
+    assert_eq!(
+        lab.parse_outcome(job),
+        Some(ParseOutcome::Failed),
+        "the report says its results did not parse"
+    );
+    assert_eq!(
+        lab.execution_status(execution.uuid),
+        Some(ExecutionState::COMPLETED),
+        "the run was clean, so its execution stays completed"
+    );
+    let output = lab.output(job).await.expect("the job's output is stored");
+    let error = output.error.expect("the job's error");
+    assert!(
+        error.starts_with(
+            "Failed to parse the output of iteration 0: Failed to convert results with adapter"
+        ),
+        "{error}"
+    );
+    let stdout: Vec<Option<String>> = output.results.into_iter().map(|run| run.stdout).collect();
+    assert_eq!(
+        stdout,
+        vec![unreadable().stdout],
+        "the run's output is kept"
+    );
+    assert_one_callback(&lab.server, job, "failed").await;
+}
+
+/// A job whose output parses in every execution stores the report it stored before the parse on
+/// arrival: each run once, as its iteration, a parse of `Parsed`, and no warning.
+///
+/// Kills: a parse on arrival that writes to the report.
+#[tokio::test]
+async fn a_readable_job_stores_its_report_once() {
+    let lab = Lab::new("readable").await;
+    let job = lab.job(Job::plus().iterations(3));
+    let mut runner = lab.runner("Runner").await;
+
+    for value in [1.0, 2.0, 3.0] {
+        let execution = runner.claim().await;
+        runner.run(execution.uuid, value).await;
+    }
+
+    assert_eq!(get_status(&lab.server, job), JobStatus::Processed);
+    assert_eq!(lab.stored(job), vec![(0, 1.0), (1, 2.0), (2, 3.0)]);
+    assert_eq!(lab.parse_outcome(job), Some(ParseOutcome::Parsed));
+    assert_eq!(lab.warnings(job), 0);
+}
+
+/// Under `allow_failure`, a run that fails is a gap, and a gap is not parsed: a run that exited
+/// non-zero with output Bencher cannot read, and a run with no result, leave the job to run on.
+///
+/// Kills: a server that parses the output of a run its job does not keep.
+#[tokio::test]
+async fn a_gap_is_not_parsed() {
+    let lab = Lab::new("gap-unread").await;
+    let job = lab.job(Job::plus().iterations(4).allow_failure());
+    let mut runner = lab.runner("Runner").await;
+
+    let execution = runner.claim().await;
+    runner.run(execution.uuid, 1.0).await;
+
+    let execution = runner.claim().await;
+    runner.running().await;
+    let mut failed = unreadable();
+    failed.exit_code = 1;
+    let ack = runner
+        .send(RunnerMessage::Completed {
+            job: execution.uuid,
+            results: vec![failed],
+        })
+        .await;
+    assert!(matches!(ack, ServerMessage::Ack { .. }), "{ack:?}");
+
+    let execution = runner.claim().await;
+    runner.running().await;
+    let ack = runner
+        .send(RunnerMessage::Completed {
+            job: execution.uuid,
+            results: Vec::new(),
+        })
+        .await;
+    assert!(matches!(ack, ServerMessage::Ack { .. }), "{ack:?}");
+
+    let execution = runner.claim().await;
+    runner.run(execution.uuid, 4.0).await;
+
+    assert_eq!(get_status(&lab.server, job), JobStatus::Processed);
+    assert_eq!(lab.stored(job), vec![(0, 1.0), (3, 4.0)]);
+}
+
+/// A `Failed` whose output Bencher cannot read fails the job with the runner's error, and its
+/// output is not parsed.
+///
+/// Kills: a parse on arrival that reads a `Failed` execution's output before it fails the job.
+#[tokio::test]
+async fn a_failed_execution_is_not_parsed() {
+    let lab = Lab::new("failed-unread").await;
+    let job = lab.job(Job::plus().iterations(3));
+    let mut runner = lab.runner("Runner").await;
+
+    let execution = runner.claim().await;
+    runner.running().await;
+    let ack = runner
+        .send(RunnerMessage::Failed {
+            job: execution.uuid,
+            results: vec![unreadable()],
+            error: "the runner stopped".to_owned(),
+        })
+        .await;
+    assert!(matches!(ack, ServerMessage::Ack { .. }), "{ack:?}");
+
+    assert_eq!(get_status(&lab.server, job), JobStatus::Failed);
+    assert!(runner.poll().await.is_none(), "no second execution");
+    let output = lab.output(job).await.expect("the job's output is stored");
+    assert_eq!(output.error.as_deref(), Some("the runner stopped"));
+    assert_eq!(lab.parse_outcome(job), None);
+}
+
+/// A job of 2 files per iteration parses every file of an execution as it arrives: output Bencher
+/// cannot read in the second file of iteration 1 fails the job after that execution.
+///
+/// Kills: a parse on arrival that reads only an execution's first file or its stdout.
+#[tokio::test]
+async fn an_unreadable_second_file_fails_the_job() {
+    let lab = Lab::new("unreadable-file").await;
+    let job = lab.job(Job::plus().iterations(3).file_paths(&["a.json", "b.json"]));
+    let mut runner = lab.runner("Runner").await;
+
+    let execution = runner.claim().await;
+    runner.running().await;
+    let ack = runner
+        .send(RunnerMessage::Completed {
+            job: execution.uuid,
+            results: vec![files(&[
+                ("a.json", bmf_text(1.0)),
+                ("b.json", bmf_text(2.0)),
+            ])],
+        })
+        .await;
+    assert!(matches!(ack, ServerMessage::Ack { .. }), "{ack:?}");
+    assert_eq!(get_status(&lab.server, job), JobStatus::Running);
+
+    let execution = runner.claim().await;
+    runner.running().await;
+    let ack = runner
+        .send(RunnerMessage::Completed {
+            job: execution.uuid,
+            results: vec![files(&[
+                ("a.json", bmf_text(3.0)),
+                ("b.json", UNREADABLE.to_owned()),
+            ])],
+        })
+        .await;
+    assert!(matches!(ack, ServerMessage::Ack { .. }), "{ack:?}");
+
+    assert_eq!(get_status(&lab.server, job), JobStatus::Failed);
+    assert!(runner.poll().await.is_none(), "no third execution");
+    let output = lab.output(job).await.expect("the job's output is stored");
+    let error = output.error.expect("the job's error");
+    assert!(
+        error.starts_with(
+            "Failed to parse the output of iteration 1: Failed to convert results with adapter"
+        ),
+        "{error}"
+    );
+}
+
+/// A job at BMF version 1 parses each execution with its report's adapter at version 1: libtest's
+/// JSON bench events, which `rust_bench` reads at version 1 only and `json` never reads, complete
+/// the job, and each run stores its median and range as its iteration.
+///
+/// Kills: a parse on arrival at version 0, or with the `json` adapter, in place of the job's.
+#[tokio::test]
+async fn a_version_1_job_parses_with_its_adapter() {
+    let lab = Lab::new("v1-adapter").await;
+    let job = lab.job(
+        Job::plus()
+            .iterations(2)
+            .bmf_version(1)
+            .adapter(Adapter::RustBench),
+    );
+    let mut runner = lab.runner("Runner").await;
+
+    for median in [10.0, 20.0] {
+        let execution = runner.claim().await;
+        runner.running().await;
+        let ack = runner
+            .send(RunnerMessage::Completed {
+                job: execution.uuid,
+                results: vec![libtest_bench(median)],
+            })
+            .await;
+        assert!(matches!(ack, ServerMessage::Ack { .. }), "{ack:?}");
+    }
+
+    assert_eq!(get_status(&lab.server, job), JobStatus::Processed);
+    assert_eq!(lab.parse_outcome(job), Some(ParseOutcome::Parsed));
+    assert_eq!(
+        lab.stored_metrics(job),
+        vec![
+            (0, "median".to_owned(), 10.0),
+            (0, "range".to_owned(), LIBTEST_DEVIATION),
+            (1, "median".to_owned(), 20.0),
+            (1, "range".to_owned(), LIBTEST_DEVIATION),
+        ]
+    );
+}
+
+/// A job at BMF version 1 whose first execution's output is BMF version 0 fails after that
+/// execution, with the refusal the final processing gives for the job's version.
+///
+/// Kills: a parse on arrival at version 0 in place of the job's.
+#[tokio::test]
+async fn a_version_1_job_refuses_version_0_output_on_arrival() {
+    let lab = Lab::new("v1-refuses-v0").await;
+    let job = lab.job(Job::plus().iterations(3).bmf_version(1));
+    let mut runner = lab.runner("Runner").await;
+
+    let execution = runner.claim().await;
+    runner.running().await;
+    let ack = runner
+        .send(RunnerMessage::Completed {
+            job: execution.uuid,
+            results: vec![bmf(1.0)],
+        })
+        .await;
+    assert!(matches!(ack, ServerMessage::Ack { .. }), "{ack:?}");
+
+    assert_eq!(
+        get_status(&lab.server, job),
+        JobStatus::Failed,
+        "the job fails after its first execution"
+    );
+    assert!(runner.poll().await.is_none(), "no second execution");
+    let output = lab.output(job).await.expect("the job's output is stored");
+    let error = output.error.expect("the job's error");
+    assert!(
+        error.starts_with(
+            "Failed to parse the output of iteration 0: Results parsed as BMF version 0, but the remote job was accepted at BMF version 1. Send BMF version 1 results"
+        ),
+        "{error}"
+    );
+}
+
+/// A parse failure on an execution that ends while another of its job's executions is in flight
+/// cancels that one, and its later result is discarded.
+///
+/// Kills: a parse failure that leaves the job's other execution in flight, or takes its result.
+#[tokio::test]
+async fn an_unreadable_execution_cancels_its_other_execution() {
+    let lab = Lab::without_heartbeat_timeout("unreadable-other").await;
+    let job = lab.job(Job::plus().iterations(2));
+    let mut first = lab.runner("First").await;
+    let mut second = lab.runner("Second").await;
+
+    let execution_0 = first.claim().await;
+    first.running().await;
+    let execution_1 = second.claim().await;
+    second.running().await;
+    let ack = second
+        .send(RunnerMessage::Completed {
+            job: execution_1.uuid,
+            results: vec![unreadable()],
+        })
+        .await;
+    assert!(matches!(ack, ServerMessage::Ack { .. }), "{ack:?}");
+    assert_eq!(get_status(&lab.server, job), JobStatus::Failed);
+    assert_eq!(
+        lab.execution_status(execution_0.uuid),
+        Some(ExecutionState::CANCELED)
+    );
+
+    let reply = first.send(RunnerMessage::Heartbeat).await;
+    assert!(matches!(reply, ServerMessage::Cancel), "{reply:?}");
+    let ack = first
+        .send(RunnerMessage::Completed {
+            job: execution_0.uuid,
+            results: vec![bmf(1.0)],
+        })
+        .await;
+    assert!(matches!(ack, ServerMessage::Ack { .. }), "{ack:?}");
+    assert_eq!(get_status(&lab.server, job), JobStatus::Failed);
+    assert_eq!(
+        lab.execution_status(execution_0.uuid),
+        Some(ExecutionState::CANCELED)
+    );
+    assert_eq!(lab.stored(job), Vec::new());
+}
+
+// =============================================================================
 // Harness
 // =============================================================================
 
@@ -970,6 +1310,8 @@ struct ExecutionState;
 
 impl ExecutionState {
     const RUNNING: i32 = 1;
+    const COMPLETED: i32 = 2;
+    const CANCELED: i32 = 4;
     const UNKNOWN: i32 = 5;
 }
 
@@ -993,6 +1335,11 @@ struct Job {
     iter: u32,
     timeout: i32,
     allow_failure: bool,
+    file_paths: &'static [&'static str],
+    /// The job config's BMF version, if it declares one.
+    bmf_version: Option<u8>,
+    /// The report's adapter, if not the project's first report's.
+    adapter: Option<Adapter>,
 }
 
 impl Job {
@@ -1002,6 +1349,9 @@ impl Job {
             iter: 1,
             timeout: 3600,
             allow_failure: false,
+            file_paths: &[],
+            bmf_version: None,
+            adapter: None,
         }
     }
 
@@ -1023,6 +1373,24 @@ impl Job {
     fn allow_failure(self) -> Self {
         Self {
             allow_failure: true,
+            ..self
+        }
+    }
+
+    fn file_paths(self, file_paths: &'static [&'static str]) -> Self {
+        Self { file_paths, ..self }
+    }
+
+    fn bmf_version(self, bmf_version: u8) -> Self {
+        Self {
+            bmf_version: Some(bmf_version),
+            ..self
+        }
+    }
+
+    fn adapter(self, adapter: Adapter) -> Self {
+        Self {
+            adapter: Some(adapter),
             ..self
         }
     }
@@ -1092,6 +1460,9 @@ impl Lab {
             iter,
             timeout,
             allow_failure,
+            file_paths,
+            bmf_version,
+            adapter,
         } = job;
         let report_id = create_sibling_report(&self.server, self.report_id);
         let mut conn = self.server.db_conn();
@@ -1107,14 +1478,20 @@ impl Lab {
         let created = DateTime::try_from(DateTime::TEST.timestamp() - 1000 + created)
             .expect("Invalid timestamp");
         let uuid = JobUuid::new();
-        let config = serde_json::json!({
+        let mut config = serde_json::json!({
             "registry": "https://registry.bencher.dev",
             "project": self.project_uuid,
             "digest": format!("sha256:{}", "0".repeat(64)),
             "timeout": timeout,
             "iter": iter,
             "allow_failure": allow_failure,
+            "file_paths": (!file_paths.is_empty()).then_some(file_paths),
         });
+        if let Some(bmf_version) = bmf_version
+            && let Some(object) = config.as_object_mut()
+        {
+            object.insert("bmf_version".to_owned(), serde_json::json!(bmf_version));
+        }
         diesel::insert_into(schema::job::table)
             .values((
                 schema::job::uuid.eq(uuid),
@@ -1136,6 +1513,12 @@ impl Lab {
             .set(schema::report::spec_id.eq(Some(self.spec_id)))
             .execute(&mut conn)
             .expect("Failed to set the report's spec");
+        if let Some(adapter) = adapter {
+            diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+                .set(schema::report::adapter.eq(adapter))
+                .execute(&mut conn)
+                .expect("Failed to set the report's adapter");
+        }
         uuid
     }
 
@@ -1194,6 +1577,40 @@ impl Lab {
             .order(schema::report_benchmark::iteration)
             .load(&mut self.server.db_conn())
             .expect("Failed to load the stored values")
+    }
+
+    /// Every metric the job's report stored, as its iteration, metric name, and value, in order.
+    #[expect(clippy::expect_used, reason = "test helper")]
+    fn stored_metrics(&self, job: JobUuid) -> Vec<(i32, String, f64)> {
+        schema::metric::table
+            .inner_join(schema::report_benchmark::table)
+            .filter(schema::report_benchmark::report_id.eq(self.job_report(job)))
+            .select((
+                schema::report_benchmark::iteration,
+                schema::metric::name,
+                schema::metric::value,
+            ))
+            .order((schema::report_benchmark::iteration, schema::metric::name))
+            .load(&mut self.server.db_conn())
+            .expect("Failed to load the stored metrics")
+    }
+
+    #[expect(clippy::expect_used, reason = "test helper")]
+    fn parse_outcome(&self, job: JobUuid) -> Option<ParseOutcome> {
+        schema::report::table
+            .filter(schema::report::id.eq(self.job_report(job)))
+            .select(schema::report::parse_outcome)
+            .first(&mut self.server.db_conn())
+            .expect("Failed to get the report's parse")
+    }
+
+    #[expect(clippy::expect_used, reason = "test helper")]
+    fn warnings(&self, job: JobUuid) -> i64 {
+        schema::report_warning::table
+            .filter(schema::report_warning::report_id.eq(self.job_report(job)))
+            .count()
+            .get_result(&mut self.server.db_conn())
+            .expect("Failed to count the report's warnings")
     }
 
     async fn output(&self, job: JobUuid) -> Option<bencher_json::runner::JsonJobOutput> {
@@ -1463,9 +1880,60 @@ async fn go_silent() {
 fn bmf(value: f64) -> JsonIterationOutput {
     JsonIterationOutput {
         exit_code: 0,
-        stdout: Some(serde_json::json!({ "bench": { "latency": { "value": value } } }).to_string()),
+        stdout: Some(bmf_text(value)),
         stderr: None,
         output: None,
+    }
+}
+
+fn bmf_text(value: f64) -> String {
+    serde_json::json!({ "bench": { "latency": { "value": value } } }).to_string()
+}
+
+/// The deviation of every libtest bench event, which `rust_bench` stores as its range.
+const LIBTEST_DEVIATION: f64 = 0.5;
+
+/// A clean run whose stdout is 1 bench event of nightly libtest's `--format json`.
+fn libtest_bench(median: f64) -> JsonIterationOutput {
+    let event = serde_json::json!({
+        "type": "bench",
+        "name": "fib_10",
+        "median": median,
+        "deviation": LIBTEST_DEVIATION,
+    });
+    JsonIterationOutput {
+        exit_code: 0,
+        stdout: Some(event.to_string()),
+        stderr: None,
+        output: None,
+    }
+}
+
+/// Output that no adapter reads.
+const UNREADABLE: &str = "this is not benchmark output";
+
+/// A clean run whose stdout Bencher cannot read.
+fn unreadable() -> JsonIterationOutput {
+    JsonIterationOutput {
+        exit_code: 0,
+        stdout: Some(UNREADABLE.to_owned()),
+        stderr: None,
+        output: None,
+    }
+}
+
+/// A clean run that wrote these files.
+fn files(files: &[(&str, String)]) -> JsonIterationOutput {
+    JsonIterationOutput {
+        exit_code: 0,
+        stdout: None,
+        stderr: None,
+        output: Some(
+            files
+                .iter()
+                .map(|(path, contents)| ((*path).into(), contents.clone()))
+                .collect(),
+        ),
     }
 }
 

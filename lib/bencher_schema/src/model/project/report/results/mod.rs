@@ -119,7 +119,6 @@ impl ReportResults {
         warnings: &mut ReportWarnings,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
-        let bmf_version = report_version.version;
         #[cfg(feature = "otel")]
         let process_start = context.clock.now();
 
@@ -132,22 +131,11 @@ impl ReportResults {
                 )
             })?;
 
-        let adapter_settings = adapter_settings_at(settings.average, bmf_version, warnings);
         // Each payload parses on its own, so the parse the report records is the same
         // whether an iteration returned one payload or several.
         let payloads: Vec<&str> = iterations.iter().flatten().copied().collect();
-        let results_array = AdapterResultsArray::new(&payloads, adapter, adapter_settings)
-            .inspect_err(|_| self.parse = Some(ParseRecord::FAILED))
-            .map_err(|e| match e {
-                // The adapter is right and the version is wrong, so no adapter hint.
-                AdapterError::BmfVersion { parsed, .. } => report_version.refusal(parsed),
-                AdapterError::V1Only(adapter) => report_version.v1_only(adapter),
-                AdapterError::Valid(_) | AdapterError::BenchmarkUnits(_) | AdapterError::Convert(_) => {
-                    bad_request_error(format!(
-                        "Failed to convert results with adapter ({adapter} | {settings:?}): {e}\n\nAre you sure {adapter} is the right adapter?\nRead more about adapters here: https://bencher.dev/docs/explanation/adapters/"
-                    ))
-                },
-            })?;
+        let results_array = parse_payloads(&payloads, adapter, &settings, report_version, warnings)
+            .inspect_err(|_| self.parse = Some(ParseRecord::FAILED))?;
         self.parse = Some(ParseRecord::parsed(&results_array, warnings));
         let (mut results_array, replaced) =
             results_array.merge_iterations(iterations.iter().map(Vec::len));
@@ -552,6 +540,28 @@ impl ReportResults {
     }
 }
 
+/// Parse each payload on its own with `adapter`, at the report's BMF version and settings, or
+/// refuse them as a report refuses results it cannot read.
+pub fn parse_payloads(
+    payloads: &[&str],
+    adapter: Adapter,
+    settings: &JsonReportSettings,
+    report_version: ReportBmfVersion,
+    warnings: &mut ReportWarnings,
+) -> Result<AdapterResultsArray, HttpError> {
+    let adapter_settings = adapter_settings_at(settings.average, report_version.version, warnings);
+    AdapterResultsArray::new(payloads, adapter, adapter_settings).map_err(|e| match e {
+        // The adapter is right and the version is wrong, so no adapter hint.
+        AdapterError::BmfVersion { parsed, .. } => report_version.refusal(parsed),
+        AdapterError::V1Only(adapter) => report_version.v1_only(adapter),
+        AdapterError::Valid(_) | AdapterError::BenchmarkUnits(_) | AdapterError::Convert(_) => {
+            bad_request_error(format!(
+                "Failed to convert results with adapter ({adapter} | {settings:?}): {e}\n\nAre you sure {adapter} is the right adapter?\nRead more about adapters here: https://bencher.dev/docs/explanation/adapters/"
+            ))
+        },
+    })
+}
+
 /// The settings a report reads its results with: no average at version 1, where every average
 /// a harness reports is its own metric, so a requested one is ignored with a warning.
 fn adapter_settings_at(
@@ -599,7 +609,7 @@ pub struct ParseRecord {
 }
 
 impl ParseRecord {
-    const FAILED: Self = Self {
+    pub const FAILED: Self = Self {
         resolved_adapter: None,
         outcome: ParseOutcome::Failed,
     };
