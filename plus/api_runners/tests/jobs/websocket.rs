@@ -1,16 +1,25 @@
 use super::common::{
-    WsStream, assert_ws_closed, associate_runner_spec, connect_channel_ws as connect_channel,
-    create_runner, create_test_report, get_project_id, get_runner_id, insert_test_job,
-    insert_test_job_with_optional_fields, insert_test_job_with_timeout, insert_test_spec,
-    plan_project, post_metrics, recv_server_msg as recv_msg, runner_metadata,
-    send_runner_msg as send_msg, set_job_runner_id, set_job_status, ws_url,
+    WsStream, assert_ws_closed, associate_runner_spec, claim_via_channel,
+    connect_channel_ws as connect_channel, create_runner, create_test_report, get_project_id,
+    get_runner_id, insert_test_job, insert_test_job_with_optional_fields,
+    insert_test_job_with_timeout, insert_test_spec, plan_project, post_metrics,
+    recv_server_msg as recv_msg, runner_metadata, send_runner_msg as send_msg, set_job_runner_id,
+    set_job_status, ws_url,
 };
 use super::report_parse;
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::{LogCapture, TestProject, TestServer, TestUser};
 use bencher_json::{
-    BranchName, JobStatus, JobUuid, JsonRunnerKey, PlanLevel, PollTimeout, RunnerUuid,
-    project::report::ParseOutcome,
+    BmfVersion, BranchName, JobStatus, JobUuid, JsonNewMetric, JsonRunnerKey, PlanLevel,
+    PollTimeout, RunnerUuid,
+    project::{
+        measure::built_in::{
+            BuiltInMeasure as _,
+            json::{BuildTime, FileSize},
+        },
+        metric::JsonNewResults,
+        report::ParseOutcome,
+    },
     runner::{JsonIterationOutput, JsonPaused, JsonReady, PauseReason},
 };
 use bencher_schema::schema;
@@ -1515,6 +1524,176 @@ async fn channel_completed_build_time_with_a_failed_iteration() {
     assert_eq!(build_times, [12.5]);
 
     ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// A run's job carries the version the run was accepted at to its runner, and the build time and
+/// file size the runner builds at that version are processed at it, even once the project moves.
+///
+/// Kills: a claimed job that loses its version, built parts written at one version whatever the
+/// job pinned, and a job's results read at its project's version when they are processed.
+#[tokio::test]
+async fn channel_completed_built_parts_at_the_version_the_run_was_accepted_at() {
+    for (accepted, moved, label) in [
+        (BmfVersion::V0, BmfVersion::V1, "built0"),
+        (BmfVersion::V1, BmfVersion::V0, "built1"),
+    ] {
+        let server = TestServer::new().await;
+        let admin = server
+            .signup("Admin", &format!("ws-{label}@example.com"))
+            .await;
+        let org = server.create_org(&admin, &format!("Ws {label}")).await;
+        let project = server
+            .create_project(&admin, &org, &format!("Ws {label} proj"))
+            .await;
+        set_project_bmf_version(&server, &admin, &project, accepted).await;
+        let runner = create_runner(&server, &admin.token, &format!("Runner {label}")).await;
+        let (spec_uuid, spec_id) = insert_test_spec(&server);
+        associate_runner_spec(&server, get_runner_id(&server, runner.uuid), spec_id);
+
+        post_built_parts_run(&server, &admin, &project, spec_uuid).await;
+        set_project_bmf_version(&server, &admin, &project, moved).await;
+
+        let (mut ws, claimed) =
+            claim_via_channel(&server, runner.uuid, runner.key.as_ref(), 1).await;
+        let claimed = claimed.expect("The runner claims the run's job");
+        assert_eq!(claimed.config.bmf_version, Some(accepted), "{label}");
+        let metrics = serde_json::to_string(&JsonNewResults::new(
+            vec![
+                (
+                    "make".parse().expect("Invalid benchmark name"),
+                    vec![(BuildTime::name_id(), built(12.5))],
+                ),
+                (
+                    "app.bin".parse().expect("Invalid benchmark name"),
+                    vec![(FileSize::name_id(), built(1024.0))],
+                ),
+            ],
+            accepted,
+        ))
+        .expect("Failed to serialize the built parts");
+
+        send_msg(&mut ws, &RunnerMessage::Running).await;
+        let resp = recv_msg(&mut ws).await;
+        assert!(matches!(resp, ServerMessage::Ack { .. }));
+        send_msg(
+            &mut ws,
+            &RunnerMessage::Completed {
+                job: claimed.uuid,
+                results: vec![JsonIterationOutput {
+                    exit_code: 0,
+                    stdout: Some("built".into()),
+                    stderr: None,
+                    output: Some(std::collections::BTreeMap::from([(
+                        camino::Utf8PathBuf::from("\0bencher"),
+                        metrics,
+                    )])),
+                }],
+            },
+        )
+        .await;
+        let resp = recv_msg(&mut ws).await;
+        assert!(matches!(resp, ServerMessage::Ack { .. }));
+        assert_eq!(
+            get_job_status(&server, claimed.uuid),
+            JobStatus::Processed,
+            "{label}"
+        );
+
+        assert_eq!(
+            measure_metrics(&server),
+            [
+                ("build-time".to_owned(), "value".to_owned(), 12.5),
+                ("file-size".to_owned(), "value".to_owned(), 1024.0),
+            ],
+            "{label}"
+        );
+
+        ws.close(None).await.expect("Failed to close WebSocket");
+    }
+}
+
+/// Post a run of a job that builds its build time and the file size of `/out/app.bin`.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn post_built_parts_run(
+    server: &TestServer,
+    admin: &TestUser,
+    project: &TestProject,
+    spec: bencher_json::SpecUuid,
+) {
+    let project_slug: &str = project.slug.as_ref();
+    let run = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [],
+        "job": {
+            "image": format!("localhost/{project_slug}@sha256:{}", "a".repeat(64)),
+            "spec": spec,
+            "build_time": true,
+            "file_size": true,
+            "file_paths": ["/out/app.bin"],
+        },
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&run)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED, "POST the run");
+}
+
+/// Every stored metric as its measure's slug, its name, and its value, by measure.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn measure_metrics(server: &TestServer) -> Vec<(String, String, f64)> {
+    let mut metrics: Vec<(String, String, f64)> = schema::metric::table
+        .inner_join(schema::measure::table)
+        .select((
+            schema::measure::slug,
+            schema::metric::name,
+            schema::metric::value,
+        ))
+        .load(&mut server.db_conn())
+        .expect("Failed to load the metrics");
+    metrics.sort_by(|left, right| left.0.cmp(&right.0));
+    metrics
+}
+
+/// One built value, which carries no bounds.
+fn built(value: f64) -> JsonNewMetric {
+    JsonNewMetric {
+        value: value.into(),
+        ..Default::default()
+    }
+}
+
+/// Move the project to `bmf_version` as `admin`, the server admin.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn set_project_bmf_version(
+    server: &TestServer,
+    admin: &TestUser,
+    project: &TestProject,
+    bmf_version: BmfVersion,
+) {
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{}", project.slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&serde_json::json!({ "bmf_version": bmf_version }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "PATCH bmf_version");
 }
 
 /// Failed with multiple iterations (partial results before failure).
