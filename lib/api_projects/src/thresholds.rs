@@ -188,13 +188,13 @@ fn get_ls_query<'q>(
         .into_boxed();
 
     if let Some(branch) = query_params.branch.as_ref() {
-        filter_branch_name_id!(query, branch);
+        filter_branch_name_id!(query, branch, query_project.id);
     }
     if let Some(testbed) = query_params.testbed.as_ref() {
-        filter_testbed_name_id!(query, testbed);
+        filter_testbed_name_id!(query, testbed, query_project.id);
     }
     if let Some(measure) = query_params.measure.as_ref() {
-        filter_measure_name_id!(query, measure);
+        filter_measure_name_id!(query, measure, query_project.id);
     }
 
     if let Some(true) = query_params.archived {

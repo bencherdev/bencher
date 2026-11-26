@@ -6,8 +6,8 @@ use std::{
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
     BmfVersion, BranchName, BranchSlug, BranchUuid, CommitTitle, DateTime, DateTimeMillis, GitHash,
-    HeadUuid, NameId, ProjectResourceId, ReportUuid, ResourceName, TestbedNameId, TestbedSlug,
-    TestbedUuid, UserName, VersionUuid,
+    HeadUuid, ProjectResourceId, ReportUuid, ResourceName, TestbedNameId, TestbedSlug, TestbedUuid,
+    UserName, VersionUuid,
     project::{
         alert::AlertStatus,
         console::{
@@ -57,6 +57,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use super::{alerts::run_alerts, before, thresholds::readable_project};
+use crate::macros::filter_branch_name_id;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjConsoleRunsParams {
@@ -230,11 +231,7 @@ fn run_keys(
         .select((schema::report::version_id, min(schema::report::start_time)))
         .into_boxed();
     if let Some(branch) = &query.branch {
-        keys = match branch {
-            NameId::Uuid(uuid) => keys.filter(schema::branch::uuid.eq(uuid.to_string())),
-            NameId::Slug(slug) => keys.filter(schema::branch::slug.eq(slug.to_string())),
-            NameId::Name(name) => keys.filter(schema::branch::name.eq(name.to_string())),
-        };
+        filter_branch_name_id!(keys, branch, project_id);
     }
     if let Some(testbed) = &query.testbed {
         // A testbed that is not there, or archived, holds no runs to list.
@@ -319,13 +316,17 @@ fn visible_testbed(
     project_id: ProjectId,
     testbed: &TestbedNameId,
 ) -> diesel::QueryResult<Option<TestbedId>> {
-    schema::testbed::table
-        .filter(schema::testbed::project_id.eq(project_id))
-        .filter(schema::testbed::archived.is_null())
-        .filter(QueryTestbed::eq_name_id(testbed))
-        .select(schema::testbed::id)
-        .first(conn)
-        .optional()
+    // Resolved before the archived check, so an archived testbed holding the slug never
+    // falls back to another testbed with that name.
+    let found = QueryTestbed::find_name_id(testbed, |eq_name_id| {
+        schema::testbed::table
+            .filter(schema::testbed::project_id.eq(project_id))
+            .filter(eq_name_id)
+            .select((schema::testbed::id, schema::testbed::archived.is_null()))
+            .first::<(TestbedId, bool)>(conn)
+    })
+    .optional()?;
+    Ok(found.and_then(|(testbed_id, visible)| visible.then_some(testbed_id)))
 }
 
 /// The reports the reports list shows: none on an archived branch or testbed.
