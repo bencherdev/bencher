@@ -3,7 +3,7 @@ title: "Criterion"
 description: "A step-by-step guide on how to benchmark Rust code with Criterion"
 heading: "How to benchmark Rust code with Criterion"
 published: "2024-01-28T14:20:00Z"
-modified: "2026-04-15T06:13:17Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 2
 ---
 
@@ -46,7 +46,7 @@ import BencherFooter from "../../../chunks/learn/en/bencher-footer.mdx";
 
 <BenchmarkingRust />
 
-All three are [support by Bencher](/docs/explanation/adapters/). So why choose Criterion?
+All four are [supported by Bencher](/docs/explanation/adapters/). So why choose Criterion?
 Criterion is the de facto standard benchmarking harness in the Rust community.
 I would suggest using Criterion for benchmarking your code's latency.
 That is, Criterion is great for measuring wall clock time.
@@ -153,6 +153,8 @@ We even maxed out Criterion's change meter, which only goes up to `-100.000%`!
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 With [`cargo-criterion`](https://github.com/bheisler/cargo-criterion), `cargo criterion --message-format=json` prints the mean, median, and median absolute deviation beside the typical estimate, each with its confidence interval, as JSON, and [Bencher reads that output too](/docs/explanation/adapters/#-rust-criterion).
 
 <CatchInCiPlot />
 

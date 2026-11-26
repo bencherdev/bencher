@@ -3,7 +3,7 @@ title: "Criterion"
 description: "Пошаговое руководство по проведению бенчмарка Rust кода с помощью Criterion"
 heading: "Как провести бенчмарк Rust кода с помощью Criterion"
 published: "2024-01-28T14:20:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 2
 ---
 
@@ -46,7 +46,7 @@ import BencherFooter from "../../../chunks/learn/ru/bencher-footer.mdx";
 
 <BenchmarkingRust />
 
-Все три [поддерживаются Bencher](/ru/docs/explanation/adapters/). Так почему выбрать Criterion?
+Все четыре [поддерживаются Bencher](/ru/docs/explanation/adapters/). Так почему выбрать Criterion?
 Criterion - это де-факто стандартный инструмент для проведения бенчмарка в сообществе Rust.
 Я бы предложил использовать Criterion для проверки производительности вашего кода.
 То есть Criterion отлично подходит для измерения реального времени выполнения кода.
@@ -153,6 +153,8 @@ Criterion - это де-факто стандартный инструмент �
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 С [`cargo-criterion`](https://github.com/bheisler/cargo-criterion) команда `cargo criterion --message-format=json` выводит в виде JSON среднее, медиану и медианное абсолютное отклонение рядом с типичной оценкой, каждое со своим доверительным интервалом, и [Bencher тоже читает этот вывод](/ru/docs/explanation/adapters/#-rust-criterion).
 
 <CatchInCiPlot />
 

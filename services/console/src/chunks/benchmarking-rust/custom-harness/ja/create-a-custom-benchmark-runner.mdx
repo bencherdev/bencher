@@ -8,7 +8,7 @@ import PlayGameMain from "../play-game-rs-main.mdx";
 カスタムベンチマークハーネスは、実際にはベンチマークをすべて実行し、結果を報告するバイナリです。
 ベンチマークランナーはそのすべてを統括します。
 
-結果を[Bencher Metric Format (BMF) JSON][bmf json]で出力したいと思います。
+結果を[Bencher Metric Format (BMF) JSON][bmf json]のバージョン1で出力したいと思います。
 これを実現するために、最後の依存関係として
 [David Tolnayによる`serde_json`クレート][crates serde json]を追加します！
 
@@ -18,7 +18,7 @@ import PlayGameMain from "../play-game-rs-main.mdx";
 
 <PlayGameRsRun />
 
-BMF JSON結果には、各ベンチマークに対して6つの[メトリクス][measures]が含まれます：
+BMF JSON結果の各ベンチマークは、パラメータのない単一の[バリアント][variant]を持ち、そのバリアントは6つの[メジャー][measures]を持ちます。各メジャーは正確なカウントなので、単一の[メトリック][metric]である`value`を持ちます：
 
 - Final Blocks: ベンチマーク終了時に割り当てられた最終的なブロック数。
 - Final Bytes: ベンチマーク終了時に割り当てられた最終的なバイト数。
@@ -34,5 +34,7 @@ BMF JSON結果には、各ベンチマークに対して6つの[メトリクス]
 
 [bmf json]: /ja/docs/reference/bencher-metric-format/
 [measures]: /ja/docs/explanation/benchmarking/#measure
+[variant]: /ja/docs/explanation/benchmarking/#parameters
+[metric]: /ja/docs/explanation/benchmarking/#metric
 
 [crates serde json]: https://crates.io/crates/serde_json/

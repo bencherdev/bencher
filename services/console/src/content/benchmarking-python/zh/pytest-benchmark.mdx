@@ -3,7 +3,7 @@ title: "pytest-benchmark"
 description: "使用 pytest-benchmark 对 Python 代码进行基准测试的分步指南"
 heading: "如何使用 pytest-benchmark 对 Python 代码进行基准测试"
 published: "2024-10-09T16:30:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 1
 ---
 
@@ -106,6 +106,8 @@ import BencherFooter from "../../../chunks/learn/zh/bencher-footer.mdx";
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 `pytest-benchmark` 会将它运行的每一轮都保存在其 JSON 结果中。在默认 `max_time` 为一秒的情况下，像我们这样的快速基准测试写出的文件会大于 Bencher API 服务器默认接受的 4 MiB 请求体。`--benchmark-max-time 0.02` 可以让文件远低于该限制。
 
 <CatchInCiPlot />
 

@@ -3,7 +3,7 @@ title: "Iai"
 description: "如何使用Iai对Rust代码进行基准测试的逐步指南"
 heading: "如何使用Iai对Rust代码进行基准测试"
 published: "2024-02-13T06:50:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 3
 ---
 
@@ -46,7 +46,7 @@ import BencherFooter from "../../../chunks/learn/zh/bencher-footer.mdx";
 
 <BenchmarkingRust />
 
-三者都被 [Bencher 支持](/zh/docs/explanation/adapters/)。那么为什么选择Iai呢？
+四者都被 [Bencher 支持](/zh/docs/explanation/adapters/)。那么为什么选择Iai呢？
 Iai使用指令计数而非墙钟时间。
 这使其理想的适合[持续性基准测试](/zh/docs/explanation/continuous-benchmarking/)，也就是在CI中进行基准测试。
 我建议对于持续化基准测试使用Iai，特别是如果你正在使用共享的运行器。
@@ -66,6 +66,8 @@ Valgrind支持Linux，Solaris，FreeBSD和macOS。
 在 Debian 上运行：`sudo apt-get install valgrind`
 
 在 macOS （仅限x86_64/Intel芯片）上：`brew install valgrind`
+
+> 🐰 Valgrind 3.21 及更高版本默认关闭缓存模拟，没有缓存模拟时 Iai 会以 `no entry found for key` panic。请在运行基准测试之前使用 `export VALGRIND_OPTS=--cache-sim=yes` 重新开启它。如果某次运行已经 panic，请先删除 `target/iai`。
 
 <FizzBuzzRefactor />
 

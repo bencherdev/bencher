@@ -1,12 +1,13 @@
 ## 在 Rust 中进行基准测试
 
-在 Rust 中进行基准测试的三个热门选项是：
+在 Rust 中进行基准测试的四个热门选项是：
 [libtest bench](/zh/learn/benchmarking/rust/libtest-bench/),
-[Criterion](/zh/learn/benchmarking/rust/criterion/), 和
+[Criterion](/zh/learn/benchmarking/rust/criterion/),
+[Gungraun](/zh/learn/benchmarking/rust/gungraun/) 和
 [Iai](/zh/learn/benchmarking/rust/iai/)。
 
 libtest 是 Rust 内置的单元测试和基准测试框架。虽然它是 Rust 标准库的一部分，但 libtest bench 仍被认为是不稳定的，因此仅在 `nightly` 编译器版本中可用。要在稳定版 Rust 编译器上工作，则需要使用一个[单独的基准测试工具](https://github.com/bluss/bencher) 。然而，这两者都没有得到积极的开发。
 
 Rust 生态系统中最流行的基准测试工具是 Criterion。它可以在稳定版和 `nightly` Rust 编译器版本上工作，并且已经成为 Rust 社区内事实上的标准。相比 libtest bench，Criterion 还具有更多的功能。
 
-Criterion 的一个实验性替代品是 Iai，同样出自 Criterion 的创建者。然而，它使用指令计数而不是墙钟时间：CPU 指令、L1 访问、L2 访问和 RAM 访问。这允许一次性基准测试，因为这些指标在不同运行之间应该几乎保持相同。
+Criterion 的一个替代品是 Gungraun。然而，它使用指令计数而不是墙钟时间：CPU 指令、L1 Hits 和 RAM Hits 等缓存指标，以及更多……这允许一次性基准测试，因为这些指标在不同运行之间应该几乎保持相同。

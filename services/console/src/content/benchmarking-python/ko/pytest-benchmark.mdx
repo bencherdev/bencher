@@ -3,7 +3,7 @@ title: "pytest-benchmark"
 description: "pytest-benchmark를 사용하여 Python 코드를 벤치마킹하는 단계별 가이드"
 heading: "pytest-benchmark를 사용하여 Python 코드를 벤치마킹하는 방법"
 published: "2024-10-09T16:30:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 1
 ---
 
@@ -43,7 +43,7 @@ import BencherFooter from "../../../chunks/learn/ko/bencher-footer.mdx";
 
 <BenchmarkingPython />
 
-둘 다 [벤쳐의 지원을 받습니다](/ko/docs/explanation/adapters/).
+둘 다 [Bencher의 지원을 받습니다](/ko/docs/explanation/adapters/).
 그렇다면 왜 `pytest-benchmark`를 선택해야 할까요?
 `pytest-benchmark`는 Python 생태계에서 사실상 표준 유닛 테스트 하니스인 `pytest`와 매끄럽게 통합됩니다.
 이미 `pytest`를 사용하고 있다면 코드의 지연 시간을 벤치마킹하기 위해 `pytest-benchmark`를 사용하는 것이 좋습니다.
@@ -105,6 +105,8 @@ import BencherFooter from "../../../chunks/learn/ko/bencher-footer.mdx";
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 `pytest-benchmark`는 실행하는 모든 라운드를 JSON 결과에 저장합니다. 기본 `max_time`인 1초로는 우리 것처럼 빠른 벤치마크가 Bencher API 서버가 기본적으로 허용하는 4 MiB 요청 본문보다 큰 파일을 작성합니다. `--benchmark-max-time 0.02`를 사용하면 파일이 그 한도보다 훨씬 작게 유지됩니다.
 
 <CatchInCiPlot />
 

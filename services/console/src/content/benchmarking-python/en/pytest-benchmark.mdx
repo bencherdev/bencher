@@ -3,7 +3,7 @@ title: "pytest-benchmark"
 description: "A step-by-step guide on how to benchmark Python code with pytest-benchmark"
 heading: "How to benchmark Python code with pytest-benchmark"
 published: "2024-10-09T16:30:00Z"
-modified: "2026-04-15T06:13:17Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 1
 ---
 
@@ -43,7 +43,7 @@ import BencherFooter from "../../../chunks/learn/en/bencher-footer.mdx";
 
 <BenchmarkingPython />
 
-Both are [support by Bencher](/docs/explanation/adapters/).
+Both are [supported by Bencher](/docs/explanation/adapters/).
 So why choose `pytest-benchmark`?
 `pytest-benchmark` integrates seamlessly with `pytest`,
 which is the de facto standard unit test harness in the Python ecosystem.
@@ -107,6 +107,8 @@ And the `test_game_1_000_000` benchmark is down more than 500,000x! `571,684,633
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 `pytest-benchmark` saves every round that it runs in its JSON results. With its default `max_time` of one second, fast benchmarks like ours write a file larger than the 4 MiB request body that a Bencher API server accepts by default. `--benchmark-max-time 0.02` keeps the file well under that limit.
 
 <CatchInCiPlot />
 

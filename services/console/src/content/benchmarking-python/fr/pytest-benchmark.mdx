@@ -3,7 +3,7 @@ title: "pytest-benchmark"
 description: "Un guide étape par étape sur la façon d'évaluer les performances du code Python avec pytest-benchmark"
 heading: "Comment évaluer les performances du code Python avec pytest-benchmark"
 published: "2024-10-09T16:30:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 1
 ---
 
@@ -107,6 +107,8 @@ Et le benchmark `test_game_1_000_000` a chuté de plus de 500,000x ! `571,684,63
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 `pytest-benchmark` enregistre chaque round qu'il exécute dans ses résultats JSON. Avec son `max_time` par défaut d'une seconde, des benchmarks rapides comme les nôtres écrivent un fichier plus grand que le corps de requête de 4 MiB qu'un serveur API Bencher accepte par défaut. `--benchmark-max-time 0.02` maintient le fichier bien en dessous de cette limite.
 
 <CatchInCiPlot />
 
