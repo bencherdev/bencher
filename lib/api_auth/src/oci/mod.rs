@@ -644,12 +644,13 @@ fn extract_basic_credentials(
 ///
 /// The issued token is single-repository, so we select one target repository
 /// and union the actions requested for it:
-/// - The target is the first scope that names a repository — the registry's
-///   challenge scope, i.e. the resource the client is actually accessing.
+/// - The target is the repository of the first scope that asks for `push`.
+///   A push that may mount a layer from another repository also asks to pull
+///   that source, and containerd sorts its scopes, so the source can come first.
+/// - Without a `push` scope, the target is the first scope that names a repository.
 /// - Actions are unioned **only** from scopes whose repository matches the
-///   target. Cached scopes that containerd may append for *other* repositories
-///   (or any repository-less scope) are dropped, so they can never widen the
-///   token's actions or retarget it.
+///   target. Scopes for *other* repositories (or any repository-less scope)
+///   are dropped, so they can never widen the token's actions.
 fn parse_scopes(scopes: &[String]) -> Result<(Option<String>, Vec<OciAction>), HttpError> {
     // Parse every scope first so a malformed scope still errors, as before.
     let parsed: Vec<(Option<String>, Vec<OciAction>)> = scopes
@@ -657,7 +658,11 @@ fn parse_scopes(scopes: &[String]) -> Result<(Option<String>, Vec<OciAction>), H
         .map(|s| parse_scope(s))
         .collect::<Result<_, _>>()?;
 
-    let target = parsed.iter().find_map(|(repo, _)| repo.clone());
+    let target = parsed
+        .iter()
+        .find(|(repo, actions)| repo.is_some() && actions.contains(&OciAction::Push))
+        .or_else(|| parsed.iter().find(|(repo, _)| repo.is_some()))
+        .and_then(|(repo, _)| repo.clone());
 
     let mut actions = Vec::new();
     for (repo, scope_actions) in parsed {
@@ -799,24 +804,70 @@ mod tests {
         assert_eq!(actions, Vec::new());
     }
 
+    // containerd sorts its scopes, so a mount source can come before the push target.
     #[test]
-    fn parse_scopes_ignores_other_repos() {
+    fn parse_scopes_push_repo_first() {
         let scopes = vec![
+            "repository:repo-b:pull,push".to_owned(),
             "repository:repo-a:pull".to_owned(),
-            "repository:repo-b:push".to_owned(),
         ];
         let (repo, actions) = parse_scopes(&scopes).unwrap();
-        assert_eq!(repo, Some("repo-a".to_owned()));
-        assert_eq!(actions, vec![OciAction::Pull]);
+        assert_eq!(repo, Some("repo-b".to_owned()));
+        assert_eq!(actions, vec![OciAction::Pull, OciAction::Push]);
     }
 
-    // A foreign repository's actions must never leak into the target token,
-    // even when they overlap/exceed the target's own actions.
     #[test]
-    fn parse_scopes_excludes_other_repo_actions() {
+    fn parse_scopes_push_repo_last() {
         let scopes = vec![
             "repository:repo-a:pull".to_owned(),
             "repository:repo-b:pull,push".to_owned(),
+        ];
+        let (repo, actions) = parse_scopes(&scopes).unwrap();
+        assert_eq!(repo, Some("repo-b".to_owned()));
+        assert_eq!(actions, vec![OciAction::Pull, OciAction::Push]);
+    }
+
+    #[test]
+    fn parse_scopes_push_repo_among_three() {
+        let scopes = vec![
+            "repository:repo-a:pull".to_owned(),
+            "repository:repo-b:push".to_owned(),
+            "repository:repo-c:pull".to_owned(),
+        ];
+        let (repo, actions) = parse_scopes(&scopes).unwrap();
+        assert_eq!(repo, Some("repo-b".to_owned()));
+        assert_eq!(actions, vec![OciAction::Push]);
+    }
+
+    #[test]
+    fn parse_scopes_push_repo_merges_own_scopes() {
+        let scopes = vec![
+            "repository:repo-a:pull".to_owned(),
+            "repository:repo-b:pull".to_owned(),
+            "repository:repo-b:push".to_owned(),
+        ];
+        let (repo, actions) = parse_scopes(&scopes).unwrap();
+        assert_eq!(repo, Some("repo-b".to_owned()));
+        assert_eq!(actions, vec![OciAction::Pull, OciAction::Push]);
+    }
+
+    #[test]
+    fn parse_scopes_first_push_repo_wins() {
+        let scopes = vec![
+            "repository:repo-a:pull".to_owned(),
+            "repository:repo-b:push".to_owned(),
+            "repository:repo-c:pull,push".to_owned(),
+        ];
+        let (repo, actions) = parse_scopes(&scopes).unwrap();
+        assert_eq!(repo, Some("repo-b".to_owned()));
+        assert_eq!(actions, vec![OciAction::Push]);
+    }
+
+    #[test]
+    fn parse_scopes_no_push_keeps_first_repo() {
+        let scopes = vec![
+            "repository:repo-a:pull".to_owned(),
+            "repository:repo-b:pull".to_owned(),
         ];
         let (repo, actions) = parse_scopes(&scopes).unwrap();
         assert_eq!(repo, Some("repo-a".to_owned()));
