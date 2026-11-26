@@ -417,12 +417,14 @@ mod tests {
                 start_point::StartPoint,
                 version::{QueryVersion, VersionId},
             },
+            testbed::TestbedId,
+            threshold::alert::AlertId,
         },
         schema,
         test_util::{
             BranchIds, count_head_versions, create_base_entities, create_branch_with_head,
-            create_head_version, create_version, get_branch_head_id, get_head_replaced,
-            get_head_versions, setup_test_db,
+            create_head_version, create_version, get_alert_state, get_branch_head_id,
+            get_head_replaced, get_head_versions, setup_test_db,
         },
     };
 
@@ -1439,10 +1441,9 @@ mod tests {
         assert!(get_head_replaced(&mut conn, branch.head_id).is_some());
     }
 
-    /// Test that silencing alerts for old head works within a transaction.
+    /// Test that a replacement silences only the active alerts of the old head.
     #[test]
-    #[expect(clippy::too_many_lines, reason = "test requires extensive setup")]
-    fn for_branch_silences_old_head_alerts() {
+    fn for_branch_silences_only_active_old_head_alerts() {
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);
 
@@ -1469,109 +1470,87 @@ mod tests {
             None,
         );
         create_head_version(&mut conn, branch.head_id, version_id);
-        let measure = crate::test_util::create_measure(
-            &mut conn,
-            base.project_id,
-            "00000000-0000-0000-0000-000000000040",
-            "latency",
-            "latency",
-        );
+        let mut alert_on_old_head = |index: u16, status: AlertStatus| {
+            create_head_alert(
+                &mut conn,
+                base.project_id,
+                branch,
+                version_id,
+                testbed,
+                index,
+                status,
+            )
+        };
+        let active = alert_on_old_head(1, AlertStatus::Active);
+        let dismissed = alert_on_old_head(2, AlertStatus::Dismissed);
+        let silenced = alert_on_old_head(3, AlertStatus::Silenced);
 
-        // Create an alert chain on the old head
+        let now = DateTime::try_from(DateTime::TEST.timestamp() + 60).expect("Invalid timestamp");
+        let insert_head = InsertHead::new(branch.branch_id, None);
+        let branch_head = conn
+            .immediate_transaction(|conn| insert_head.insert_for_branch(conn, None, now))
+            .expect("Failed to replace the head");
+
+        let BranchHead::Created {
+            silenced_alerts, ..
+        } = branch_head
+        else {
+            panic!("Expected a new head, got {branch_head:?}");
+        };
+        assert_eq!(silenced_alerts, 1);
+        assert_eq!(
+            get_alert_state(&mut conn, active),
+            (AlertStatus::Silenced, now)
+        );
+        assert_eq!(
+            get_alert_state(&mut conn, dismissed),
+            (AlertStatus::Dismissed, DateTime::TEST)
+        );
+        assert_eq!(
+            get_alert_state(&mut conn, silenced),
+            (AlertStatus::Silenced, DateTime::TEST)
+        );
+    }
+
+    /// Create an alert on its own measure and threshold, from a report on the head.
+    fn create_head_alert(
+        conn: &mut SqliteConnection,
+        project_id: ProjectId,
+        branch: BranchIds,
+        version_id: VersionId,
+        testbed: TestbedId,
+        index: u16,
+        status: AlertStatus,
+    ) -> AlertId {
+        let uuid = |row: u16| format!("00000000-0000-0000-0000-{:012}", index * 100 + row);
+        let name = format!("alert{index}");
+        let measure = crate::test_util::create_measure(conn, project_id, &uuid(0), &name, &name);
         let report_id = crate::test_util::create_report(
-            &mut conn,
-            "00000000-0000-0000-0000-000000000100",
-            base.project_id,
+            conn,
+            &uuid(1),
+            project_id,
             branch.head_id,
             version_id,
             testbed,
         );
-        let benchmark_id = crate::test_util::create_benchmark(
-            &mut conn,
-            base.project_id,
-            "00000000-0000-0000-0000-000000000101",
-            "bench1",
-            "bench1",
-        );
-        let report_benchmark_id = crate::test_util::create_report_benchmark(
-            &mut conn,
-            "00000000-0000-0000-0000-000000000102",
-            report_id,
-            0,
-            benchmark_id,
-        );
-        let metric_id = crate::test_util::create_metric(
-            &mut conn,
-            "00000000-0000-0000-0000-000000000103",
-            report_benchmark_id,
-            measure,
-            1.0,
-        );
+        let benchmark_id =
+            crate::test_util::create_benchmark(conn, project_id, &uuid(2), &name, &name);
+        let report_benchmark_id =
+            crate::test_util::create_report_benchmark(conn, &uuid(3), report_id, 0, benchmark_id);
+        let metric_id =
+            crate::test_util::create_metric(conn, &uuid(4), report_benchmark_id, measure, 1.0);
         let threshold_id = crate::test_util::create_threshold(
-            &mut conn,
-            base.project_id,
+            conn,
+            project_id,
             branch.branch_id,
             testbed,
             measure,
-            "00000000-0000-0000-0000-000000000104",
+            &uuid(5),
         );
-        let model_id = crate::test_util::create_model(
-            &mut conn,
-            threshold_id,
-            "00000000-0000-0000-0000-000000000105",
-            0,
-        );
-        let boundary_id = crate::test_util::create_boundary(
-            &mut conn,
-            "00000000-0000-0000-0000-000000000106",
-            metric_id,
-            threshold_id,
-            model_id,
-        );
-        let alert_id = crate::test_util::create_alert(
-            &mut conn,
-            "00000000-0000-0000-0000-000000000107",
-            boundary_id,
-            BoundaryLimit::Upper,
-            AlertStatus::Active,
-        );
-
-        // Alert should be active
-        assert_eq!(
-            crate::test_util::get_alert_status(&mut conn, alert_id),
-            AlertStatus::Active,
-        );
-
-        // Run transaction: silence alerts for old head
-        conn.immediate_transaction(|conn| {
-            use super::super::super::threshold::alert::{AlertId, UpdateAlert};
-
-            let alerts = schema::alert::table
-                .inner_join(schema::boundary::table.inner_join(
-                    schema::metric::table.inner_join(
-                        schema::report_benchmark::table.inner_join(schema::report::table),
-                    ),
-                ))
-                .filter(schema::report::head_id.eq(branch.head_id))
-                .select(schema::alert::id)
-                .load::<AlertId>(conn)?;
-
-            if !alerts.is_empty() {
-                let silenced_alert = UpdateAlert::silence(DateTime::TEST);
-                diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&alerts)))
-                    .set(&silenced_alert)
-                    .execute(conn)?;
-            }
-
-            diesel::QueryResult::Ok(())
-        })
-        .expect("Transaction failed");
-
-        // Alert should now be silenced
-        assert_eq!(
-            crate::test_util::get_alert_status(&mut conn, alert_id),
-            AlertStatus::Silenced,
-        );
+        let model_id = crate::test_util::create_model(conn, threshold_id, &uuid(6), 0);
+        let boundary_id =
+            crate::test_util::create_boundary(conn, &uuid(7), metric_id, threshold_id, model_id);
+        crate::test_util::create_alert(conn, &uuid(8), boundary_id, BoundaryLimit::Upper, status)
     }
 
     /// Test that transaction works correctly when branch has no old head.

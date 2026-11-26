@@ -70,30 +70,22 @@ impl QueryAlert {
             .map_err(resource_not_found_err!(Alert, (project_id, uuid)))
     }
 
+    /// A dismissed or silenced alert is settled, so it keeps its status and modified.
     pub fn silence_all(
         conn: &mut DbConnection,
         head_id: HeadId,
         now: DateTime,
     ) -> diesel::QueryResult<usize> {
-        let alerts =
+        let head_reports = schema::report::table
+            .filter(schema::report::head_id.eq(head_id))
+            .select(schema::report::id);
+        diesel::update(
             schema::alert::table
-                .inner_join(schema::boundary::table.inner_join(
-                    schema::metric::table.inner_join(
-                        schema::report_benchmark::table.inner_join(schema::report::table),
-                    ),
-                ))
-                .filter(schema::report::head_id.eq(head_id))
-                .select(schema::alert::id)
-                .load::<AlertId>(conn)?;
-
-        if alerts.is_empty() {
-            return Ok(0);
-        }
-
-        let silenced_alert = UpdateAlert::silence(now);
-        diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&alerts)))
-            .set(&silenced_alert)
-            .execute(conn)
+                .filter(schema::alert::report_id.eq_any(head_reports))
+                .filter(schema::alert::status.eq(AlertStatus::Active)),
+        )
+        .set(&UpdateAlert::silence(now))
+        .execute(conn)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, HttpError> {
@@ -395,24 +387,20 @@ mod tests {
         DateTime,
         project::{alert::AlertStatus, boundary::BoundaryLimit},
     };
-    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     #[cfg(feature = "plus")]
     use crate::test_util::{
         CreateSpecArgs, clear_testbed_spec, create_spec, set_report_spec, set_testbed_spec,
     };
 
-    use crate::{
-        schema,
-        test_util::{
-            create_alert, create_base_entities, create_benchmark, create_boundary,
-            create_branch_with_head, create_head_version, create_measure, create_metric,
-            create_model, create_report, create_report_benchmark, create_testbed, create_threshold,
-            create_version, get_alert_status, setup_test_db,
-        },
+    use crate::test_util::{
+        create_alert, create_base_entities, create_benchmark, create_boundary,
+        create_branch_with_head, create_head_version, create_measure, create_metric, create_model,
+        create_report, create_report_benchmark, create_testbed, create_threshold, create_version,
+        get_alert_state, get_alert_status, set_alert_status, setup_test_db,
     };
 
-    use super::{AlertId, UpdateAlert};
+    use super::{AlertId, QueryAlert};
     use crate::model::project::{
         ProjectId,
         branch::{BranchId, head::HeadId, version::VersionId},
@@ -502,7 +490,7 @@ mod tests {
 
     #[test]
     #[expect(clippy::too_many_lines, reason = "test requires extensive setup")]
-    fn silence_all_updates_all_alerts_for_head() {
+    fn silence_all_silences_only_active_alerts_for_head() {
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);
         let branch = create_branch_with_head(
@@ -615,36 +603,26 @@ mod tests {
             },
         );
 
-        // All should be Active
-        assert_eq!(get_alert_status(&mut conn, alert1), AlertStatus::Active);
-        assert_eq!(get_alert_status(&mut conn, alert2), AlertStatus::Active);
-        assert_eq!(get_alert_status(&mut conn, alert3), AlertStatus::Active);
+        set_alert_status(&mut conn, alert2, AlertStatus::Dismissed);
+        set_alert_status(&mut conn, alert3, AlertStatus::Silenced);
 
-        // Query alert IDs for this head
-        let alert_ids: Vec<AlertId> =
-            schema::alert::table
-                .inner_join(schema::boundary::table.inner_join(
-                    schema::metric::table.inner_join(
-                        schema::report_benchmark::table.inner_join(schema::report::table),
-                    ),
-                ))
-                .filter(schema::report::head_id.eq(branch.head_id))
-                .select(schema::alert::id)
-                .load::<AlertId>(&mut conn)
-                .expect("Failed to query alerts");
-        assert_eq!(alert_ids.len(), 3);
+        let now = DateTime::try_from(DateTime::TEST.timestamp() + 60).expect("Invalid timestamp");
+        let silenced = QueryAlert::silence_all(&mut conn, branch.head_id, now)
+            .expect("Failed to silence alerts");
 
-        // Bulk silence using eq_any
-        let silenced_alert = UpdateAlert::silence(DateTime::TEST);
-        diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&alert_ids)))
-            .set(&silenced_alert)
-            .execute(&mut conn)
-            .expect("Failed to bulk silence alerts");
-
-        // Verify all are now Silenced
-        assert_eq!(get_alert_status(&mut conn, alert1), AlertStatus::Silenced);
-        assert_eq!(get_alert_status(&mut conn, alert2), AlertStatus::Silenced);
-        assert_eq!(get_alert_status(&mut conn, alert3), AlertStatus::Silenced);
+        assert_eq!(silenced, 1);
+        assert_eq!(
+            get_alert_state(&mut conn, alert1),
+            (AlertStatus::Silenced, now)
+        );
+        assert_eq!(
+            get_alert_state(&mut conn, alert2),
+            (AlertStatus::Dismissed, DateTime::TEST)
+        );
+        assert_eq!(
+            get_alert_state(&mut conn, alert3),
+            (AlertStatus::Silenced, DateTime::TEST)
+        );
     }
 
     #[test]
@@ -745,26 +723,10 @@ mod tests {
             },
         );
 
-        // Silence only head1's alerts
-        let head1_alert_ids: Vec<AlertId> =
-            schema::alert::table
-                .inner_join(schema::boundary::table.inner_join(
-                    schema::metric::table.inner_join(
-                        schema::report_benchmark::table.inner_join(schema::report::table),
-                    ),
-                ))
-                .filter(schema::report::head_id.eq(branch1.head_id))
-                .select(schema::alert::id)
-                .load::<AlertId>(&mut conn)
-                .expect("Failed to query alerts");
+        let silenced = QueryAlert::silence_all(&mut conn, branch1.head_id, DateTime::TEST)
+            .expect("Failed to silence alerts");
 
-        let silenced_alert = UpdateAlert::silence(DateTime::TEST);
-        diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&head1_alert_ids)))
-            .set(&silenced_alert)
-            .execute(&mut conn)
-            .expect("Failed to silence");
-
-        // head1 alert silenced, head2 alert still active
+        assert_eq!(silenced, 1);
         assert_eq!(
             get_alert_status(&mut conn, alert_head1),
             AlertStatus::Silenced
@@ -788,30 +750,10 @@ mod tests {
             "00000000-0000-0000-0000-000000000011",
         );
 
-        // Query alerts for a head with no alerts
-        let alert_ids: Vec<AlertId> =
-            schema::alert::table
-                .inner_join(schema::boundary::table.inner_join(
-                    schema::metric::table.inner_join(
-                        schema::report_benchmark::table.inner_join(schema::report::table),
-                    ),
-                ))
-                .filter(schema::report::head_id.eq(branch.head_id))
-                .select(schema::alert::id)
-                .load::<AlertId>(&mut conn)
-                .expect("Failed to query alerts");
+        let silenced = QueryAlert::silence_all(&mut conn, branch.head_id, DateTime::TEST)
+            .expect("Failed to silence alerts");
 
-        assert_eq!(alert_ids, Vec::new());
-
-        // Replicate the silence_all early-return logic:
-        // When alert_ids is empty, the update should affect 0 rows.
-        let silenced_alert = UpdateAlert::silence(DateTime::TEST);
-        let updated =
-            diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&alert_ids)))
-                .set(&silenced_alert)
-                .execute(&mut conn)
-                .expect("Failed to bulk silence alerts");
-        assert_eq!(updated, 0);
+        assert_eq!(silenced, 0);
     }
 
     #[cfg(feature = "plus")]
