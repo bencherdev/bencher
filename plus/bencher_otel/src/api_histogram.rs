@@ -4,6 +4,10 @@ use opentelemetry::KeyValue;
 pub use bencher_json::Priority;
 
 use crate::callback::finish_attributes;
+use crate::oci::{
+    BYTES_BOUNDARIES, OciPhaseOutcome, OciPullOutcome, OciStorageOperation, OciStorageOutcome,
+    OciUploadPhase, SECONDS_BOUNDARIES,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ApiHistogram {
@@ -23,6 +27,16 @@ pub enum ApiHistogram {
     CallbackFinishDuration(CallbackFinish),
     /// Attempts a callback made over its life, recorded at its final outcome.
     CallbackFinishAttempts(CallbackFinish),
+    /// Time a registry storage call took to answer.
+    OciStorageRequestDuration(OciStorageOperation, OciStorageOutcome),
+    /// Time an upload request took, from its handler's start to its response.
+    OciUploadPhaseDuration(OciUploadPhase, OciPhaseOutcome),
+    /// Size of each finalized blob.
+    OciBlobUploadBytes,
+    /// Bytes a blob GET body sent before it ended or was dropped.
+    OciBlobPullBytes(OciPullOutcome),
+    /// Time a blob GET took, from its handler's start to its body's end or drop.
+    OciBlobPullDuration(OciPullOutcome),
 }
 
 impl ApiHistogram {
@@ -36,6 +50,11 @@ impl ApiHistogram {
             Self::ReportWriteDuration => "report.write.duration",
             Self::CallbackFinishDuration(_) => "callback.finish.duration",
             Self::CallbackFinishAttempts(_) => "callback.finish.attempts",
+            Self::OciStorageRequestDuration(_, _) => "oci.storage.request.duration",
+            Self::OciUploadPhaseDuration(_, _) => "oci.upload.phase.duration",
+            Self::OciBlobUploadBytes => "oci.blob.upload.bytes",
+            Self::OciBlobPullBytes(_) => "oci.blob.pull.bytes",
+            Self::OciBlobPullDuration(_) => "oci.blob.pull.duration",
         }
     }
 
@@ -59,6 +78,17 @@ impl ApiHistogram {
             Self::CallbackFinishAttempts(_) => {
                 "Attempts a callback made over its life, recorded at its final outcome"
             },
+            Self::OciStorageRequestDuration(_, _) => "Time a registry storage call took to answer",
+            Self::OciUploadPhaseDuration(_, _) => {
+                "Time an upload request took, from its handler's start to its response"
+            },
+            Self::OciBlobUploadBytes => "Size of each finalized blob",
+            Self::OciBlobPullBytes(_) => {
+                "Bytes a blob GET body sent before it ended or was dropped"
+            },
+            Self::OciBlobPullDuration(_) => {
+                "Time a blob GET took, from its handler's start to its body's end or drop"
+            },
         }
     }
 
@@ -70,8 +100,12 @@ impl ApiHistogram {
             | Self::ReportCreateDuration
             | Self::ReportProcessDuration
             | Self::ReportWriteDuration
-            | Self::CallbackFinishDuration(_) => "s",
+            | Self::CallbackFinishDuration(_)
+            | Self::OciStorageRequestDuration(_, _)
+            | Self::OciUploadPhaseDuration(_, _)
+            | Self::OciBlobPullDuration(_) => "s",
             Self::CallbackFinishAttempts(_) => "{attempt}",
+            Self::OciBlobUploadBytes | Self::OciBlobPullBytes(_) => "By",
         }
     }
 
@@ -82,9 +116,17 @@ impl ApiHistogram {
             | Self::JobCompleteDuration(priority) => vec![priority_attribute(priority)],
             Self::ReportCreateDuration
             | Self::ReportProcessDuration
-            | Self::ReportWriteDuration => Vec::new(),
+            | Self::ReportWriteDuration
+            | Self::OciBlobUploadBytes => Vec::new(),
             Self::CallbackFinishDuration(finish) | Self::CallbackFinishAttempts(finish) => {
                 finish_attributes(finish)
+            },
+            Self::OciStorageRequestDuration(operation, outcome) => {
+                vec![operation.into(), outcome.into()]
+            },
+            Self::OciUploadPhaseDuration(phase, outcome) => vec![phase.into(), outcome.into()],
+            Self::OciBlobPullBytes(outcome) | Self::OciBlobPullDuration(outcome) => {
+                vec![outcome.into()]
             },
         }
     }
@@ -103,6 +145,10 @@ impl ApiHistogram {
                 Some(&[0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 20.0, 30.0, 60.0])
             },
             Self::CallbackFinishAttempts(_) => Some(&[0.0, 1.0, 2.0, 3.0]),
+            Self::OciStorageRequestDuration(_, _)
+            | Self::OciUploadPhaseDuration(_, _)
+            | Self::OciBlobPullDuration(_) => Some(SECONDS_BOUNDARIES),
+            Self::OciBlobUploadBytes | Self::OciBlobPullBytes(_) => Some(BYTES_BOUNDARIES),
         }
     }
 }

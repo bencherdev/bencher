@@ -26,6 +26,7 @@ plus = [
     "dep:dropshot",
     "dep:futures",
     "dep:http",
+    "dep:hyper",
     "dep:schemars",
     "dep:serde",
     "dep:serde_json",
@@ -33,7 +34,7 @@ plus = [
     "dep:urlencoding",
 ]
 sentry = ["dep:sentry"]
-otel = ["dep:bencher_otel"]
+otel = ["dep:bencher_otel", "bencher_oci_storage?/otel"]
 
 [dependencies]
 api_auth = { workspace = true, optional = true }
@@ -51,6 +52,7 @@ bytes = { workspace = true, optional = true }
 dropshot = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
+hyper = { workspace = true, optional = true }
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
@@ -66,7 +68,7 @@ chrono.workspace = true
 http.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-no-provider"] }
 serde_json.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tokio = { workspace = true, features = ["io-util", "macros", "net", "rt-multi-thread"] }
 
 [lints]
 workspace = true

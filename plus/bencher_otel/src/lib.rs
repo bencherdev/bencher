@@ -4,6 +4,7 @@ mod api_gauge;
 mod api_histogram;
 mod api_meter;
 mod callback;
+mod oci;
 
 pub use api_gauge::{ApiGauge, RunnerStateKind};
 pub use api_histogram::{ApiHistogram, Priority};
@@ -13,4 +14,8 @@ pub use api_meter::{
     OAuthGrantKind, OAuthProvider, OAuthRevokeKind, OAuthTokenAuthFailureReason,
     OAuthTokenFailureReason, PauseReasonKind, PlanKind, ProjectKeyAuthFailureReason,
     UpdateChannelKind, UserKeyAuthFailureReason,
+};
+pub use oci::{
+    OciFinalizeOutcome, OciPhaseOutcome, OciPullOutcome, OciStorageErrorCode, OciStorageOperation,
+    OciStorageOutcome, OciSweepAction, OciUploadPhase,
 };

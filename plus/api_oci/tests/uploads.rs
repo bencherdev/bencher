@@ -131,6 +131,70 @@ async fn upload_chunk() {
     assert!(range.contains(&format!("0-{}", chunk_data.len() - 1)));
 }
 
+// PATCH with a chunked body that breaks part way is the client's fault
+#[tokio::test]
+async fn upload_chunk_with_a_broken_body() {
+    use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _, BufReader};
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Broken User", "uploadbroken@example.com")
+        .await;
+    let org = server.create_org(&user, "Broken Org").await;
+    let project = server.create_project(&user, &org, "Broken Project").await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
+        .send()
+        .await
+        .expect("Start upload failed");
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header");
+    let session_id = extract_session_id(location).expect("Invalid location format");
+
+    // One good chunk, then a chunk size line that is not hex
+    let address = server
+        .url
+        .strip_prefix("http://")
+        .expect("The test server speaks HTTP");
+    let mut socket = tokio::net::TcpStream::connect(address)
+        .await
+        .expect("Failed to connect");
+    socket
+        .write_all(
+            format!(
+                "PATCH /v2/{}/blobs/uploads/{} HTTP/1.1\r\nHost: {}\r\nContent-Type: application/octet-stream\r\nTransfer-Encoding: chunked\r\n\r\n10\r\n0123456789abcdef\r\nnot a chunk size\r\n",
+                project_slug, session_id, address
+            )
+            .as_bytes(),
+        )
+        .await
+        .expect("Failed to send");
+
+    let mut status_line = String::new();
+    BufReader::new(socket)
+        .read_line(&mut status_line)
+        .await
+        .expect("Failed to read the response");
+    assert!(
+        status_line.starts_with("HTTP/1.1 400 "),
+        "a broken body answers 400, not {status_line}"
+    );
+}
+
 // PATCH with Content-Range header
 #[tokio::test]
 async fn upload_chunk_with_content_range() {

@@ -36,7 +36,7 @@ use crate::error::storage_error;
 use crate::response::{DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers};
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
 use bencher_json::ProjectResourceId;
-use bencher_oci_storage::{Digest, UploadId};
+use bencher_oci_storage::{Digest, PhaseOutcome, UploadId, UploadPhase, UploadPhaseTimer};
 use bencher_schema::context::ApiContext;
 use dropshot::{
     Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, StreamingBody, endpoint,
@@ -101,10 +101,11 @@ pub(crate) async fn stream_to_storage(
     storage: &bencher_oci_storage::OciStorage,
     upload_id: &UploadId,
     current_size: u64,
-) -> Result<u64, HttpError> {
+) -> Result<u64, UploadError> {
     let chunk_size = storage.chunk_size();
     let (buffer, new_size) = body
         .into_stream()
+        .map_err(UploadError::Body)
         .try_fold(
             (Vec::with_capacity(chunk_size), current_size),
             |(mut buffer, mut new_size), data| async move {
@@ -129,10 +130,31 @@ pub(crate) async fn stream_to_storage(
     if buffer.is_empty() {
         Ok(new_size)
     } else {
-        storage
+        Ok(storage
             .append_upload(upload_id, buffer.into())
             .await
-            .map_err(storage_error)
+            .map_err(storage_error)?)
+    }
+}
+
+/// A failed upload request, with a failure of its request body kept apart.
+pub(crate) enum UploadError {
+    /// The request body failed part way, as it does when the client goes away.
+    Body(HttpError),
+    Request(HttpError),
+}
+
+impl From<HttpError> for UploadError {
+    fn from(error: HttpError) -> Self {
+        Self::Request(error)
+    }
+}
+
+impl From<UploadError> for HttpError {
+    fn from(error: UploadError) -> Self {
+        match error {
+            UploadError::Body(error) | UploadError::Request(error) => error,
+        }
     }
 }
 
@@ -238,15 +260,23 @@ pub async fn oci_upload_chunk(
     path: Path<UploadSessionPath>,
     body: StreamingBody,
 ) -> Result<Response<Body>, HttpError> {
+    let phase = UploadPhaseTimer::new(UploadPhase::Patch);
+    finish_phase(phase, upload_chunk(&rqctx, path.into_inner(), body).await)
+}
+
+async fn upload_chunk(
+    rqctx: &RequestContext<ApiContext>,
+    path: UploadSessionPath,
+    body: StreamingBody,
+) -> Result<Response<Body>, UploadError> {
     let context = rqctx.context();
-    let path = path.into_inner();
     validate_uploads_ref(&path.reference)?;
 
     // No Bearer auth required - session ID serves as authentication
     // (obtained only via authenticated POST to start upload)
 
     // Apply public rate limiting based on IP
-    apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
+    apply_public_rate_limit(&rqctx.log, context, rqctx)?;
 
     let repository_name = path.name.to_string();
 
@@ -397,17 +427,28 @@ pub async fn oci_upload_complete(
     query: Query<UploadCompleteQuery>,
     body: StreamingBody,
 ) -> Result<Response<Body>, HttpError> {
+    let phase = UploadPhaseTimer::new(UploadPhase::Finalize);
+    finish_phase(
+        phase,
+        upload_complete(&rqctx, path.into_inner(), query.into_inner(), body).await,
+    )
+}
+
+async fn upload_complete(
+    rqctx: &RequestContext<ApiContext>,
+    path: UploadSessionPath,
+    query: UploadCompleteQuery,
+    body: StreamingBody,
+) -> Result<Response<Body>, UploadError> {
     let context = rqctx.context();
-    let path = path.into_inner();
     validate_uploads_ref(&path.reference)?;
 
     // No Bearer auth required - session ID serves as authentication
     // (obtained only via authenticated POST to start upload)
 
     // Apply public rate limiting based on IP
-    apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
+    apply_public_rate_limit(&rqctx.log, context, rqctx)?;
 
-    let query = query.into_inner();
     let repository_name = path.name.to_string();
 
     // Resolve project for stable storage paths
@@ -442,7 +483,7 @@ pub async fn oci_upload_complete(
             .complete_upload(&upload_id, &expected_digest)
             .await
             .map_err(storage_error)?;
-        Ok::<(Digest, u64), HttpError>((digest, final_size))
+        Ok::<(Digest, u64), UploadError>((digest, final_size))
     }
     .await;
 
@@ -531,4 +572,24 @@ pub async fn oci_upload_cancel(
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
+}
+
+/// Records an upload phase with the outcome of its response, and hands the response on.
+pub(crate) fn finish_phase(
+    phase: UploadPhaseTimer,
+    response: Result<Response<Body>, UploadError>,
+) -> Result<Response<Body>, HttpError> {
+    let outcome = match &response {
+        Ok(response) => {
+            if response.status().is_success() {
+                PhaseOutcome::Ok
+            } else {
+                PhaseOutcome::Error
+            }
+        },
+        Err(UploadError::Body(_)) => PhaseOutcome::Aborted,
+        Err(UploadError::Request(_)) => PhaseOutcome::Error,
+    };
+    phase.finish(outcome);
+    response.map_err(HttpError::from)
 }

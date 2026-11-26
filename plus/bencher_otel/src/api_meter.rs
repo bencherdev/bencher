@@ -8,6 +8,7 @@ use uuid::Uuid;
 use crate::api_gauge::ApiGauge;
 use crate::api_histogram::{ApiHistogram, Priority, priority_attribute};
 use crate::callback::attempt_attributes;
+use crate::oci::{OciFinalizeOutcome, OciStorageErrorCode, OciStorageOperation, OciSweepAction};
 
 static METER: LazyLock<Meter> = LazyLock::new(|| opentelemetry::global::meter(ApiMeter::NAME));
 
@@ -81,6 +82,24 @@ impl ApiMeter {
     pub fn record(api_histogram: ApiHistogram, value: f64) {
         let builder = METER
             .f64_histogram(api_histogram.name())
+            .with_description(api_histogram.description())
+            .with_unit(api_histogram.unit());
+        let histogram = match api_histogram.boundaries() {
+            Some(boundaries) => builder.with_boundaries(boundaries.to_vec()),
+            None => builder,
+        }
+        .build();
+        let attributes = api_histogram.attributes();
+        histogram.record(value, &attributes);
+    }
+
+    /// Record a histogram observation of a whole number, such as a size in bytes.
+    ///
+    /// The `OTel` SDK deduplicates instruments by (name, description, unit),
+    /// so re-building on every call is cheap and returns the same instrument.
+    pub fn record_u64(api_histogram: ApiHistogram, value: u64) {
+        let builder = METER
+            .u64_histogram(api_histogram.name())
             .with_description(api_histogram.description())
             .with_unit(api_histogram.unit());
         let histogram = match api_histogram.boundaries() {
@@ -181,6 +200,9 @@ pub enum ApiCounter {
     OciManifestPull,
     OciTagsList,
     OciBandwidthMax(Priority),
+    OciStorageError(OciStorageOperation, OciStorageErrorCode),
+    OciFinalize(OciFinalizeOutcome),
+    OciUploadSweep(OciSweepAction),
 
     RunnerRequestMax(IntervalKind),
 
@@ -291,6 +313,9 @@ impl ApiCounter {
             Self::OciBlobPush | Self::OciBlobPull => "{blob}",
             Self::OciManifestPush | Self::OciManifestPull => "{manifest}",
             Self::OciBandwidthMax(_) => "{bandwidth}",
+            Self::OciStorageError(_, _) => "{error}",
+            Self::OciFinalize(_) => "{upload}",
+            Self::OciUploadSweep(_) => "{session}",
 
             Self::RunnerCreate | Self::RunnerUpdate => "{runner}",
             Self::RunnerJobClaim | Self::RunnerJobUpdate(_) => "{job}",
@@ -390,6 +415,9 @@ impl ApiCounter {
             Self::OciManifestPull => "oci.manifest.pull",
             Self::OciTagsList => "oci.tags.list",
             Self::OciBandwidthMax(_) => "oci.bandwidth.max",
+            Self::OciStorageError(_, _) => "oci.storage.errors",
+            Self::OciFinalize(_) => "oci.finalize",
+            Self::OciUploadSweep(_) => "oci.upload.sweep",
 
             Self::RunnerRequestMax(_) => "runner.request.max",
 
@@ -556,6 +584,11 @@ impl ApiCounter {
             Self::OciManifestPull => "Counts the number of OCI manifest pulls",
             Self::OciTagsList => "Counts the number of OCI tags list requests",
             Self::OciBandwidthMax(_) => "Counts the number of OCI bandwidth limit hits",
+            Self::OciStorageError(_, _) => "Counts the number of failed registry storage calls",
+            Self::OciFinalize(_) => "Counts the number of OCI blob upload finalizes, by outcome",
+            Self::OciUploadSweep(_) => {
+                "Counts the number of stale OCI upload sessions the sweep acted on"
+            },
 
             Self::RunnerRequestMax(_) => "Counts the number of runner request maximums reached",
 
@@ -689,6 +722,9 @@ impl ApiCounter {
             },
             Self::CallbackAttempt(class) => attempt_attributes(class),
             Self::GitHubCommitTitlesFailed(reason) => vec![reason.into()],
+            Self::OciStorageError(operation, code) => vec![operation.into(), code.into()],
+            Self::OciFinalize(outcome) => vec![outcome.into()],
+            Self::OciUploadSweep(action) => vec![action.into()],
             Self::RunnerRequestMax(interval_kind)
             | Self::RunUnclaimedMax(interval_kind)
             | Self::RunClaimedMax(interval_kind)

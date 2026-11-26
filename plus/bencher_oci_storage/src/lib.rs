@@ -14,6 +14,8 @@ use reqwest as _;
 
 mod error;
 mod job_output;
+mod metrics;
+mod recording;
 mod storage;
 mod types;
 
@@ -22,6 +24,7 @@ pub use bencher_json::ProjectUuid;
 pub use bencher_json::system::config::DEFAULT_MAX_BODY_SIZE;
 pub use error::OciError;
 pub use job_output::JobOutput;
+pub use metrics::{PhaseOutcome, PullTimer, UploadPhase, UploadPhaseTimer};
 pub use storage::{
     BlobBody, ListTagsResult, MAX_CONCURRENCY, OciStorage, OciStorageError, UploadSweep,
 };

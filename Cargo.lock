@@ -229,6 +229,7 @@ dependencies = [
  "dropshot",
  "futures",
  "http",
+ "hyper",
  "reqwest",
  "schemars 0.8.22",
  "sentry",
@@ -1146,7 +1147,9 @@ dependencies = [
 name = "bencher_oci_storage"
 version = "0.6.17"
 dependencies = [
+ "async-trait",
  "bencher_json",
+ "bencher_otel",
  "bytes",
  "chrono",
  "futures",
