@@ -35,10 +35,7 @@ export const WINDOWS = [
 	{ label: "3m", long: "3 months", days: 92 },
 ] as const;
 
-/**
- * Every adapter a report is listed with, by name. A language adapter such as
- * `rust` tries each of its tools in turn, so the API lists it as `magic`.
- */
+/** Every adapter a report is listed with, by name; the API lists a language adapter as `magic`. */
 export const ADAPTERS: readonly AdapterName[] = [
 	"c_sharp_dot_net",
 	"cpp_catch2",

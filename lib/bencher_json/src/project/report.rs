@@ -1116,7 +1116,7 @@ pub struct JsonReportQueryParams {
     pub branch: Option<String>,
     /// Filter by testbed UUID, slug, or name exact match.
     pub testbed: Option<String>,
-    /// Filter by adapter, as reports list it: a language adapter such as `rust` is listed as `magic`.
+    /// Filter by adapter, as reports list it.
     pub adapter: Option<Adapter>,
     /// Filter for reports after the given date time in milliseconds.
     pub start_time: Option<DateTimeMillis>,
