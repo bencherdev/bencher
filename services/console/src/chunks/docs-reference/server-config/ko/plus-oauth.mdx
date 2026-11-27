@@ -3,7 +3,7 @@
 이 섹션을 구성하면 ChatGPT, claude.ai, Claude Code 같은 MCP 클라이언트가 OAuth로 [Bencher MCP에 로그인](/ko/docs/how-to/mcp/)할 수 있습니다.
 API 서버가 이들의 OAuth 인가 서버가 되며, 사용자는 `console.url`의 Bencher Console에서 각 앱을 승인합니다.
 전체 섹션은 선택 사항입니다.
-지정하지 않으면 OAuth는 꺼집니다: OAuth 엔드포인트는 `404 Not Found`를 반환하고, Bencher MCP는 API 키와 익명 요청만 허용합니다.
+지정하지 않으면 외부 앱은 로그인할 수 없습니다: MCP 서버의 메타데이터와 사용자 정보, 키, OpenID 경로는 `404 Not Found`를 반환하고, Bencher MCP는 API 키와 익명 요청만 허용합니다. Bencher CLI는 요청이 도달한 URL에서 인가 서버의 메타데이터와 인가, 토큰, 취소 엔드포인트를 통해 계속 로그인합니다.
 
 | 이름 | 예시 | 기본값 | 필수 | 설명 |
 | :---: | :---: | :---: | :---: | :---: |

@@ -1,4 +1,4 @@
-use bencher_valid::{DateTime, NonEmpty, OAuthClientId, OAuthScope, UserKey};
+use bencher_valid::{DateTime, NonEmpty, OAuthClientId, OAuthDevice, OAuthScope, UserKey};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -13,6 +13,9 @@ crate::typed_uuid::typed_uuid!(OAuthAuthorizationUuid);
 pub struct JsonOAuthAuthorization {
     pub uuid: OAuthAuthorizationUuid,
     pub client: JsonOAuthAuthorizationClient,
+    /// The device the Bencher CLI asks from, by its hostname. Only the Bencher CLI names one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device: Option<OAuthDevice>,
     pub redirect: JsonOAuthAuthorizationRedirect,
     pub scopes: Vec<OAuthScope>,
     pub expiration: DateTime,
@@ -23,7 +26,7 @@ pub struct JsonOAuthAuthorization {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonOAuthAuthorizationClient {
-    /// The URL of the app's metadata document.
+    /// The URL of the app's metadata document, or `bencher_cli` for the Bencher CLI.
     pub id: OAuthClientId,
     /// The host serving the app's metadata document, which is who the app is.
     pub host: String,

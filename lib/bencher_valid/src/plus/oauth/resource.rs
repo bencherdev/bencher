@@ -25,13 +25,41 @@ pub struct OAuthIssuer(String);
 pub struct OAuthResource(String);
 
 #[cfg(feature = "db")]
-crate::typed_string!(OAuthResource);
+impl<DB> diesel::serialize::ToSql<diesel::sql_types::Text, DB> for OAuthResource
+where
+    DB: diesel::backend::Backend,
+    for<'a> String: diesel::serialize::ToSql<diesel::sql_types::Text, DB>
+        + Into<<DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer>,
+{
+    fn to_sql<'b>(
+        &'b self,
+        out: &mut diesel::serialize::Output<'b, '_, DB>,
+    ) -> diesel::serialize::Result {
+        out.set_value(self.0.clone());
+        Ok(diesel::serialize::IsNull::No)
+    }
+}
+
+/// A stored resource may be the Bencher CLI's, on plain `http` at any host.
+#[cfg(feature = "db")]
+impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Text, DB> for OAuthResource
+where
+    DB: diesel::backend::Backend,
+    String: diesel::deserialize::FromSql<diesel::sql_types::Text, DB>,
+{
+    fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+        let resource = String::from_sql(bytes)?;
+        normalize(&resource, Http::AnyHost)
+            .map(|Normalized { origin, path }| Self(format!("{origin}{path}")))
+            .ok_or_else(|| ValidError::OAuthResource(resource).into())
+    }
+}
 
 impl TryFrom<String> for OAuthIssuer {
     type Error = ValidError;
 
     fn try_from(issuer: String) -> Result<Self, Self::Error> {
-        if let Some(normalized) = normalize(&issuer)
+        if let Some(normalized) = normalize(&issuer, Http::Loopback)
             && normalized.path.is_empty()
         {
             Ok(Self(normalized.origin))
@@ -45,14 +73,29 @@ impl TryFrom<String> for OAuthResource {
     type Error = ValidError;
 
     fn try_from(resource: String) -> Result<Self, Self::Error> {
-        let Some(Normalized { origin, path }) = normalize(&resource) else {
+        let Some(Normalized { origin, path }) = normalize(&resource, Http::Loopback) else {
             return Err(ValidError::OAuthResource(resource));
         };
         Ok(Self(format!("{origin}{path}")))
     }
 }
 
+impl OAuthIssuer {
+    /// The issuer at the origin a request reached, for the Bencher CLI's client alone, which is
+    /// never configured: `https`, or plain `http` on any host.
+    pub fn of_request(origin: &str) -> Option<Self> {
+        normalize(origin, Http::AnyHost)
+            .filter(|normalized| normalized.path.is_empty())
+            .map(|normalized| Self(normalized.origin))
+    }
+}
+
 impl OAuthResource {
+    /// What the Bencher CLI's grant acts for: the REST API at the issuer's origin.
+    pub fn rest(issuer: &OAuthIssuer) -> Self {
+        Self(issuer.0.clone())
+    }
+
     /// The MCP endpoint served at the issuer's origin.
     pub fn mcp(issuer: &OAuthIssuer) -> Self {
         Self(format!("{issuer}/mcp"))
@@ -100,14 +143,28 @@ struct Normalized {
     path: String,
 }
 
-fn normalize(url: &str) -> Option<Normalized> {
+/// Where plain `http` is allowed.
+#[derive(Clone, Copy)]
+enum Http {
+    /// Only on a loopback host, as OAuth asks of anything configured.
+    Loopback,
+    /// On any host, for the Bencher CLI's client where no issuer is configured.
+    AnyHost,
+}
+
+fn normalize(url: &str, http: Http) -> Option<Normalized> {
     let url = Url::parse(url).ok()?;
     let secure = match url.scheme() {
         "https" => true,
         "http" => false,
         _ => return None,
     };
-    if !(secure || is_loopback(&url.host()?))
+    let host = url.host()?;
+    let plain_http = match http {
+        Http::Loopback => is_loopback(&host),
+        Http::AnyHost => true,
+    };
+    if !(secure || plain_http)
         || !url.username().is_empty()
         || url.password().is_some()
         || url.query().is_some()
@@ -207,6 +264,28 @@ mod tests {
             format!("{issuer}/mcp")
                 .parse::<OAuthResource>()
                 .unwrap_err();
+        }
+    }
+
+    // Kills plain `http` off loopback for a configured issuer, or refused for the Bencher CLI's
+    // issuer at a request's origin, which may serve no TLS.
+    #[test]
+    fn the_cli_issuer_takes_plain_http_on_any_host() {
+        let issuer = OAuthIssuer::of_request("http://Bencher.LAN:6610").unwrap();
+        assert_eq!(issuer.as_ref(), "http://bencher.lan:6610");
+        assert_eq!(
+            OAuthResource::rest(&issuer).as_ref(),
+            "http://bencher.lan:6610"
+        );
+        "http://bencher.lan:6610"
+            .parse::<OAuthIssuer>()
+            .unwrap_err();
+        for refused in [
+            "http://bencher.lan:6610/api",
+            "http://user@bencher.lan",
+            "ftp://bencher.lan",
+        ] {
+            assert!(OAuthIssuer::of_request(refused).is_none(), "{refused}");
         }
     }
 

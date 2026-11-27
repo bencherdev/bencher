@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post};
 use bencher_json::{
-    DateTime, OAuthCode, OAuthCodeHash, OAuthCodeVerifier, OAuthResource, OAuthScopes,
-    OAuthTokenHash,
+    DateTime, OAuthClientId, OAuthCode, OAuthCodeHash, OAuthCodeVerifier, OAuthResource,
+    OAuthScopes, OAuthTokenHash,
 };
 use bencher_schema::{
     context::{ApiContext, DbConnection, OAuthCredential, OAuthServer},
@@ -21,11 +21,10 @@ use http::{HeaderMap, Response};
 use serde::Serialize;
 
 use crate::{
-    AUTHORIZATION_CODE, REFRESH_TOKEN,
+    AUTHORIZATION_CODE, Authority, REFRESH_TOKEN, cli_scopes,
     client::{CLIENT_CREDENTIALS, CLIENT_ID, authenticates_client},
     error::{GrantRefusal, InvalidRequest, TokenError, charge_refusal},
     id_token::SignIn,
-    oauth_server,
     params::Params,
     response::json,
     supported_scopes,
@@ -60,7 +59,7 @@ const BEARER: &str = "Bearer";
 pub async fn oauth_token_options(
     rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    oauth_server(rqctx.context())?;
+    Authority::new(&rqctx)?;
     Ok(Endpoint::cors(&[Post.into()]))
 }
 
@@ -78,11 +77,11 @@ pub async fn oauth_token_post(
     body: UntypedBody,
 ) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
-    let oauth = oauth_server(context)?;
+    let authority = Authority::new(&rqctx)?;
     let now = context.clock.now();
     match token(
         context,
-        oauth,
+        authority.configured(),
         rqctx.request.headers(),
         body.as_bytes(),
         now,
@@ -90,13 +89,17 @@ pub async fn oauth_token_post(
     .await
     {
         Ok(issued) => json(&TokenResponse::new(&issued, now)),
-        Err(error) => error.charged(&rqctx).into_response(&rqctx.log, oauth),
+        Err(error) => error
+            .charged(&rqctx)
+            .into_response(&rqctx.log, authority.issuer()),
     }
 }
 
+/// `oauth` is the configured server, without which only the Bencher CLI's codes and tokens are
+/// honored.
 async fn token(
     context: &ApiContext,
-    oauth: &OAuthServer,
+    oauth: Option<&OAuthServer>,
     headers: &HeaderMap,
     body: &[u8],
     now: DateTime,
@@ -133,7 +136,7 @@ async fn token(
 
 async fn exchange(
     context: &ApiContext,
-    oauth: &OAuthServer,
+    oauth: Option<&OAuthServer>,
     params: &Params<'_>,
     now: DateTime,
 ) -> Result<Issued, TokenError> {
@@ -195,7 +198,7 @@ async fn exchange(
 
 async fn refresh(
     context: &ApiContext,
-    oauth: &OAuthServer,
+    oauth: Option<&OAuthServer>,
     params: &Params<'_>,
     now: DateTime,
 ) -> Result<OAuthTokens, TokenError> {
@@ -204,7 +207,7 @@ async fn refresh(
         return Err(TokenError::Request(InvalidRequest::RefreshParameters));
     };
     let resource = requested_resource(oauth, params)?;
-    let scope = supported_scopes(oauth, params.get(SCOPE));
+    let scope = params.get(SCOPE);
     // An access token hashes too, so that one presented here is refused as the wrong kind.
     let token_hash =
         oauth_token_hash(refresh_token).ok_or(TokenError::Grant(GrantRefusal::UnknownToken))?;
@@ -250,19 +253,61 @@ async fn refresh(
         .map_err(TokenError::server)?
 }
 
+/// The resource a request names, which must be one the configured server serves: the Bencher CLI
+/// names none.
 fn requested_resource(
-    oauth: &OAuthServer,
+    oauth: Option<&OAuthServer>,
     params: &Params<'_>,
 ) -> Result<Option<OAuthResource>, TokenError> {
     let resource = params
         .value::<OAuthResource>(RESOURCE)
         .map_err(|()| TokenError::Target)?;
     if let Some(resource) = &resource
-        && !oauth.serves(resource)
+        && !oauth.is_some_and(|oauth| oauth.serves(resource))
     {
         return Err(TokenError::Target);
     }
     Ok(resource)
+}
+
+/// Why a client's codes and tokens for `resource` are no longer honored, if they are not: the
+/// Bencher CLI's always are, and an outside app's only while OAuth is configured, serves the
+/// resource, and allows the client.
+fn unhonored(
+    oauth: Option<&OAuthServer>,
+    client_id: &OAuthClientId,
+    resource: &OAuthResource,
+) -> Option<GrantRefusal> {
+    if client_id.is_bencher_cli() {
+        return None;
+    }
+    let Some(oauth) = oauth else {
+        return Some(GrantRefusal::UnlistedClient);
+    };
+    if !oauth.serves(resource) {
+        Some(GrantRefusal::ResourceUnserved)
+    } else if !oauth.clients().allows(client_id) {
+        Some(GrantRefusal::UnlistedClient)
+    } else {
+        None
+    }
+}
+
+/// The scopes a refresh asks for, as the grant's client understands them.
+fn requested_scopes(
+    oauth: Option<&OAuthServer>,
+    client_id: &OAuthClientId,
+    scope: Option<&str>,
+) -> OAuthScopes {
+    if client_id.is_bencher_cli() {
+        scope
+            .map(|scope| cli_scopes(Some(scope)))
+            .unwrap_or_default()
+    } else {
+        oauth
+            .map(|oauth| supported_scopes(oauth, scope))
+            .unwrap_or_default()
+    }
 }
 
 /// Whether `grant_id` names a grant that is still live, which a replayed code revokes.
@@ -295,7 +340,7 @@ impl CodeExchange<'_> {
     fn grant<'o>(
         &self,
         conn: &mut DbConnection,
-        oauth: &'o OAuthServer,
+        oauth: Option<&'o OAuthServer>,
         now: DateTime,
     ) -> diesel::QueryResult<Result<(OAuthTokens, Option<SignIn<'o>>), TokenError>> {
         let Some((authorization, query_user, query_key)) =
@@ -320,7 +365,7 @@ impl CodeExchange<'_> {
         let tokens = query_grant.issue(conn, refresh, now)?;
         Ok(Ok((
             tokens,
-            SignIn::new(oauth, &authorization, &query_user),
+            oauth.and_then(|oauth| SignIn::new(oauth, &authorization, &query_user)),
         )))
     }
 
@@ -328,7 +373,7 @@ impl CodeExchange<'_> {
     /// is wrong with the request.
     fn refusal(
         &self,
-        oauth: &OAuthServer,
+        oauth: Option<&OAuthServer>,
         authorization: &QueryOAuthAuthorization,
         query_user: &QueryUser,
         query_key: Option<&QueryUserKey>,
@@ -351,10 +396,10 @@ impl CodeExchange<'_> {
             .is_some_and(|resource| *resource != authorization.resource)
         {
             GrantRefusal::Resource
-        } else if !oauth.serves(&authorization.resource) {
-            GrantRefusal::ResourceUnserved
-        } else if !oauth.clients().allows(&authorization.client_id) {
-            GrantRefusal::UnlistedClient
+        } else if let Some(refusal) =
+            unhonored(oauth, &authorization.client_id, &authorization.resource)
+        {
+            refusal
         } else if !self.code_verifier.verifies(&authorization.code_challenge) {
             GrantRefusal::CodeVerifier
         } else {
@@ -373,8 +418,8 @@ impl CodeExchange<'_> {
 struct Refresh<'p> {
     token_hash: OAuthTokenHash,
     client_id: &'p str,
-    /// What the new access token should allow; it is never more than the grant allows.
-    scope: OAuthScopes,
+    /// What the new access token should allow, as asked; it is never more than the grant allows.
+    scope: Option<&'p str>,
     resource: Option<OAuthResource>,
 }
 
@@ -385,7 +430,7 @@ impl Refresh<'_> {
     fn rotate(
         &self,
         conn: &mut DbConnection,
-        oauth: &OAuthServer,
+        oauth: Option<&OAuthServer>,
         now: DateTime,
     ) -> diesel::QueryResult<Result<OAuthTokens, TokenError>> {
         let Some((query_token, query_grant, query_user, query_key)) =
@@ -415,7 +460,7 @@ impl Refresh<'_> {
     /// else is wrong with the request.
     fn refusal(
         &self,
-        oauth: &OAuthServer,
+        oauth: Option<&OAuthServer>,
         query_token: &QueryOAuthToken,
         query_grant: &QueryOAuthGrant,
         query_user: &QueryUser,
@@ -432,18 +477,17 @@ impl Refresh<'_> {
             GrantRefusal::OtherClient
         } else if let Some(failure) = grant_failure(query_grant, query_user, query_key, now) {
             GrantRefusal::Grant(failure)
-        } else if !oauth.serves(&query_grant.resource) {
-            GrantRefusal::ResourceUnserved
-        } else if !oauth.clients().allows(&query_grant.client_id) {
-            GrantRefusal::UnlistedClient
+        } else if let Some(refusal) =
+            unhonored(oauth, &query_grant.client_id, &query_grant.resource)
+        {
+            refusal
         } else if self
             .resource
             .as_ref()
             .is_some_and(|resource| *resource != query_grant.resource)
         {
             GrantRefusal::Resource
-        } else if !self
-            .scope
+        } else if !requested_scopes(oauth, &query_grant.client_id, self.scope)
             .iter()
             .all(|scope| query_grant.scope.permits(scope))
         {

@@ -3,7 +3,7 @@
 This section lets MCP clients, such as ChatGPT, claude.ai, and Claude Code, [sign in to Bencher MCP](/docs/how-to/mcp/) with OAuth.
 The API server becomes their OAuth authorization server, and users approve each app on the Bencher Console at `console.url`.
 The entire section is optional.
-If not specified, then OAuth is off: its endpoints return `404 Not Found`, and Bencher MCP only accepts API keys and anonymous requests.
+If not specified, outside apps cannot sign in: the MCP server's metadata, user info, keys, and OpenID routes return `404 Not Found`, and Bencher MCP only accepts API keys and anonymous requests. The Bencher CLI still signs in through the authorization server's metadata and its authorize, token, and revoke endpoints, at the URL the request reached.
 
 | Name | Example | Default | Required | Description |
 | :---: | :---: | :---: | :---: | :---: |

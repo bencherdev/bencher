@@ -15547,7 +15547,7 @@
             "type": "string"
           },
           "id": {
-            "description": "The URL of the app's metadata document.",
+            "description": "The URL of the app's metadata document, or `bencher_cli` for the Bencher CLI.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/OAuthClientId"
@@ -15634,6 +15634,15 @@
           },
           "created": {
             "$ref": "#/components/schemas/DateTime"
+          },
+          "device": {
+            "nullable": true,
+            "description": "The device the Bencher CLI signed in on, by its hostname. Only the Bencher CLI names one.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OAuthDevice"
+              }
+            ]
           },
           "expiration": {
             "$ref": "#/components/schemas/DateTime"
@@ -20333,7 +20342,11 @@
         "type": "string"
       },
       "OAuthClientId": {
-        "description": "An OAuth client identifier: the URL of the client's metadata document.",
+        "description": "An OAuth client identifier: the Bencher CLI's fixed ID, or the URL of an outside app's metadata document.",
+        "type": "string"
+      },
+      "OAuthDevice": {
+        "description": "The hostname of the device the Bencher CLI signs in on, as it names itself: 1 to 64 ASCII letters, digits, `.`, `-`, or `_`, starting with a letter or digit.",
         "type": "string"
       },
       "OAuthGrantUuid": {
@@ -20384,6 +20397,20 @@
             "type": "string",
             "enum": [
               "profile"
+            ]
+          },
+          {
+            "description": "Act as the user over the REST API, without server admin: the Bencher CLI's alone.",
+            "type": "string",
+            "enum": [
+              "user"
+            ]
+          },
+          {
+            "description": "Act as the user over the REST API with their server admin, while they hold it: the Bencher CLI's alone, approved only by a server admin.",
+            "type": "string",
+            "enum": [
+              "admin"
             ]
           }
         ]

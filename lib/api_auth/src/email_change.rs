@@ -105,9 +105,10 @@ pub async fn auth_email_change_confirm_post(
     let context = rqctx.context();
     admit(&rqctx.log, context, &rqctx.request)?;
     // A bearer credential wins over the cookie, and no bearer credential is a browser session.
-    let cookie = match BearerToken::from_request(&rqctx).await {
-        Ok(BearerToken::Session(cookie)) => Some(cookie),
-        Ok(BearerToken::Jwt(_) | BearerToken::UserKey(_)) | Err(_) => None,
+    let cookie = if let Ok(BearerToken::Session(cookie)) = BearerToken::from_request(&rqctx).await {
+        Some(cookie)
+    } else {
+        None
     };
     let presented = session_user(context, cookie)
         .await?

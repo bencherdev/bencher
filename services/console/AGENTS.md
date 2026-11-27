@@ -118,7 +118,8 @@ shape on both sides at once.
 
 Every page under `/auth` (the door at `/auth/login` and `/auth/signup`, Check
 your inbox and a link's page at `/auth/confirm`, consent at `/auth/authorize`,
-the provider callbacks, sign out, and a new email's confirm) is drawn by
+the Bencher CLI's code page at `/auth/cli`, the provider callbacks, sign out,
+and a new email's confirm) is drawn by
 `src/next/auth/` in the frame of `src/next/astro/AuthPage.astro`, one entry
 module a page. `src/middleware.ts` sends `Referrer-Policy: no-referrer` and
 `Cache-Control: no-store` with each, and only the door and Check your inbox

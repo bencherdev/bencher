@@ -48,8 +48,8 @@ pub use month::ExpirationMonth;
 pub use number::CardNumber;
 pub use oauth::{
     OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeChallenge, OAuthCodeHash,
-    OAuthCodeVerifier, OAuthIssuer, OAuthMaxAge, OAuthNonce, OAuthRedirectUri, OAuthRefreshToken,
-    OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash,
+    OAuthCodeVerifier, OAuthDevice, OAuthIssuer, OAuthMaxAge, OAuthNonce, OAuthRedirectUri,
+    OAuthRefreshToken, OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash,
 };
 pub use operating_system::OperatingSystem;
 pub use plan_id::{LicensedPlanId, MeteredPlanId};

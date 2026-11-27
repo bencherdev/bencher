@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseOk};
 use bencher_json::{
     DateTime, JsonOAuthAuthorization, JsonOAuthDecision, JsonOAuthRedirect, Jwt,
-    OAuthAuthorizationUuid, OAuthCode, OAuthCodeHash, ProjectKey, UserKey,
+    OAuthAuthorizationUuid, OAuthCode, OAuthCodeHash, OAuthScope, ProjectKey, UserKey,
 };
 use bencher_schema::{
     context::{ApiContext, OAuthServer},
@@ -23,13 +23,15 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{
-    oauth_server,
-    response::{client_redirect, json},
-};
+use crate::response::{client_redirect, json};
 
 const NOT_FOUND: &str = "No such request to connect, or it expired";
 const ANSWERED: &str = "This request to connect has already been answered";
+const CLI_NEEDS_A_SESSION: &str =
+    "Only a browser session can approve the Bencher CLI. Sign in to approve it.";
+const CLI_NEEDS_A_SERVER_ADMIN: &str = "Only a server admin can approve the Bencher CLI as admin";
+/// The refusal's code, for the consent page to tell a reader who cannot approve an admin grant.
+const NOT_A_SERVER_ADMIN: &str = "not_a_server_admin";
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OAuthAuthorizationParams {
@@ -43,10 +45,9 @@ pub struct OAuthAuthorizationParams {
     unpublished = true,
 }]
 pub async fn oauth_authorization_options(
-    rqctx: RequestContext<ApiContext>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OAuthAuthorizationParams>,
 ) -> Result<CorsResponse, HttpError> {
-    oauth_server(rqctx.context())?;
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
@@ -63,10 +64,23 @@ pub async fn oauth_authorization_get(
     path_params: Path<OAuthAuthorizationParams>,
 ) -> Result<ResponseOk<JsonOAuthAuthorization>, HttpError> {
     let context = rqctx.context();
-    let oauth = oauth_server(context)?;
     charge_public_request(&rqctx)?;
     let OAuthAuthorizationParams { authorization } = path_params.into_inner();
-    let authorization = QueryOAuthAuthorization::from_uuid(public_conn!(context), authorization)
+    let authorization = live(context, authorization).await?;
+    if authorization.is_answered() {
+        return Err(conflict_error(ANSWERED));
+    }
+    Ok(Get::pub_response_ok(
+        authorization.into_json(context.oauth.as_ref()),
+    ))
+}
+
+/// A request that has not expired.
+async fn live(
+    context: &ApiContext,
+    uuid: OAuthAuthorizationUuid,
+) -> Result<QueryOAuthAuthorization, HttpError> {
+    QueryOAuthAuthorization::from_uuid(public_conn!(context), uuid)
         .optional()
         .map_err(|error| {
             issue_error(
@@ -76,11 +90,7 @@ pub async fn oauth_authorization_get(
             )
         })?
         .filter(|authorization| !authorization.is_expired(context.clock.now()))
-        .ok_or_else(|| not_found_error(NOT_FOUND))?;
-    if authorization.is_answered() {
-        return Err(conflict_error(ANSWERED));
-    }
-    Ok(Get::pub_response_ok(authorization.into_json(oauth)))
+        .ok_or_else(|| not_found_error(NOT_FOUND))
 }
 
 /// Answer a request to connect
@@ -98,13 +108,17 @@ pub async fn oauth_authorization_post(
     body: TypedBody<JsonOAuthDecision>,
 ) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
-    let oauth = oauth_server(context)?;
+    let issuer = context.oauth.as_ref().map(OAuthServer::issuer);
     let OAuthAuthorizationParams { authorization } = path_params.into_inner();
     let JsonOAuthDecision { approve, key } = body.into_inner();
     let now = context.clock.now();
 
     let (answer, code) = if approve {
         let (auth_user, auth_time) = approver(&rqctx, key).await?;
+        let pending = live(context, authorization).await?;
+        if pending.client_id.is_bencher_cli() {
+            cli_approver(context, &auth_user, &pending)?;
+        }
         let code = OAuthCode::generate();
         let code_hash = OAuthCodeHash::from(&code);
         let answer = write_transaction!(context, |conn| {
@@ -154,7 +168,7 @@ pub async fn oauth_authorization_post(
                 bencher_otel::OAuthConsentKind::LoginRequired,
             ));
             return redirect(
-                oauth,
+                issuer,
                 &authorization,
                 &[
                     ("error", "login_required"),
@@ -176,14 +190,14 @@ pub async fn oauth_authorization_post(
                 bencher_otel::OAuthConsentKind::ApproveSession
             },
         ));
-        redirect(oauth, &authorization, &[("code", code.as_ref())])
+        redirect(issuer, &authorization, &[("code", code.as_ref())])
     } else {
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthConsent(
             bencher_otel::OAuthConsentKind::Deny,
         ));
         redirect(
-            oauth,
+            issuer,
             &authorization,
             &[
                 ("error", "access_denied"),
@@ -193,9 +207,10 @@ pub async fn oauth_authorization_post(
     }
 }
 
-/// Where to send the browser with the answer to a request: its client's redirect URI, with `params`.
+/// Where to send the browser with the answer to a request: its client's redirect URI, with `params`
+/// and the configured `issuer`, if any.
 fn redirect(
-    oauth: &OAuthServer,
+    issuer: Option<&bencher_json::OAuthIssuer>,
     authorization: &QueryOAuthAuthorization,
     params: &[(&str, &str)],
 ) -> Result<Response<Body>, HttpError> {
@@ -203,9 +218,28 @@ fn redirect(
         &authorization.redirect_uri,
         params,
         authorization.state.as_ref(),
-        oauth.issuer(),
+        issuer,
     );
     json(&JsonOAuthRedirect { url })
+}
+
+/// Refuse an approval of the Bencher CLI that is not a browser session signed in within the fresh
+/// sign-in window, or that asks for server admin from a reader without it, which a later refresh
+/// token could otherwise carry far past the session.
+fn cli_approver(
+    context: &ApiContext,
+    auth_user: &AuthUser,
+    pending: &QueryOAuthAuthorization,
+) -> Result<(), HttpError> {
+    if !auth_user.is_session() {
+        return Err(forbidden_error(CLI_NEEDS_A_SESSION));
+    }
+    if pending.scope.permits(OAuthScope::Admin) && !auth_user.is_admin(&context.rbac) {
+        let mut error = forbidden_error(CLI_NEEDS_A_SERVER_ADMIN);
+        error.error_code = Some(NOT_A_SERVER_ADMIN.to_owned());
+        return Err(error);
+    }
+    auth_user.check_fresh_sign_in(context)
 }
 
 /// The user approving a request, and when they last proved who they are: a user API key pasted in
@@ -238,7 +272,7 @@ async fn approver(
     let auth_time = match auth_user.credential {
         AuthCredential::Session(session) => Some(session.proved),
         AuthCredential::UserKey(_) => None,
-        AuthCredential::ApiToken | AuthCredential::OAuthGrant { .. } => {
+        AuthCredential::ApiToken | AuthCredential::OAuthGrant { .. } | AuthCredential::CliGrant => {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthConsentBlocked);
             return Err(forbidden_error(

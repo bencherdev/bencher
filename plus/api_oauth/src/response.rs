@@ -146,13 +146,13 @@ pub(crate) fn consent_page(console_url: &Url, query: (&str, &str)) -> Url {
     url
 }
 
-/// The client's redirect URI with `params`, its `state`, and the issuer added to its query,
-/// which is kept as it is.
+/// The client's redirect URI with `params`, its `state`, and the configured issuer added to its
+/// query, which is kept as it is.
 pub(crate) fn client_redirect(
     redirect_uri: &OAuthRedirectUri,
     params: &[(&str, &str)],
     state: Option<&OAuthRequestState>,
-    issuer: &OAuthIssuer,
+    issuer: Option<&OAuthIssuer>,
 ) -> Url {
     let mut url = redirect_uri.url().clone();
     {
@@ -163,7 +163,9 @@ pub(crate) fn client_redirect(
         if let Some(state) = state {
             query.append_pair("state", state.as_ref());
         }
-        query.append_pair("iss", issuer.as_ref());
+        if let Some(issuer) = issuer {
+            query.append_pair("iss", issuer.as_ref());
+        }
     }
     url
 }

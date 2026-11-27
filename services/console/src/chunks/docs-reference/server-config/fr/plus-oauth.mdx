@@ -3,7 +3,7 @@
 Cette section permet aux clients MCP, comme ChatGPT, claude.ai et Claude Code, de [se connecter à Bencher MCP](/fr/docs/how-to/mcp/) avec OAuth.
 Le serveur d'API devient leur serveur d'autorisation OAuth, et les utilisateurs approuvent chaque application sur la Bencher Console à l'adresse `console.url`.
 La totalité de la section est optionnelle.
-Si elle n'est pas spécifiée, alors OAuth est désactivé : ses endpoints renvoient `404 Not Found`, et Bencher MCP n'accepte que les clés d'API et les requêtes anonymes.
+Si elle n'est pas spécifiée, les applications externes ne peuvent pas se connecter : les métadonnées du serveur MCP et les routes d'informations utilisateur, de clés et OpenID renvoient `404 Not Found`, et Bencher MCP n'accepte que les clés d'API et les requêtes anonymes. La CLI Bencher se connecte toujours via les métadonnées du serveur d'autorisation et ses endpoints d'autorisation, de jeton et de révocation, à l'URL atteinte par la requête.
 
 | Nom | Exemple | Par défaut | Requis | Description |
 | :---: | :---: | :---: | :---: | :---: |

@@ -16,10 +16,10 @@ pub use bencher_valid::{
     GitHubAppSlug, GitHubInstallationId, GitHubInstallationPermission, GitHubRepositoryId,
     GitHubRepositoryName, GracePeriod, ImageDigest, ImageReference, LastFour, LicensedPlanId,
     Memory, MeteredPlanId, OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeChallenge,
-    OAuthCodeHash, OAuthCodeVerifier, OAuthIssuer, OAuthMaxAge, OAuthNonce, OAuthRedirectUri,
-    OAuthRefreshToken, OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash,
-    PkceVerifier, PlanLevel, PlanStatus, PollTimeout, ProviderAccountId, ProviderNonce,
-    ProviderState, ProviderStateHash, RunnerKey, RunnerKeyHash, Timeout,
+    OAuthCodeHash, OAuthCodeVerifier, OAuthDevice, OAuthIssuer, OAuthMaxAge, OAuthNonce,
+    OAuthRedirectUri, OAuthRefreshToken, OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes,
+    OAuthTokenHash, PkceVerifier, PlanLevel, PlanStatus, PollTimeout, ProviderAccountId,
+    ProviderNonce, ProviderState, ProviderStateHash, RunnerKey, RunnerKeyHash, Timeout,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;

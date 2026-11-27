@@ -4,7 +4,12 @@ use bencher_schema::{
     context::{ApiContext, OAuthServer},
     model::{
         project::QueryProject,
-        user::{actor::ApiActor, auth::AuthUser, oauth::is_oauth_token, public::PublicUser},
+        user::{
+            actor::ApiActor,
+            auth::AuthUser,
+            oauth::{CLI_TOKEN_AT_MCP, is_oauth_token},
+            public::PublicUser,
+        },
     },
 };
 use dropshot::{Body, ClientErrorStatusCode, HttpError, RequestContext};
@@ -90,6 +95,11 @@ impl McpPrincipal {
     pub async fn new(rqctx: &RequestContext<ApiContext>) -> Result<Self, HttpError> {
         let context = rqctx.context();
         let Some(oauth) = &context.oauth else {
+            // Without OAuth configured, the only OAuth tokens are the Bencher CLI's, which the
+            // REST API takes in its place.
+            if bearer_token(rqctx.request.headers()).is_some_and(is_oauth_token) {
+                return Err(bencher_schema::error::unauthorized_error(CLI_TOKEN_AT_MCP));
+            }
             return ApiActor::new_bearer_only(rqctx).await.map(Self::Actor);
         };
         let oauth_token =

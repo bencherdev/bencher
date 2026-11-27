@@ -1,7 +1,7 @@
 use bencher_json::{
     DateTime, JsonOAuthClient, JsonOAuthGrant, JsonOAuthGrantKey, NonEmpty, OAuthAccessToken,
-    OAuthClientId, OAuthCode, OAuthGrantUuid, OAuthRefreshToken, OAuthResource, OAuthScopes,
-    OAuthTokenHash,
+    OAuthClientId, OAuthCode, OAuthDevice, OAuthGrantUuid, OAuthRefreshToken, OAuthResource,
+    OAuthScopes, OAuthTokenHash,
 };
 use chrono::TimeDelta;
 use diesel::{
@@ -12,7 +12,10 @@ use dropshot::HttpError;
 
 use crate::{
     context::{ApiContext, DbConnection, OAuthServer},
-    error::{INVALID_CREDENTIAL, invalid_credential, issue_error, resource_not_found_err},
+    error::{
+        INVALID_CREDENTIAL, invalid_credential, issue_error, resource_not_found_err,
+        unauthorized_error,
+    },
     schema,
 };
 
@@ -39,6 +42,8 @@ pub struct QueryOAuthGrant {
     pub user_key_id: Option<UserKeyId>,
     pub client_id: OAuthClientId,
     pub client_name: NonEmpty,
+    /// The device the Bencher CLI signed in on, by its hostname.
+    pub device: Option<OAuthDevice>,
     pub scope: OAuthScopes,
     pub resource: OAuthResource,
     pub created: DateTime,
@@ -178,6 +183,7 @@ impl QueryOAuthGrant {
             user_key_id,
             client_id,
             client_name,
+            device,
             scope,
             resource: _,
             created,
@@ -199,6 +205,7 @@ impl QueryOAuthGrant {
                 id: client_id,
                 name: client_name,
             },
+            device,
             scopes: scope.iter().collect(),
             user_key,
             created,
@@ -297,32 +304,26 @@ pub type OAuthTokenGrant = (
     Option<QueryUserKey>,
 );
 
+/// Why the Bencher CLI's access token is refused by the MCP server, which takes only outside apps'.
+pub const CLI_TOKEN_AT_MCP: &str =
+    "The Bencher CLI's OAuth tokens are accepted only by the REST API";
+/// Why an outside app's access token is refused by the REST API, which takes only the Bencher
+/// CLI's.
+pub const APP_TOKEN_AT_REST: &str =
+    "OAuth tokens of apps other than the Bencher CLI are accepted only by the MCP server";
+
 /// Look up an OAuth access token presented to the MCP server or the user info endpoint.
 ///
 /// A single query returns the token with its grant, user, and bound user key,
-/// and every adverse case returns the same opaque error.
+/// and every adverse case returns the same opaque error, but for a live token of the Bencher CLI,
+/// which is told where it belongs.
 pub fn authenticate(
     context: &ApiContext,
     conn: &mut DbConnection,
     oauth: &OAuthServer,
     token: &str,
 ) -> Result<(QueryUser, QueryOAuthGrant), HttpError> {
-    let Some(token_hash) = oauth_token_hash(token) else {
-        return Err(oauth_token_failure(OAuthTokenFailure::Invalid));
-    };
-    let lookup = QueryOAuthToken::with_grant(conn, &token_hash)
-        .inspect_err(|err| {
-            issue_error(
-                "Failed to lookup OAuth token",
-                &format!("Failed to lookup OAuth token by hash: {token_hash}"),
-                err,
-            );
-        })
-        .map_err(|_err| invalid_credential())?;
-    let Some((query_token, query_grant, query_user, query_key)) = lookup else {
-        return Err(oauth_token_failure(OAuthTokenFailure::NotFound));
-    };
-
+    let (query_token, query_grant, query_user, query_key) = lookup(conn, token)?;
     if let Some(failure) = token_failure(
         oauth,
         &query_token,
@@ -331,9 +332,60 @@ pub fn authenticate(
         query_key.as_ref(),
         context.clock.now(),
     ) {
-        return Err(oauth_token_failure(failure));
+        return Err(if matches!(failure, OAuthTokenFailure::CliClient) {
+            oauth_token_refusal(failure, CLI_TOKEN_AT_MCP)
+        } else {
+            oauth_token_failure(failure)
+        });
     }
     Ok((query_user, query_grant))
+}
+
+/// Look up the Bencher CLI's OAuth access token presented to the REST API.
+///
+/// It needs no OAuth server configured. Every adverse case returns the same opaque error, but for
+/// a live token of an outside app, which is told where it belongs.
+pub fn authenticate_cli(
+    context: &ApiContext,
+    conn: &mut DbConnection,
+    token: &OAuthAccessToken,
+) -> Result<(QueryUser, QueryOAuthGrant), HttpError> {
+    let (query_token, query_grant, query_user, query_key) = lookup(conn, token.as_ref())?;
+    let now = context.clock.now();
+    let failure = if query_token.kind != OAuthTokenKind::Access {
+        Some(OAuthTokenFailure::Kind)
+    } else if query_token.is_expired(now) {
+        Some(OAuthTokenFailure::Expired)
+    } else {
+        grant_failure(&query_grant, &query_user, query_key.as_ref(), now).map(Into::into)
+    };
+    if let Some(failure) = failure {
+        return Err(oauth_token_failure(failure));
+    }
+    if !query_grant.client_id.is_bencher_cli() {
+        return Err(oauth_token_refusal(
+            OAuthTokenFailure::RestApi,
+            APP_TOKEN_AT_REST,
+        ));
+    }
+    Ok((query_user, query_grant))
+}
+
+/// A token by its hash, with what it acts for, or the opaque error.
+fn lookup(conn: &mut DbConnection, token: &str) -> Result<OAuthTokenGrant, HttpError> {
+    let Some(token_hash) = oauth_token_hash(token) else {
+        return Err(oauth_token_failure(OAuthTokenFailure::Invalid));
+    };
+    QueryOAuthToken::with_grant(conn, &token_hash)
+        .inspect_err(|err| {
+            issue_error(
+                "Failed to lookup OAuth token",
+                &format!("Failed to lookup OAuth token by hash: {token_hash}"),
+                err,
+            );
+        })
+        .map_err(|_err| invalid_credential())?
+        .ok_or_else(|| oauth_token_failure(OAuthTokenFailure::NotFound))
 }
 
 /// Access and refresh tokens share a table, so either hashes to a lookup,
@@ -353,8 +405,8 @@ pub fn is_oauth_token(token: &str) -> bool {
     token.starts_with(OAuthAccessToken::PREFIX) || token.starts_with(OAuthRefreshToken::PREFIX)
 }
 
-/// Whether a bearer credential is any OAuth token or authorization code, none of which a REST
-/// endpoint accepts.
+/// Whether a bearer credential is any OAuth token or authorization code. Of these, the REST API
+/// takes only the Bencher CLI's access token.
 pub fn is_oauth_credential(raw: &str) -> bool {
     is_oauth_token(raw) || raw.starts_with(OAuthCode::PREFIX)
 }
@@ -375,6 +427,9 @@ fn token_failure(
     }
     if let Some(failure) = grant_failure(query_grant, query_user, query_key, now) {
         return Some(failure.into());
+    }
+    if query_grant.client_id.is_bencher_cli() {
+        return Some(OAuthTokenFailure::CliClient);
     }
     if !oauth.serves(&query_grant.resource) {
         return Some(OAuthTokenFailure::Resource);
@@ -425,6 +480,17 @@ pub fn approver_failure(
         }
     }
     None
+}
+
+/// A live token refused where it does not belong, told why.
+fn oauth_token_refusal(failure: OAuthTokenFailure, message: &str) -> HttpError {
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthTokenAuthFailed(
+        failure.into(),
+    ));
+    let mut error = unauthorized_error(message);
+    error.internal_message = format!("{message} ({failure:?})");
+    error
 }
 
 fn oauth_token_failure(failure: OAuthTokenFailure) -> HttpError {
@@ -499,6 +565,10 @@ enum OAuthTokenFailure {
     Locked,
     KeyRevoked,
     KeyExpired,
+    /// The Bencher CLI's live token, at the MCP server or the user info endpoint.
+    CliClient,
+    /// An outside app's live token, at the REST API.
+    RestApi,
 }
 
 /// Why a grant can no longer act for its user.
@@ -547,6 +617,8 @@ impl From<OAuthTokenFailure> for bencher_otel::OAuthTokenAuthFailureReason {
             OAuthTokenFailure::Locked => Self::Locked,
             OAuthTokenFailure::KeyRevoked => Self::KeyRevoked,
             OAuthTokenFailure::KeyExpired => Self::KeyExpired,
+            OAuthTokenFailure::CliClient => Self::CliClient,
+            OAuthTokenFailure::RestApi => Self::RestApi,
         }
     }
 }
@@ -559,6 +631,7 @@ mod tests {
     use crate::test_util::setup_test_db;
 
     const OAUTH_MIGRATION: &str = "20261012120000";
+    const DEVICE_MIGRATION: &str = "20261127120000";
 
     #[derive(diesel::QueryableByName)]
     struct Count {
@@ -571,6 +644,64 @@ mod tests {
             .get_result::<Count>(conn)
             .unwrap()
             .count
+    }
+
+    // Kills a down migration that leaves the Bencher CLI's rows for a binary that cannot read its
+    // client ID, or that drops an outside app's.
+    #[test]
+    fn device_migration_down_drops_only_the_cli() {
+        let mut conn = setup_test_db();
+        conn.batch_execute(
+            "INSERT INTO user (id, uuid, name, slug, email, admin, locked, created, modified)
+                VALUES (1, '00000000-0000-0000-0000-000000000080', 'User', 'user', 'user@example.com', 0, 0, 0, 0);
+            INSERT INTO oauth_grant (id, uuid, user_id, client_id, client_name, device, scope, resource, created, modified, expiration)
+                VALUES (1, '00000000-0000-0000-0000-000000000082', 1, 'https://client.example/client.json', 'Client', NULL, 'projects:read', 'https://api.example.com/mcp', 0, 0, 1),
+                    (2, '00000000-0000-0000-0000-000000000083', 1, 'bencher_cli', 'Bencher CLI', 'ada-macbook', 'user', 'http://bencher.lan:6610', 0, 0, 1);
+            INSERT INTO oauth_token (id, grant_id, kind, token_hash, created, expiration)
+                VALUES (1, 1, 0, 'app', 0, 1), (2, 2, 0, 'cli', 0, 1), (3, 2, 1, 'cli refresh', 0, 1);
+            INSERT INTO oauth_authorization (id, uuid, client_id, client_name, device, redirect_uri, scope, resource, code_challenge, refresh, grant_id, created, expiration)
+                VALUES (1, '00000000-0000-0000-0000-000000000084', 'https://client.example/client.json', 'Client', NULL, 'https://client.example/callback', 'projects:read', 'https://api.example.com/mcp', 'challenge', 0, 1, 0, 1),
+                    (2, '00000000-0000-0000-0000-000000000085', 'bencher_cli', 'Bencher CLI', 'ada-macbook', 'http://127.0.0.1:53682/callback', 'user', 'http://bencher.lan:6610', 'challenge', 1, 2, 0, 1),
+                    (3, '00000000-0000-0000-0000-000000000086', 'bencher_cli', 'Bencher CLI', 'ada-macbook', 'http://127.0.0.1:53682/callback', 'user', 'http://bencher.lan:6610', 'challenge', 1, NULL, 0, 1);",
+        )
+        .unwrap();
+
+        conn.batch_execute("PRAGMA foreign_keys = OFF").unwrap();
+        loop {
+            let version = conn.revert_last_migration(crate::MIGRATIONS).unwrap();
+            if version.to_string() == DEVICE_MIGRATION {
+                break;
+            }
+        }
+        for (table, left) in [
+            ("oauth_grant", 1),
+            ("oauth_token", 1),
+            ("oauth_authorization", 1),
+        ] {
+            assert_eq!(
+                count(&mut conn, &format!("SELECT COUNT(*) AS count FROM {table}")),
+                left,
+                "{table}"
+            );
+            assert_eq!(
+                count(
+                    &mut conn,
+                    &format!("SELECT COUNT(*) AS count FROM {table} WHERE id = 1")
+                ),
+                1,
+                "{table} keeps the outside app's row"
+            );
+        }
+
+        conn.run_pending_migrations(crate::MIGRATIONS).unwrap();
+        conn.batch_execute("PRAGMA foreign_keys = ON").unwrap();
+        assert_eq!(
+            count(
+                &mut conn,
+                "SELECT COUNT(*) AS count FROM oauth_grant WHERE device IS NULL"
+            ),
+            1
+        );
     }
 
     #[test]

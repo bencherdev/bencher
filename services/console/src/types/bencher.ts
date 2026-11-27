@@ -565,14 +565,23 @@ export type MeteredPlanId = string;
 
 export type NonEmpty = string;
 
-/** An OAuth access token, accepted only by the MCP server. */
+/** An OAuth access token: an outside app's for the MCP server, or the Bencher CLI's for the REST API. */
 export type OAuthAccessToken = string;
 
-/** An OAuth client identifier: the URL of the client's metadata document. */
+/**
+ * An OAuth client identifier: the Bencher CLI's fixed ID, or the URL of an outside app's metadata
+ * document.
+ */
 export type OAuthClientId = string;
 
 /** An OAuth authorization code, exchanged once at the token endpoint. */
 export type OAuthCode = string;
+
+/**
+ * The hostname of the device the Bencher CLI signs in on, as it names itself: 1 to 64 ASCII
+ * letters, digits, `.`, `-`, or `_`, starting with a letter or digit.
+ */
+export type OAuthDevice = string;
 
 /** An OAuth refresh token, exchanged at the token endpoint for a new access token. */
 export type OAuthRefreshToken = string;
@@ -2322,7 +2331,7 @@ export interface JsonOAuth {
 
 /** The app asking to connect. */
 export interface JsonOAuthAuthorizationClient {
-	/** The URL of the app's metadata document. */
+	/** The URL of the app's metadata document, or `bencher_cli` for the Bencher CLI. */
 	id: OAuthClientId;
 	/** The host serving the app's metadata document, which is who the app is. */
 	host: string;
@@ -2351,12 +2360,21 @@ export enum OAuthScope {
 	Email = "email",
 	/** The user's name. */
 	Profile = "profile",
+	/** Act as the user over the REST API, without server admin: the Bencher CLI's alone. */
+	User = "user",
+	/**
+	 * Act as the user over the REST API with their server admin, while they hold it: the Bencher
+	 * CLI's alone, approved only by a server admin.
+	 */
+	Admin = "admin",
 }
 
 /** An app's pending request to connect to a user's account through OAuth. */
 export interface JsonOAuthAuthorization {
 	uuid: Uuid;
 	client: JsonOAuthAuthorizationClient;
+	/** The device the Bencher CLI asks from, by its hostname. Only the Bencher CLI names one. */
+	device?: OAuthDevice;
 	redirect: JsonOAuthAuthorizationRedirect;
 	scopes: OAuthScope[];
 	expiration: string;
@@ -2364,7 +2382,7 @@ export interface JsonOAuthAuthorization {
 
 /** The app an OAuth grant was given to. */
 export interface JsonOAuthClient {
-	/** The URL of the app's metadata document. */
+	/** The URL of the app's metadata document, or `bencher_cli` for the Bencher CLI. */
 	id: OAuthClientId;
 	/** The host serving the app's metadata document, which is who the app is. */
 	host: string;
@@ -2389,6 +2407,8 @@ export interface JsonOAuthGrantKey {
 export interface JsonOAuthGrant {
 	uuid: Uuid;
 	client: JsonOAuthClient;
+	/** The device the Bencher CLI signed in on, by its hostname. Only the Bencher CLI names one. */
+	device?: OAuthDevice;
 	scopes: OAuthScope[];
 	/**
 	 * The user API key the connection was approved with, if any.

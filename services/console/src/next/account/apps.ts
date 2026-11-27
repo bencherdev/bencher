@@ -65,3 +65,18 @@ export const lastRefreshed = (
 	Date.parse(grant.modified) > Date.parse(grant.created)
 		? grant.modified
 		: undefined;
+
+/** The Bencher CLI's client ID, which the server knows without a document. */
+const BENCHER_CLI = "bencher_cli";
+
+/** Whether the grant is the Bencher CLI's, signed in on one device. */
+export const isCli = (grant: Pick<JsonOAuthGrant, "client">) =>
+	grant.client.id === BENCHER_CLI;
+
+/** Who the app is: the Bencher CLI on its device, or the host of an outside app. */
+export const appName = (grant: Pick<JsonOAuthGrant, "client" | "device">) =>
+	isCli(grant)
+		? grant.device
+			? `Bencher CLI on ${grant.device}`
+			: "Bencher CLI"
+		: grant.client.host;

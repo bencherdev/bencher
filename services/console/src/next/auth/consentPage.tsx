@@ -27,10 +27,16 @@ const boot = (mount: HTMLElement) => {
 			deleteCache();
 		}
 	};
-	const effects = consentEffects(async () => {
-		await endSession();
-		forget();
-	}, forget);
+	const effects = consentEffects(
+		async () => {
+			await endSession();
+			forget();
+		},
+		forget,
+		undefined,
+		// Loaded only when the Bencher CLI's approval asks for a recent sign-in.
+		async () => (await import("../fresh/dialog")).signInAgain(),
+	);
 	handOff(mount, () =>
 		render(
 			() => (

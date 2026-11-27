@@ -139,6 +139,45 @@ test("each app shows who it is, what it can do, and how it was approved", async 
 });
 
 // Kills an empty list drawn as nothing, or still waiting.
+const cli = {
+	uuid: "grant-cli",
+	client: { id: "bencher_cli", host: "", name: "Bencher CLI" },
+	device: "muriel-laptop",
+	scopes: [OAuthScope.Admin, OAuthScope.User],
+	created: "2026-10-03T10:00:00Z",
+	modified: "2026-10-03T10:00:00Z",
+	expiration: "2027-10-03T10:00:00Z",
+} as JsonOAuthGrant;
+
+// Kills the Bencher CLI drawn as an outside app with no host, without its
+// device, or with its admin grant read as an ordinary one, and a Revoke that
+// does not say which device it ends.
+test("the Bencher CLI shows its device and what it can do", async () => {
+	const { api, sent } = grantsApi(async () => ({ grants: [cli] }));
+	dispose = mountAccount(ConnectedApps, "apps", { api }).dispose;
+	const card = app("Bencher CLI");
+	await expect.element(card).toBeVisible();
+	await expect.element(card).toHaveTextContent(/device\s*muriel-laptop/);
+	expect(
+		card
+			.getByRole("listitem")
+			.elements()
+			.map((item) => item.textContent),
+	).toEqual(["Act as you, with server admin"]);
+	await expect.element(card).not.toHaveTextContent(/calls itself/);
+	await expect.element(card).not.toHaveTextContent(/approved/);
+	await page
+		.getByRole("button", { name: "Revoke Bencher CLI on muriel-laptop" })
+		.click();
+	await expect
+		.element(page.getByRole("alertdialog"))
+		.toHaveTextContent("Revoke Bencher CLI on muriel-laptop?");
+	await page.getByRole("button", { name: "Revoke app" }).click();
+	await expect
+		.poll(() => sent)
+		.toEqual([{ method: "DELETE", path: `${GRANTS}/grant-cli` }]);
+});
+
 test("no apps says so", async () => {
 	const { api } = grantsApi(async () => ({ grants: [] }));
 	dispose = mountAccount(ConnectedApps, "apps", { api }).dispose;

@@ -9,6 +9,8 @@ const SCOPE_TEXT: Record<OAuthScope, string> = {
 	openid: "Know which Bencher account you are signed in as",
 	email: "View your email address and whether it is verified",
 	profile: "View your name and username",
+	user: "Act as you, without server admin",
+	admin: "Act as you, with server admin",
 };
 
 export const scopeText = (scope: OAuthScope): string =>

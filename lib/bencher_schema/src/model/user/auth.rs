@@ -6,7 +6,7 @@ use bencher_json::{
     UserKeyHash,
 };
 #[cfg(feature = "plus")]
-use bencher_json::{OAuthScopes, system::payment::JsonCustomer};
+use bencher_json::{OAuthAccessToken, OAuthScope, OAuthScopes, system::payment::JsonCustomer};
 use bencher_rbac::{
     Organization, Project, Server, User as RbacUser,
     server::Permission,
@@ -43,7 +43,7 @@ use crate::{
 
 use super::QueryUser;
 #[cfg(feature = "plus")]
-use super::oauth::{authenticate, is_oauth_credential};
+use super::oauth::{authenticate, authenticate_cli, is_oauth_credential};
 
 const CROSS_ORIGIN_SESSION: &str = "A session can change state only from the console's own origin";
 const FRESH_SIGN_IN: &str = "This needs a browser session signed in within the last 10 minutes";
@@ -95,6 +95,14 @@ impl AuthUser {
                 BearerToken::UserKey(key) => {
                     let (query_user, query_key) = Self::user_from_user_key(context, conn, &key)?;
                     (query_user, AuthCredential::UserKey(query_key.id), None)
+                },
+                #[cfg(feature = "plus")]
+                BearerToken::OAuth(token) => {
+                    let (mut query_user, query_grant) = authenticate_cli(context, conn, &token)?;
+                    // Server admin power only for an admin grant, and only while the user holds it.
+                    let admin = query_grant.scope.permits(OAuthScope::Admin);
+                    query_user.admin &= admin;
+                    (query_user, AuthCredential::CliGrant, None)
                 },
                 BearerToken::Session(cookie) => {
                     let Some((query_user, query_session)) =
@@ -506,6 +514,8 @@ impl AuthUser {
             AuthCredential::UserKey(user_key_id) => Some(user_key_id),
             #[cfg(feature = "plus")]
             AuthCredential::OAuthGrant { user_key_id } => user_key_id,
+            #[cfg(feature = "plus")]
+            AuthCredential::CliGrant => None,
             AuthCredential::Session(_) | AuthCredential::ApiToken => None,
         }
     }
@@ -583,6 +593,10 @@ pub enum AuthCredential {
     OAuthGrant {
         user_key_id: Option<UserKeyId>,
     },
+    /// The Bencher CLI's OAuth access token at the REST API, which is never a browser session.
+    /// Its server admin power is already in its user's, as its grant allows.
+    #[cfg(feature = "plus")]
+    CliGrant,
 }
 
 /// A browser session, as the request's sign-in read it. A session's row ID passes to a later
@@ -618,6 +632,9 @@ enum Renewal {
 pub enum BearerToken {
     Jwt(Jwt),
     UserKey(UserKey),
+    /// The Bencher CLI's OAuth access token. An outside app's is refused once looked up.
+    #[cfg(feature = "plus")]
+    OAuth(OAuthAccessToken),
     Session(CookieCredential),
 }
 
@@ -638,7 +655,11 @@ impl BearerToken {
     /// Centralized so the `SharedExtractor` impl and `ApiActor`'s dispatch agree on
     /// the prefix detection rules.
     pub fn from_raw(raw: &str) -> Result<Self, HttpError> {
-        // Refused before the JWT parse so an OAuth token gets its own 401 and metric.
+        #[cfg(feature = "plus")]
+        if let Ok(token) = raw.parse::<OAuthAccessToken>() {
+            return Ok(Self::OAuth(token));
+        }
+        // Refused before the JWT parse so a refresh token or code gets its own 401 and metric.
         #[cfg(feature = "plus")]
         if is_oauth_credential(raw) {
             #[cfg(feature = "otel")]
@@ -646,7 +667,7 @@ impl BearerToken {
                 bencher_otel::OAuthTokenAuthFailureReason::RestApi,
             ));
             return Err(unauthorized_error(
-                "OAuth tokens are not accepted by the REST API",
+                "OAuth refresh tokens and authorization codes are not accepted by the REST API. Send the Bencher CLI's access token.",
             ));
         }
         if raw.starts_with(UserKey::PREFIX) {

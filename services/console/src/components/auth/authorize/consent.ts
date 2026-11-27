@@ -1,6 +1,10 @@
 import { REQUEST_PARAM, requestUuid } from "./path";
 
 const ERROR_PARAM = "error";
+/** The Bencher CLI's client ID, which the server knows without a document. */
+export const BENCHER_CLI = "bencher_cli";
+const FRESH_SIGN_IN = "fresh_sign_in";
+const NOT_A_SERVER_ADMIN = "not_a_server_admin";
 const USER_KEY_PREFIX = "bencher_user_";
 const PROJECT_KEY_PREFIX = "bencher_run_";
 
@@ -94,6 +98,10 @@ export enum Refusal {
 	/** The session is no longer accepted, so the user signs in again. */
 	SessionEnded = "session_ended",
 	KeyRefused = "key_refused",
+	/** The session must sign in again to approve the Bencher CLI. */
+	FreshSignIn = "fresh_sign_in",
+	/** Only a server admin can approve the Bencher CLI as admin. */
+	NotAdmin = "not_admin",
 	/** Anything else, the network included. */
 	Failed = "failed",
 }
@@ -101,7 +109,17 @@ export enum Refusal {
 export const refusal = (
 	status: undefined | number,
 	credential: undefined | Credential,
+	/** The API's `error_code`, if it gave one. */
+	code?: string,
 ): Refusal => {
+	if (status === 403 && credential === Credential.Session) {
+		if (code === FRESH_SIGN_IN) {
+			return Refusal.FreshSignIn;
+		}
+		if (code === NOT_A_SERVER_ADMIN) {
+			return Refusal.NotAdmin;
+		}
+	}
 	switch (status) {
 		case 404:
 			return Refusal.Gone;
@@ -125,7 +143,8 @@ export const refusal = (
 	}
 };
 
-export const refusalText = (refusal: Refusal): string => {
+/** Why the API refused, for a page that offers a pasted key unless `keyed` is false. */
+export const refusalText = (refusal: Refusal, keyed = true): string => {
 	switch (refusal) {
 		case Refusal.Gone:
 			return "This request to connect is no longer available. It may have expired, or this server may not connect apps.";
@@ -134,9 +153,15 @@ export const refusalText = (refusal: Refusal): string => {
 		case Refusal.Busy:
 			return "Too many requests. Wait a minute and try again.";
 		case Refusal.SessionEnded:
-			return "Your session ended. Sign in again, or approve with a user API key.";
+			return keyed
+				? "Your session ended. Sign in again, or approve with a user API key."
+				: "Your session ended. Sign in again.";
 		case Refusal.KeyRefused:
 			return "That user API key was not accepted. Check that it is current and that its account is not locked.";
+		case Refusal.FreshSignIn:
+			return "Sign in again to approve.";
+		case Refusal.NotAdmin:
+			return "Not a server admin";
 		case Refusal.Failed:
 			return "Bencher could not be reached. Try again.";
 	}
@@ -150,6 +175,16 @@ export const answerUrl = (url: unknown): undefined | string => {
 	try {
 		const { protocol } = new URL(url);
 		return protocol === "https:" || protocol === "http:" ? url : undefined;
+	} catch {
+		return undefined;
+	}
+};
+
+/** The `error_code` of an API error's body, if it has one. */
+export const errorCode = (body: string): undefined | string => {
+	try {
+		const code = JSON.parse(body)?.error_code;
+		return typeof code === "string" ? code : undefined;
 	} catch {
 		return undefined;
 	}
