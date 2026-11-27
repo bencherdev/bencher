@@ -159,6 +159,8 @@ pub struct Seed {
     wrong_secret_console_url: String,
     /// The API's log, which holds every email it sends.
     api_log: String,
+    /// The API's database, where the suite sets when a session last proved its reader.
+    db: String,
     now: DateTime,
     admin: SeedReader,
     member: SeedReader,
@@ -289,6 +291,7 @@ impl Seed {
             console_url: console_url.to_owned(),
             wrong_secret_console_url: wrong_secret_console_url.to_owned(),
             api_log: api_log.to_owned(),
+            db: db.to_string(),
             now: DateTime::try_from(NOW)?,
             admin,
             member,

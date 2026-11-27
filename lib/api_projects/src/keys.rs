@@ -221,6 +221,7 @@ fn get_ls_query<'q>(
 /// The plaintext key is only returned once in the response.
 /// Requires `manage` permission on the project and a user session:
 /// neither a user API key nor a deprecated user API token can create a project key.
+/// A user session needs a sign-in within the last 10 minutes.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/keys",
@@ -238,6 +239,7 @@ pub async fn proj_key_post(
             "Only a user session can create a project API key.",
         ));
     }
+    auth_user.check_fresh_sign_in(rqctx.context()).await?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),

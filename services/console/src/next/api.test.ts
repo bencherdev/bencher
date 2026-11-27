@@ -123,6 +123,108 @@ describe("createApi", () => {
 		expect(calls[0]?.init?.body).toBeUndefined();
 	});
 
+	// Kills a change refused for want of a fresh sign-in that does not ask the
+	// reader, that does not go again once they sign in again, or that goes
+	// again after they cancel; and asking for any other refusal, or for a read.
+	test("a change that needs a fresh sign-in asks for one, then goes again", async () => {
+		const fresh = {
+			error_code: "fresh_sign_in",
+			message:
+				"This needs a browser session signed in within the last 10 minutes",
+		};
+		const answering = (...answers: [number, unknown][]) => {
+			const sent: (RequestInit | undefined)[] = [];
+			const fetch = async (
+				_url: string | URL | Request,
+				init?: RequestInit,
+			) => {
+				const [status, body] = answers[
+					Math.min(sent.length, answers.length - 1)
+				] ?? [500, {}];
+				sent.push(init);
+				return new Response(JSON.stringify(body), { status });
+			};
+			return { fetch, sent };
+		};
+		const client = (fetch: typeof globalThis.fetch, signedIn: boolean) => {
+			let asked = 0;
+			const api = createApi({
+				fetch,
+				onUnauthorized: () => {},
+				signInAgain: async () => {
+					asked += 1;
+					return signedIn;
+				},
+			});
+			return { api, asked: () => asked };
+		};
+
+		const made = answering([403, fresh], [201, { name: "ci" }]);
+		const signs = client(made.fetch, true);
+		const { data } = await signs.api.send<{ name: string }>(
+			"POST",
+			"/v0/users/ada/keys",
+			{ name: "ci" },
+		);
+		expect(data).toEqual({ name: "ci" });
+		expect(signs.asked()).toBe(1);
+		expect(made.sent.map((init) => [init?.method, init?.body])).toEqual([
+			["POST", '{"name":"ci"}'],
+			["POST", '{"name":"ci"}'],
+		]);
+
+		const cancelled = answering([403, fresh], [201, {}]);
+		const cancels = client(cancelled.fetch, false);
+		const error = await cancels.api
+			.send("DELETE", "/v0/projects/hashbrown")
+			.catch((error: ApiError) => error);
+		expect((error as ApiError).status).toBe(403);
+		expect((error as ApiError).message).toContain("fresh_sign_in");
+		expect(cancels.asked()).toBe(1);
+		expect(cancelled.sent).toHaveLength(1);
+
+		for (const [status, body] of [
+			[403, { error_code: "cross_origin", message: "no" }],
+			[403, { message: "Only a user session can create a user API key." }],
+			[429, fresh],
+		] as const) {
+			const refused = answering([status, body]);
+			const asks = client(refused.fetch, true);
+			await asks.api.send("POST", "/v0/x", {}).catch(() => undefined);
+			expect(asks.asked(), JSON.stringify(body)).toBe(0);
+		}
+		const read = answering([403, fresh]);
+		const reads = client(read.fetch, true);
+		await reads.api.get("/v0/x").catch(() => undefined);
+		expect(reads.asked()).toBe(0);
+	});
+
+	// Kills a change that asks again when the API refuses it for want of a
+	// fresh sign-in right after the reader signed in again.
+	test("a change asks for a fresh sign-in once", async () => {
+		const fresh = { error_code: "fresh_sign_in", message: "Sign in again" };
+		const sent: (RequestInit | undefined)[] = [];
+		let asked = 0;
+		const api = createApi({
+			fetch: async (_url: string | URL | Request, init?: RequestInit) => {
+				sent.push(init);
+				return new Response(JSON.stringify(fresh), { status: 403 });
+			},
+			onUnauthorized: () => {},
+			signInAgain: async () => {
+				asked += 1;
+				return true;
+			},
+		});
+		const error = await api
+			.send("POST", "/v0/users/ada/keys", { name: "ci" })
+			.catch((error: ApiError) => error);
+		expect((error as ApiError).status).toBe(403);
+		expect((error as ApiError).message).toContain("fresh_sign_in");
+		expect(asked).toBe(1);
+		expect(sent).toHaveLength(2);
+	});
+
 	// Kills a refused change that loses the status a page explains it by.
 	test("a refused change keeps its status and the API's message", async () => {
 		const error = await api(respond(402, { message: "No plan" }))

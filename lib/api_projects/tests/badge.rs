@@ -364,10 +364,7 @@ async fn badge_of_a_private_project() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{slug}/keys")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&serde_json::json!({ "name": "badge-key" }))
         .send()
         .await

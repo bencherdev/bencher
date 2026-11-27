@@ -36,7 +36,7 @@ async fn email_change_waits_for_confirm() {
     let verified = stored_email_verified(&server, &user);
     assert!(verified.is_some());
 
-    patch_user(&server, &user.token, &user, &json_email(&user.email)).await;
+    patch_user(&server, &user, &user, &json_email(&user.email)).await;
     assert_eq!(
         confirm_links(&capture, &user.email).len(),
         0,
@@ -44,7 +44,7 @@ async fn email_change_waits_for_confirm() {
     );
 
     let new_email = email("wait-new@example.com");
-    let json = patch_user(&server, &user.token, &user, &json_email(&new_email)).await;
+    let json = patch_user(&server, &user, &user, &json_email(&new_email)).await;
     assert_eq!(json.email, user.email);
     assert_eq!(
         view_user(&server, &user.token, &user).await.email,
@@ -71,7 +71,7 @@ async fn email_change_confirm() {
         .execute(&mut server.db_conn())
         .expect("Failed to clear the proof");
     let new_email = email("confirm-new@example.com");
-    let token = request_change(&server, &capture, &user.token, &user, &new_email).await;
+    let token = request_change(&server, &capture, &user, &user, &new_email).await;
 
     let (status, body) = confirm(&server, user.uuid, &token).await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -96,7 +96,7 @@ async fn email_change_confirm_once() {
     let admin = server.signup("Admin User", "once-admin@example.com").await;
     let user = server.signup("Once User", "once@example.com").await;
     let new_email = email("once-new@example.com");
-    let token = request_change(&server, &capture, &user.token, &user, &new_email).await;
+    let token = request_change(&server, &capture, &user, &user, &new_email).await;
 
     let (status, body) = confirm(&server, user.uuid, &token).await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -124,7 +124,7 @@ async fn email_change_confirm_expired() {
         .await;
     let user = server.signup("Expired User", "expired@example.com").await;
     let new_email = email("expired-new@example.com");
-    let token = request_change(&server, &capture, &user.token, &user, &new_email).await;
+    let token = request_change(&server, &capture, &user, &user, &new_email).await;
     let expiration = base + i64::from(AUTH_TOKEN_TTL);
 
     time.store(expiration + 1, Ordering::Relaxed);
@@ -198,8 +198,8 @@ async fn email_change_confirm_superseded() {
         .await;
     let first = email("superseded-first@example.com");
     let second = email("superseded-second@example.com");
-    let first_token = request_change(&server, &capture, &user.token, &user, &first).await;
-    let second_token = request_change(&server, &capture, &user.token, &user, &second).await;
+    let first_token = request_change(&server, &capture, &user, &user, &first).await;
+    let second_token = request_change(&server, &capture, &user, &user, &second).await;
 
     confirm_ok(&server, user.uuid, &second_token).await;
 
@@ -240,10 +240,9 @@ async fn email_change_confirm_round_trip() {
     let (server, capture) = frozen_server_with_log().await;
     let user = server.signup("Round User", "round@example.com").await;
     let new_email = email("round-new@example.com");
-    let first_token = request_change(&server, &capture, &user.token, &user, &new_email).await;
+    let first_token = request_change(&server, &capture, &user, &user, &new_email).await;
     confirm_ok(&server, user.uuid, &first_token).await;
-    let session = client_token(&server, &new_email);
-    let back_token = request_change(&server, &capture, session.as_ref(), &user, &user.email).await;
+    let back_token = request_change(&server, &capture, &user, &user, &user.email).await;
     confirm_ok(&server, user.uuid, &back_token).await;
     let session = client_token(&server, &user.email);
     let api_token = seed_token(&server, &user, "Legacy Token");
@@ -265,10 +264,10 @@ async fn email_change_confirm_after_edit() {
     let user = server.signup("Edit User", "edit@example.com").await;
     let api_token = seed_token(&server, &user, "Legacy Token");
     let new_email = email("edit-new@example.com");
-    let token = request_change(&server, &capture, &user.token, &user, &new_email).await;
+    let token = request_change(&server, &capture, &user, &user, &new_email).await;
     patch_user(
         &server,
-        &user.token,
+        &user,
         &user,
         &serde_json::json!({ "name": "Edited User" }),
     )
@@ -300,7 +299,7 @@ async fn email_change_confirm_joins_sso() {
         StatusCode::NOT_FOUND
     );
     let new_email = email("sso@sso.example.com");
-    let token = request_change(&server, &capture, &user.token, &user, &new_email).await;
+    let token = request_change(&server, &capture, &user, &user, &new_email).await;
 
     confirm_ok(&server, user.uuid, &token).await;
     let session = client_token(&server, &new_email);
@@ -316,7 +315,7 @@ async fn email_change_confirm_taken() {
     let (server, capture) = server_with_log().await;
     let user = server.signup("Taken User", "taken@example.com").await;
     let new_email = email("taken-new@example.com");
-    let token = request_change(&server, &capture, &user.token, &user, &new_email).await;
+    let token = request_change(&server, &capture, &user, &user, &new_email).await;
     let other = server.signup("Other User", new_email.as_ref()).await;
 
     let (status, body) = confirm(&server, user.uuid, &token).await;
@@ -342,7 +341,7 @@ async fn email_change_confirm_locked() {
     let user = server.signup("Locked User", "locked@example.com").await;
     patch_user(
         &server,
-        &admin.token,
+        &admin,
         &user,
         &serde_json::json!({ "locked": true }),
     )
@@ -370,7 +369,7 @@ async fn email_change_taken() {
     let other = server.signup("Other User", "asked@example.com").await;
 
     let body = serde_json::json!({ "name": "Renamed User", "email": other.email });
-    let (status, text) = send_patch(&server, &user.token, &user, &body).await;
+    let (status, text) = send_patch(&server, &user, &user, &body).await;
     assert_eq!(status, StatusCode::CONFLICT, "{text}");
     assert_eq!(
         confirm_links(&capture, &other.email).len(),
@@ -392,7 +391,7 @@ async fn email_change_applies_other_fields() {
         "slug": "renamed-user",
         "email": new_email,
     });
-    let json = patch_user(&server, &user.token, &user, &body).await;
+    let json = patch_user(&server, &user, &user, &body).await;
     assert_eq!(json.name.as_ref(), "Renamed User");
     let slug: &str = json.slug.as_ref();
     assert_eq!(slug, "renamed-user");
@@ -412,7 +411,7 @@ async fn email_change_admin_other_user() {
     let api_token = seed_token(&server, &user, "Legacy Token");
     let new_email = email("direct-new@example.com");
 
-    let json = patch_user(&server, &admin.token, &user, &json_email(&new_email)).await;
+    let json = patch_user(&server, &admin, &user, &json_email(&new_email)).await;
     assert_eq!(json.email, new_email);
     assert_eq!(
         confirm_links(&capture, &new_email).len(),
@@ -436,7 +435,7 @@ async fn email_change_admin_self() {
     let admin = server.signup("Admin User", "self-admin@example.com").await;
     let new_email = email("self-admin-new@example.com");
 
-    let json = patch_user(&server, &admin.token, &admin, &json_email(&new_email)).await;
+    let json = patch_user(&server, &admin, &admin, &json_email(&new_email)).await;
     assert_eq!(json.email, admin.email);
     assert_eq!(confirm_links(&capture, &new_email).len(), 1);
 }
@@ -472,11 +471,11 @@ fn json_email(email: &Email) -> serde_json::Value {
 async fn request_change(
     server: &TestServer,
     capture: &LogCapture,
-    bearer: &str,
+    actor: &TestUser,
     user: &TestUser,
     new_email: &Email,
 ) -> Jwt {
-    patch_user(server, bearer, user, &json_email(new_email)).await;
+    patch_user(server, actor, user, &json_email(new_email)).await;
     let (uuid, token) = confirm_links(capture, new_email)
         .pop()
         .expect("A confirm link was sent");
@@ -537,31 +536,28 @@ fn client_token(server: &TestServer, email: &Email) -> Jwt {
         .expect("Failed to mint client token")
 }
 
-/// Patch the user with `bearer` and return the user it answers with.
+/// Patch the user in a session `actor` signed in to now, and return the user it answers with.
 async fn patch_user(
     server: &TestServer,
-    bearer: &str,
+    actor: &TestUser,
     user: &TestUser,
     body: &serde_json::Value,
 ) -> JsonUser {
-    let (status, text) = send_patch(server, bearer, user, body).await;
+    let (status, text) = send_patch(server, actor, user, body).await;
     assert_eq!(status, StatusCode::OK, "{text}");
     serde_json::from_str(&text).expect("Failed to parse user")
 }
 
 async fn send_patch(
     server: &TestServer,
-    bearer: &str,
+    actor: &TestUser,
     user: &TestUser,
     body: &serde_json::Value,
 ) -> (StatusCode, String) {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/users/{}", user.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(bearer),
-        )
+        .headers(server.fresh_session(actor))
         .json(body)
         .send()
         .await

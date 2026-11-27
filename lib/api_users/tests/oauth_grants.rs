@@ -311,10 +311,7 @@ async fn create_user_key(
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{}/keys", user.slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(user))
         .json(&json!({"name": name}))
         .send()
         .await

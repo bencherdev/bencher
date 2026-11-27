@@ -338,6 +338,7 @@ async fn patch_inner(
 /// By default, organizations are soft-deleted (along with their child projects).
 /// Set the `hard` query parameter to `true` to permanently delete the organization (requires server admin).
 /// On Bencher Cloud, deleting an organization also immediately cancels any active subscription.
+/// A user session needs a sign-in within the last 10 minutes.
 #[endpoint {
     method = DELETE,
     path =  "/v0/organizations/{organization}",
@@ -350,6 +351,7 @@ pub async fn organization_delete(
     query_params: Query<OrganizationDeleteQuery>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    auth_user.check_fresh_sign_in(rqctx.context()).await?;
     delete_inner(
         &rqctx.log,
         rqctx.context(),

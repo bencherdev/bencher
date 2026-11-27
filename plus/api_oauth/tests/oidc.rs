@@ -105,10 +105,7 @@ async fn email_verified_follows_proof_of_the_address() {
         .server
         .client
         .patch(harness.server.api_url(&format!("/v0/users/{}", user.slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
+        .headers(harness.server.fresh_session(&admin))
         .json(&json!({ "email": "moved@example.com" }))
         .send()
         .await
@@ -508,10 +505,7 @@ async fn unchanged_email_is_never_written_back() {
         .server
         .client
         .patch(harness.server.api_url(&format!("/v0/users/{}", user.slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(harness.server.fresh_session(&user))
         .json(&json!({ "email": "stale@example.com", "name": "Renamed" }))
         .send();
     let (resp, ()) = tokio::join!(patch, async move {
@@ -773,10 +767,7 @@ impl Harness {
                 self.server
                     .api_url(&format!("/v0/users/{}/keys", user.slug)),
             )
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(&user.token),
-            )
+            .headers(self.server.fresh_session(user))
             .json(&json!({ "name": "Pasted Key" }))
             .send()
             .await

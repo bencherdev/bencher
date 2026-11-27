@@ -17,7 +17,7 @@ use subtle::ConstantTimeEq as _;
 use crate::{
     context::DbConnection,
     error::issue_error,
-    model::user::{QueryUser, UserId, sign_in::SignInContext},
+    model::user::{QueryUser, UserId, session::SessionId, sign_in::SignInContext},
     schema::{self, provider_state as provider_state_table},
 };
 
@@ -30,6 +30,8 @@ pub const PROVIDER_STATE_LIFETIME: TimeDelta = TimeDelta::minutes(10);
 #[diesel(table_name = provider_state_table)]
 pub struct QueryProviderState {
     pub id: ProviderStateId,
+    /// The session a fresh sign-in proves again, or none for a sign-in.
+    pub session_id: Option<SessionId>,
     pub provider: SignInProvider,
     pub state_hash: ProviderStateHash,
     pub binding_hash: BindingSecretHash,
@@ -99,6 +101,7 @@ impl QueryProviderState {
 #[derive(diesel::Insertable)]
 #[diesel(table_name = provider_state_table)]
 pub struct InsertProviderState {
+    pub session_id: Option<SessionId>,
     pub provider: SignInProvider,
     pub state_hash: ProviderStateHash,
     pub binding_hash: BindingSecretHash,
@@ -130,6 +133,25 @@ impl InsertProviderState {
         context: SignInContext,
         now: DateTime,
     ) -> Result<(Self, ProviderSecrets), HttpError> {
+        Self::with_session(provider, context, None, now)
+    }
+
+    /// A fresh sign-in with `provider` that proves `session_id` again, starting at `now`, and its
+    /// secrets.
+    pub fn fresh(
+        provider: SignInProvider,
+        session_id: SessionId,
+        now: DateTime,
+    ) -> Result<(Self, ProviderSecrets), HttpError> {
+        Self::with_session(provider, SignInContext::default(), Some(session_id), now)
+    }
+
+    fn with_session(
+        provider: SignInProvider,
+        context: SignInContext,
+        session_id: Option<SessionId>,
+        now: DateTime,
+    ) -> Result<(Self, ProviderSecrets), HttpError> {
         let generate_error = |e| {
             issue_error(
                 "Failed to generate a sign-in secret",
@@ -154,6 +176,7 @@ impl InsertProviderState {
             pin: _,
         } = context;
         let insert = Self {
+            session_id,
             provider,
             state_hash: ProviderStateHash::from(&secrets.state),
             binding_hash: BindingSecretHash::from(&secrets.binding),
@@ -192,6 +215,18 @@ pub struct ProviderPin {
 }
 
 impl ProviderPin {
+    /// Each provider that has an account pinned to the user.
+    pub fn providers_of(
+        conn: &mut DbConnection,
+        user_id: UserId,
+    ) -> diesel::QueryResult<Vec<SignInProvider>> {
+        schema::provider_pin::table
+            .filter(schema::provider_pin::user_id.eq(user_id))
+            .order(schema::provider_pin::provider)
+            .select(schema::provider_pin::provider)
+            .load(conn)
+    }
+
     /// The user the account is pinned to, if any.
     pub fn user(&self, conn: &mut DbConnection) -> diesel::QueryResult<Option<QueryUser>> {
         schema::provider_pin::table
