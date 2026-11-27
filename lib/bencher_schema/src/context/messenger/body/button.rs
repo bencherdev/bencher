@@ -8,13 +8,40 @@ pub struct ButtonBody {
     pub preheader: String,
     pub greeting: String,
     pub pre_body: String,
-    pub button_text: String,
-    pub button_url: String,
+    /// The action the email offers, if any: a notice offers none.
+    pub button: Option<Button>,
     pub clipboard: Option<Clipboard>,
     pub post_body: String,
     pub closing: String,
     pub signature: String,
     pub settings_url: String,
+}
+
+/// A link drawn as a button, under its text.
+#[derive(Debug)]
+pub struct Button {
+    pub text: String,
+    pub url: String,
+}
+
+impl Button {
+    /// The button's HTML, with its text and its link escaped.
+    fn template(&self) -> String {
+        let Self { text, url } = self;
+        format!(
+            "
+          <br/>
+          <div class=\"columns is-centered\">
+            <div class=\"column\">
+              <div class=\"content has-text-centered\">
+                <a class=\"button is-medium is-responsive\" href=\"{url}\" target=\"_blank\" style=\"color:white;background-color:#fc7300;\">{text}</a>
+              </div>
+            </div>
+          </div>",
+            url = escape(url),
+            text = escape(text),
+        )
+    }
 }
 
 /// A value to copy, under its label, below the button.
@@ -29,8 +56,7 @@ impl FmtBody for ButtonBody {
         let Self {
             greeting,
             pre_body,
-            button_text,
-            button_url,
+            button,
             clipboard,
             post_body,
             closing,
@@ -38,13 +64,17 @@ impl FmtBody for ButtonBody {
             settings_url,
             ..
         } = self;
+        let button = button
+            .as_ref()
+            .map(|Button { text, url }| format!("\n{text}: {url}"))
+            .unwrap_or_default();
         let clipboard = clipboard
             .as_ref()
             .map(|Clipboard { text, target }| format!("\n{text}: {target}"))
             .unwrap_or_default();
 
         format!(
-            "\n{greeting}\n{pre_body}\n{button_text}: {button_url}{clipboard}\n{post_body}\n{closing}\n{signature}\nBencher - Continuous Benchmarking\nManage email settings ({settings_url})"
+            "\n{greeting}\n{pre_body}{button}{clipboard}\n{post_body}\n{closing}\n{signature}\nBencher - Continuous Benchmarking\nManage email settings ({settings_url})"
         )
     }
 
@@ -62,8 +92,7 @@ impl ButtonBody {
             preheader,
             greeting,
             pre_body,
-            button_text,
-            button_url,
+            button,
             clipboard,
             post_body,
             closing,
@@ -74,8 +103,7 @@ impl ButtonBody {
         let preheader = escape(preheader);
         let greeting = escape(greeting);
         let pre_body = escape(pre_body);
-        let button_text = escape(button_text);
-        let button_url = escape(button_url);
+        let button = button.as_ref().map(Button::template).unwrap_or_default();
         let clipboard = clipboard
             .as_ref()
             .map(|Clipboard { target, .. }| {
@@ -127,15 +155,7 @@ impl ButtonBody {
           <h1 class=\"title\"><img src=\"https://bencher.dev/favicon.png\" width=\"32\" height=\"32\" alt=\"🐰\" /> {title}</h1>
           <br/>
           <p>{greeting}</p>
-          <p>{pre_body}</p>
-          <br/>
-          <div class=\"columns is-centered\">
-            <div class=\"column\">
-              <div class=\"content has-text-centered\">
-                <a class=\"button is-medium is-responsive\" href=\"{button_url}\" target=\"_blank\" style=\"color:white;background-color:#fc7300;\">{button_text}</a>
-              </div>
-            </div>
-          </div>{clipboard}
+          <p>{pre_body}</p>{button}{clipboard}
           <p>{post_body}</p>
           <br/>
           <p>{closing}</p>
@@ -160,7 +180,7 @@ impl ButtonBody {
 
 #[cfg(test)]
 mod tests {
-    use super::{ButtonBody, Clipboard};
+    use super::{Button, ButtonBody, Clipboard, FmtBody as _};
 
     const CHOSEN: &str = "<b>&\"x'";
     const ESCAPED: &str = "&lt;b&gt;&amp;&quot;x&#39;";
@@ -174,8 +194,10 @@ mod tests {
             preheader: CHOSEN.to_owned(),
             greeting: format!("Ahoy {CHOSEN}!"),
             pre_body: format!("{CHOSEN} invited you to join {CHOSEN}."),
-            button_text: format!("Join {CHOSEN}"),
-            button_url: format!("https://bencher.example/auth/login?a=1&b={CHOSEN}"),
+            button: Some(Button {
+                text: format!("Join {CHOSEN}"),
+                url: format!("https://bencher.example/auth/login?a=1&b={CHOSEN}"),
+            }),
             clipboard: Some(Clipboard {
                 text: "Token".to_owned(),
                 target: CHOSEN.to_owned(),
@@ -196,5 +218,31 @@ mod tests {
             )),
             "{template}"
         );
+    }
+
+    // A notice offers no action: its one link is the settings link every email ends with.
+    #[test]
+    fn notice_links_only_its_settings() {
+        let notice = ButtonBody {
+            title: "Bencher Email Changed".to_owned(),
+            preheader: String::new(),
+            greeting: "Ahoy Ada,".to_owned(),
+            pre_body: "Your email changed.".to_owned(),
+            button: None,
+            clipboard: None,
+            post_body: String::new(),
+            closing: String::new(),
+            signature: String::new(),
+            settings_url: "https://bencher.example/help".to_owned(),
+        };
+        let template = notice.template();
+        assert_eq!(template.matches("href=").count(), 1, "{template}");
+        assert!(
+            template.contains("href=\"https://bencher.example/help\""),
+            "{template}"
+        );
+        assert!(!template.contains("class=\"button"), "{template}");
+        let text = notice.text();
+        assert_eq!(text.matches("https://").count(), 1, "{text}");
     }
 }

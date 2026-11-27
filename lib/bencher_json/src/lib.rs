@@ -3,12 +3,12 @@ use std::sync::LazyLock;
 pub use bencher_context::RunContext;
 pub use bencher_valid::{
     BencherKey, BenchmarkName, BindingSecret, BindingSecretHash, BmfVersion, Boundary, BranchName,
-    CdfBoundary, CommitTitle, DateTime, DateTimeMillis, Email, EmailHash, GitHash, Index,
-    IntoResourceId, InviteSecret, InviteSecretHash, IqrBoundary, Jwt, JwtHash, LinkSecret,
-    LinkSecretHash, MetricName, Model, ModelTest, NameId, NonEmpty, PercentageBoundary, ProjectKey,
-    ProjectKeyHash, ResourceId, ResourceName, SampleSize, Sanitize, Search, Secret, SessionToken,
-    SessionTokenHash, SignInCode, SignInCodeHash, Slug, Units, Url, UserKey, UserKeyHash, UserName,
-    ValidError, Window,
+    CdfBoundary, CommitTitle, DateTime, DateTimeMillis, Email, EmailChangeSecret,
+    EmailChangeSecretHash, EmailHash, GitHash, Index, IntoResourceId, InviteSecret,
+    InviteSecretHash, IqrBoundary, Jwt, JwtHash, LinkSecret, LinkSecretHash, MetricName, Model,
+    ModelTest, NameId, NonEmpty, PercentageBoundary, ProjectKey, ProjectKeyHash, ResourceId,
+    ResourceName, SampleSize, Sanitize, Search, Secret, SessionToken, SessionTokenHash, SignInCode,
+    SignInCodeHash, Slug, Units, Url, UserKey, UserKeyHash, UserName, ValidError, Window,
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
@@ -156,6 +156,7 @@ pub use user::provider::{
 };
 pub use user::{
     JsonPubUser, JsonUpdateUser, JsonUser, JsonUsers, UserResourceId, UserSlug, UserUuid,
+    email_change::{JsonEmailChange, JsonEmailChangeSecret},
     key::{
         JsonNewUserKey, JsonUpdateUserKey, JsonUserKey, JsonUserKeyCreated, JsonUserKeys,
         UserKeyUuid,

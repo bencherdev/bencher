@@ -35,12 +35,6 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(users::user_get)?;
         api_description.register(users::user_patch)?;
 
-        // Email
-        if http_options {
-            api_description.register(email::user_email_options)?;
-        }
-        api_description.register(email::user_email_put)?;
-
         // Console user
         if http_options {
             api_description.register(console_user::user_console_options)?;

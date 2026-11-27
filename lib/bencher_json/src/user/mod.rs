@@ -1,4 +1,5 @@
 pub mod console_user;
+pub mod email_change;
 pub mod key;
 #[cfg(feature = "plus")]
 pub mod oauth;

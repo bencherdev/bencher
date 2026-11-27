@@ -2,12 +2,12 @@
 export const prerender = false;
 
 import AuthPage from "../../next/astro/AuthPage.astro";
-import AuthReturn from "../../next/astro/AuthReturn.astro";
+import EmailReturn from "../../next/astro/EmailReturn.astro";
 import Frame from "../../next/auth/Frame";
 ---
 
-<AuthPage title="Confirm your new email">
-	<AuthReturn slot="head" />
+<AuthPage title="Change email">
+	<EmailReturn slot="head" />
 	<div id="auth" class="console">
 		<Frame />
 	</div>

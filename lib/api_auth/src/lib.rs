@@ -22,6 +22,7 @@ use serde as _;
 
 mod claim;
 mod confirm;
+mod email_change;
 mod invite;
 mod login;
 pub mod oci;
@@ -84,6 +85,14 @@ impl bencher_endpoint::Registrar for Api {
         }
         api_description.register(invite::auth_invite_post)?;
         api_description.register(invite::auth_invite_accept_post)?;
+
+        // Email changes
+        if http_options {
+            api_description.register(email_change::auth_email_change_options)?;
+            api_description.register(email_change::auth_email_change_confirm_options)?;
+        }
+        api_description.register(email_change::auth_email_change_post)?;
+        api_description.register(email_change::auth_email_change_confirm_post)?;
 
         // Claims
         if http_options {

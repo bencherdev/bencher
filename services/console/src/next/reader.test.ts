@@ -44,22 +44,41 @@ describe("readReader", () => {
 		}
 	});
 
-	// Kills a hint read with anything beyond who the reader is.
-	test("keeps only the UUID, slug, and name", () => {
+	// Kills a hint read with anything beyond who the reader is, and a server
+	// admin's mark read from anything but `true`.
+	test("keeps only the UUID, slug, name, and a server admin's mark", () => {
 		expect(
 			readReader(
 				memory({ [READER_KEY]: JSON.stringify({ ...hint, token: "tok" }) }),
 			),
 		).toEqual(hint);
+		expect(
+			readReader(
+				memory({ [READER_KEY]: JSON.stringify({ ...hint, admin: true }) }),
+			),
+		).toEqual({ ...hint, admin: true });
+		for (const admin of [false, "true", 1]) {
+			expect(
+				readReader(
+					memory({ [READER_KEY]: JSON.stringify({ ...hint, admin }) }),
+				),
+				String(admin),
+			).toEqual(hint);
+		}
 	});
 });
 
 describe("rememberReader", () => {
-	// Kills a hint that stores the email, any secret, or the rest of the user.
-	test("stores the UUID, slug, and name alone", () => {
+	// Kills a hint that stores the email, any secret, or the rest of the user,
+	// or marks a reader who is not a server admin.
+	test("stores the UUID, slug, name, and a server admin's mark alone", () => {
 		const storage = memory({});
 		rememberReader(storage, { ...user, token: "tok" } as typeof user);
 		expect(storage.entries).toEqual({ [READER_KEY]: JSON.stringify(hint) });
+		rememberReader(storage, { ...user, admin: true });
+		expect(storage.entries).toEqual({
+			[READER_KEY]: JSON.stringify({ ...hint, admin: true }),
+		});
 	});
 });
 

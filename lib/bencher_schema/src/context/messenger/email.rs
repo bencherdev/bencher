@@ -243,7 +243,7 @@ mod tests {
     };
 
     use super::{ClientBuilder, Email, SEND_TIMEOUT};
-    use crate::context::{Body, ButtonBody, Message, Messenger};
+    use crate::context::{Body, Button, ButtonBody, Message, Messenger};
 
     /// A self-signed certificate for 127.0.0.1, for these tests alone, made with
     /// `openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 36500
@@ -353,8 +353,10 @@ mod tests {
                 preheader: String::new(),
                 greeting: String::new(),
                 pre_body: SECRET.to_owned(),
-                button_text: "Join".to_owned(),
-                button_url: format!("https://bencher.example/auth/login#invite={SECRET}"),
+                button: Some(Button {
+                    text: "Join".to_owned(),
+                    url: format!("https://bencher.example/auth/login#invite={SECRET}"),
+                }),
                 clipboard: None,
                 post_body: String::new(),
                 closing: String::new(),
