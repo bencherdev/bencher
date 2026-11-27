@@ -109,7 +109,6 @@ the same tool set applied across all of the user's projects.
 | `list_measures`, `create_measure`, `view_measure`, `update_measure` | Measures (no rename with a project key) |
 | `list_thresholds`, `create_threshold`, `view_threshold`, `update_threshold` | Thresholds |
 | `list_alerts`, `view_alert`, `update_alert` | Alerts (status-only updates with a project key) |
-| `view_metric` | A single metric with full context |
 | `list_plots`, `create_plot`, `view_plot`, `update_plot` | Saved dashboard plots |
 | `list_jobs`, `view_job` | Bare metal runner jobs (Bencher Plus) |
 

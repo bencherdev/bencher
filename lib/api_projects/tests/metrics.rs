@@ -669,13 +669,9 @@ async fn get_row(
     }
 }
 
-/// The keys a value row answered with before the addressed row shape. Every one of
-/// them keeps its meaning and its value.
-///
-/// This list and the values asserted against it were read off the previous shape,
-/// which answered with exactly these thirteen keys and 404ed on the two bound rows
-/// the same report named.
-const BEFORE_KEYS: [&str; 13] = [
+/// The keys every addressed row answers with: the row, its name and value, and the
+/// line it belongs to. Every check of a row is its report's, so none is here.
+const ROW_KEYS: [&str; 12] = [
     "uuid",
     "report",
     "iteration",
@@ -684,16 +680,14 @@ const BEFORE_KEYS: [&str; 13] = [
     "branch",
     "testbed",
     "benchmark",
+    "variant",
     "measure",
-    "metric",
-    "threshold",
-    "boundary",
-    "alert",
+    "name",
+    "value",
 ];
 
-/// The keys the addressed row shape adds, and the only difference a value row
-/// address sees.
-const ADDED_KEYS: [&str; 3] = ["variant", "name", "value"];
+/// The deprecated triple, which only a `value` row adds.
+const TRIPLE_KEY: &str = "metric";
 
 fn keys(metric: &serde_json::Value) -> Vec<String> {
     let mut keys = metric
@@ -712,11 +706,10 @@ fn sorted(keys: &[&str]) -> Vec<String> {
     keys
 }
 
-// A value row address answers with everything it answered with before, unchanged,
-// plus the three keys the addressed row shape adds. This is the compatibility claim
-// stated as a fixture: the key set and the values are both pinned.
+// A value row address answers with its line and the deprecated triple, and with no
+// threshold, boundary, or alert. The key set and the values are both pinned.
 #[tokio::test]
-async fn metrics_get_value_row_is_unchanged_but_for_the_additions() {
+async fn metrics_get_value_row_answers_with_its_line() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "pin").await;
 
@@ -737,13 +730,11 @@ async fn metrics_get_value_row_is_unchanged_but_for_the_additions() {
     let (status, metric) = get_row(&server, &fixture, value_uuid).await;
     assert_eq!(status, StatusCode::OK);
 
-    // The key set is the old one plus the additions, and nothing else moved.
     assert_eq!(
         keys(&metric),
-        sorted(&[BEFORE_KEYS.as_slice(), ADDED_KEYS.as_slice()].concat()),
+        sorted(&[ROW_KEYS.as_slice(), &[TRIPLE_KEY]].concat()),
     );
 
-    // Every key that was there before, with the value the base shape gave it.
     assert_eq!(metric["uuid"], serde_json::json!(value_uuid));
     assert_eq!(metric["report"], posted["uuid"]);
     assert_eq!(metric["iteration"], serde_json::json!(0));
@@ -762,12 +753,6 @@ async fn metrics_get_value_row_is_unchanged_but_for_the_additions() {
             "upper_value": 44.0,
         }),
     );
-    assert_eq!(metric["threshold"], serde_json::Value::Null);
-    assert_eq!(metric["boundary"], serde_json::Value::Null);
-    assert_eq!(metric["alert"], serde_json::Value::Null);
-
-    // The additions: the addressed row's own name and value, and the variant it was
-    // measured under.
     assert_eq!(metric["name"], serde_json::json!("value"));
     assert_eq!(metric["value"], serde_json::json!(42.0));
     assert_eq!(metric["variant"]["parameters"], serde_json::json!({}));
@@ -803,11 +788,7 @@ async fn metrics_get_bound_row_resolves() {
     assert_eq!(metric["value"], serde_json::json!(40.0));
     // The triple is absent: it is a convention around a point estimate, and this
     // address does not name one.
-    assert_eq!(metric.get("metric"), None);
-    // The check keys stay, as nulls, because nothing checked this row.
-    assert_eq!(metric["threshold"], serde_json::Value::Null);
-    assert_eq!(metric["boundary"], serde_json::Value::Null);
-    assert_eq!(metric["alert"], serde_json::Value::Null);
+    assert_eq!(keys(&metric), sorted(&ROW_KEYS));
     // Every context key is the addressed row's own context.
     assert_eq!(metric["report"], posted["uuid"]);
     assert_eq!(metric["benchmark"]["name"], serde_json::json!("bench"));
@@ -845,10 +826,7 @@ async fn metrics_get_named_row_resolves() {
     assert_eq!(metric["uuid"], serde_json::json!(p99_uuid));
     assert_eq!(metric["name"], serde_json::json!("p99"));
     assert_eq!(metric["value"], serde_json::json!(97.0));
-    assert_eq!(metric.get("metric"), None);
-    assert_eq!(metric["threshold"], serde_json::Value::Null);
-    assert_eq!(metric["boundary"], serde_json::Value::Null);
-    assert_eq!(metric["alert"], serde_json::Value::Null);
+    assert_eq!(keys(&metric), sorted(&ROW_KEYS));
     assert_eq!(
         metric["variant"]["parameters"],
         serde_json::json!({ "size_mb": 16 }),
@@ -876,18 +854,14 @@ async fn metrics_get_named_row_resolves() {
 const HISTORY: [f64; 5] = [10.0, 11.0, 12.0, 13.0, 14.0];
 const REGRESSION: f64 = 1_000.0;
 
-// A checked value row answers with the threshold that checked it, the boundary it
-// produced, and the alert that boundary raised. The alert is the same alert the
-// alerts endpoint lists.
+// A value row that a threshold checked, and whose boundary raised an alert, still
+// answers with its line alone: the check is the report's to show.
 #[tokio::test]
-async fn metrics_get_checked_value_row() {
+async fn metrics_get_checked_value_row_answers_with_its_line() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "checked").await;
 
-    // Every report also names a `p99`, which lands a second metric row and no
-    // boundary. That is what makes the fixture able to see the join: metric
-    // identifiers then outrun boundary identifiers, so a boundary reached by the wrong
-    // column lands on another row instead of coincidentally landing on its own.
+    // Every report also names a `p99`, a second metric row that no threshold checks.
     let mut posted = serde_json::Value::Null;
     for (day, value) in HISTORY.into_iter().chain([REGRESSION]).enumerate() {
         posted = report(
@@ -907,16 +881,8 @@ async fn metrics_get_checked_value_row() {
         .await;
     }
 
+    // The regression raised one alert, on the value row.
     let value_uuid = row_uuid(&posted, "value");
-    let (status, metric) = get_row(&server, &fixture, value_uuid).await;
-    assert_eq!(status, StatusCode::OK);
-
-    assert_eq!(metric["name"], serde_json::json!("value"));
-    assert_eq!(metric["value"], serde_json::json!(REGRESSION));
-    assert_ne!(metric["threshold"], serde_json::Value::Null);
-    assert_ne!(metric["boundary"], serde_json::Value::Null);
-
-    // The alerts endpoint and the metric endpoint name the same alert.
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{}/alerts", fixture.project_slug)))
@@ -930,27 +896,29 @@ async fn metrics_get_checked_value_row() {
     assert_eq!(resp.status(), StatusCode::OK);
     let alerts: JsonAlerts = resp.json().await.expect("Failed to parse the alerts");
     assert_eq!(alerts.0.len(), 1, "the regression raises one alert");
-    let alert = &alerts.0[0];
-    assert_eq!(metric["alert"]["uuid"], serde_json::json!(alert.uuid));
-    assert_eq!(metric["boundary"], serde_json::json!(alert.boundary));
-    let alert_metric = alert
+    let alert_metric = alerts.0[0]
         .metric
         .as_ref()
         .expect("the alert checked a `value` row, so it carries the triple");
     assert_eq!(
-        metric["metric"]["uuid"],
-        serde_json::json!(alert_metric.uuid),
-        "the alert is on the addressed row",
+        alert_metric.uuid, value_uuid,
+        "the alert is on the value row"
     );
 
-    // The `p99` row of the same variant was not checked, so it answers with nothing
-    // on it.
+    let (status, metric) = get_row(&server, &fixture, value_uuid).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        keys(&metric),
+        sorted(&[ROW_KEYS.as_slice(), &[TRIPLE_KEY]].concat()),
+    );
+    assert_eq!(metric["uuid"], serde_json::json!(value_uuid));
+    assert_eq!(metric["value"], serde_json::json!(REGRESSION));
+
     let p99_uuid = row_uuid(&posted, "p99");
     let (status, p99) = get_row(&server, &fixture, p99_uuid).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(p99["threshold"], serde_json::Value::Null);
-    assert_eq!(p99["boundary"], serde_json::Value::Null);
-    assert_eq!(p99["alert"], serde_json::Value::Null);
+    assert_eq!(keys(&p99), sorted(&ROW_KEYS));
+    assert_eq!(p99["value"], serde_json::json!(REGRESSION * 2.0));
 }
 
 // A row of another project is not found, whatever it is named.

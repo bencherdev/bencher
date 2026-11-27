@@ -1,5 +1,3 @@
-use std::fmt;
-
 use bencher_valid::{BenchmarkName, DateTime, NameId, ResourceId};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -48,12 +46,6 @@ pub struct JsonBenchmark {
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
-}
-
-impl fmt::Display for JsonBenchmark {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

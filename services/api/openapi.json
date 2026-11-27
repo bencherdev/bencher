@@ -15794,26 +15794,8 @@
         "description": "Exactly one `metric` row: the metric the UUID addresses, and everything that named it.\n\nThe response describes the addressed row and nothing else. `value`, `lower_value`, `upper_value`, and every other name are equal here: each is one row, each resolves, and each answers with its own name and its own scalar.",
         "type": "object",
         "properties": {
-          "alert": {
-            "nullable": true,
-            "description": "The alert raised on the addressed row's boundary, if any.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonPerfAlert"
-              }
-            ]
-          },
           "benchmark": {
             "$ref": "#/components/schemas/JsonBenchmark"
-          },
-          "boundary": {
-            "nullable": true,
-            "description": "The boundary computed for the addressed row, if any.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonBoundary"
-              }
-            ]
           },
           "branch": {
             "$ref": "#/components/schemas/JsonBranch"
@@ -15852,15 +15834,6 @@
           },
           "testbed": {
             "$ref": "#/components/schemas/JsonTestbed"
-          },
-          "threshold": {
-            "nullable": true,
-            "description": "The threshold that checked the addressed row, if any.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonThresholdModel"
-              }
-            ]
           },
           "uuid": {
             "$ref": "#/components/schemas/MetricUuid"

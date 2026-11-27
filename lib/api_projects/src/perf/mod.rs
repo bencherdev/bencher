@@ -781,7 +781,7 @@ fn perf_query(
 }
 
 /// The threshold, model, boundary, and any alert for one metric.
-pub(super) type PerfBoundary = (
+type PerfBoundary = (
     QueryThreshold,
     QueryModel,
     QueryBoundary,

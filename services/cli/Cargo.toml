@@ -20,7 +20,7 @@ plus = [
 bencher_adapter.workspace = true
 bencher_client = { workspace = true, features = ["client", "rustls-tls"] }
 bencher_comment.workspace = true
-bencher_json = { workspace = true, features = ["client", "table"] }
+bencher_json = { workspace = true, features = ["client"] }
 bencher_noise.workspace = true
 bencher_parser.workspace = true
 bollard.workspace = true
@@ -36,7 +36,6 @@ rand.workspace = true
 semver = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
-tabled.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "process", "rt", "signal"] }
 tokio-rustls.workspace = true

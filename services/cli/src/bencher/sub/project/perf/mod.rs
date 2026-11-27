@@ -4,25 +4,16 @@ use std::pin::Pin;
 #[cfg(feature = "plus")]
 use bencher_json::SpecUuid;
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, DateTime, HeadUuid, JsonPerf, JsonPerfQuery, MeasureUuid,
-    ProjectResourceId, TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, HeadUuid, JsonPerfQuery, MeasureUuid, ProjectResourceId,
+    TestbedUuid,
 };
-use tabled::Table;
 
 use crate::parser::ElidedOption;
-use crate::{CliError, bencher::backend::PubBackend, cli_println, parser::project::perf::CliPerf};
+use crate::{CliError, bencher::backend::PubBackend, parser::project::perf::CliPerf};
 
 use crate::bencher::SubCmd;
 
-mod table_style;
-
-use table_style::TableStyle;
-
 #[derive(Debug, Clone)]
-#[expect(
-    clippy::option_option,
-    reason = "None = not specified, Some(None) = explicitly unset"
-)]
 pub struct Perf {
     project: ProjectResourceId,
     branches: Vec<BranchUuid>,
@@ -34,7 +25,6 @@ pub struct Perf {
     measures: Vec<MeasureUuid>,
     start_time: Option<DateTime>,
     end_time: Option<DateTime>,
-    table: Option<Option<TableStyle>>,
     backend: PubBackend,
 }
 
@@ -53,10 +43,9 @@ impl TryFrom<CliPerf> for Perf {
             measures,
             start_time,
             end_time,
-            table,
             backend,
         } = perf;
-        let backend = PubBackend::try_from(backend)?.log(table.is_none());
+        let backend = PubBackend::try_from(backend)?;
         Ok(Self {
             project,
             branches,
@@ -68,7 +57,6 @@ impl TryFrom<CliPerf> for Perf {
             measures,
             start_time,
             end_time,
-            table: table.map(|t| t.map(Into::into)),
             backend,
         })
     }
@@ -107,16 +95,7 @@ impl From<Perf> for JsonPerfQuery {
 impl SubCmd for Perf {
     async fn exec(&self) -> Result<(), CliError> {
         let sender = perf_sender(self.project.clone(), self.clone());
-        if let Some(table_style) = self.table {
-            let json_perf: JsonPerf = self.backend.send_with(sender).await?;
-            let mut perf_table: Table = json_perf.into();
-            if let Some(table_style) = table_style {
-                table_style.stylize(&mut perf_table);
-            }
-            cli_println!("{perf_table}");
-        } else {
-            self.backend.send(sender).await?;
-        }
+        self.backend.send(sender).await?;
         Ok(())
     }
 }
