@@ -145,8 +145,12 @@ fn get_ls_query<'q>(
 /// When a user signs in with a Google Workspace account,
 /// the account's hosted domain will be compared instead; GitHub sign-ins are never compared.
 /// If an SSO domain matches, they will be added as a Member to that Organization.
+/// Membership by SSO follows the email domain, so a removed member whose email is at the domain
+/// joins again at their next email sign-in: to remove such a user for good, end their mailbox at
+/// the domain.
 /// SSO domains must be globally unique on the server.
 /// That is, two Organizations cannot have the same SSO domain.
+/// A user session needs a sign-in within the last 10 minutes.
 #[endpoint {
     method = POST,
     path =  "/v0/organizations/{organization}/sso",
@@ -158,7 +162,8 @@ pub async fn org_sso_post(
     path_params: Path<OrgSsosParams>,
     body: TypedBody<JsonNewSso>,
 ) -> Result<ResponseAccepted<JsonSso>, HttpError> {
-    let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
+    let admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
+    admin_user.user().check_fresh_sign_in(rqctx.context())?;
     let json = post_inner(rqctx.context(), path_params.into_inner(), body.into_inner()).await?;
     Ok(Post::auth_response_accepted(json))
 }

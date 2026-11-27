@@ -113,16 +113,18 @@ Wenn nicht angegeben, werden die aufgelisteten Standardwerte verwendet.
 
 #### `email`
 
-Der `email`-Ratenbegrenzer gilt pro E-Mail-Adresse für die E-Mails, die eine Anmeldung starten.
+Der `email`-Ratenbegrenzer gilt pro E-Mail-Adresse und anfragender IP-Adresse für die E-Mails, die eine Anmeldung starten, und eine Anfrage ohne bekannte IP-Adresse zählt als ein Anfragender.
 Er enthält `minute`-, `hour`- und `day`-Limits.
+Zusätzlich erhält eine E-Mail-Adresse von allen Anfragenden zusammen höchstens doppelt so viele Anmelde-E-Mails pro Tag wie das `day`-Limit, außer den E-Mails, die einen angemeldeten Benutzer erneut anmelden.
+Jede Browser-Sitzung kann von allen Anfragenden zusammen höchstens doppelt so viele davon pro Tag senden lassen wie das `day`-Limit.
 Der gesamte Abschnitt ist optional.
 Wenn nicht angegeben, werden die aufgelisteten Standardwerte verwendet.
 Eine Adresse an ihrem Limit erhält keine neue E-Mail, und ihre frühere Anmeldung funktioniert weiterhin.
 
 |       Name       | Beispiel | Standard | Erforderlich |                           Beschreibung                                      |
 | :--------------: | :------: | :------: | :----------: | :-------------------------------------------------------------------------: |
-|      minute      |    2     |    2     |     Nein     |           Maximale Anmelde-E-Mails pro Minute pro E-Mail-Adresse.           |
-|       hour       |    6     |    6     |     Nein     |           Maximale Anmelde-E-Mails pro Stunde pro E-Mail-Adresse.           |
-|       day        |    12    |    12    |     Nein     |             Maximale Anmelde-E-Mails pro Tag pro E-Mail-Adresse.            |
+|      minute      |    2     |    2     |     Nein     |           Maximale Anmelde-E-Mails pro Minute pro E-Mail-Adresse und Anfragendem.           |
+|       hour       |    6     |    6     |     Nein     |           Maximale Anmelde-E-Mails pro Stunde pro E-Mail-Adresse und Anfragendem.           |
+|       day        |    12    |    12    |     Nein     |             Maximale Anmelde-E-Mails pro Tag pro E-Mail-Adresse und Anfragendem.            |
 
 [unclaimed projects]: /de/docs/how-to/claim/#unclaimed-projects

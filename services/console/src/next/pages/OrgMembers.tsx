@@ -485,6 +485,10 @@ const MemberTable = (props: {
 							return <Spacer height={rows.gap()} columns={3} />;
 						}
 						const you = () => member.uuid === props.reader;
+						// Every member is a Leader, so an organization's one member is its last,
+						// whom the API keeps.
+						const removable = () =>
+							props.roles.remove && !you() && (props.members.total() ?? 0) > 1;
 						return (
 							<tr aria-rowindex={rows.index(index()) + 2}>
 								<td data-fold="l1" class="ui-table-name">
@@ -506,7 +510,7 @@ const MemberTable = (props: {
 									</span>
 								</td>
 								<td data-fold="act" class="act">
-									<Show when={props.roles.remove && !you()}>
+									<Show when={removable()}>
 										<button
 											type="button"
 											class="lnk danger"

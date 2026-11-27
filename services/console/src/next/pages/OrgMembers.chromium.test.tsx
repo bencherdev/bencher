@@ -661,6 +661,15 @@ describe("only what the reader can do", () => {
 		expect(shown()).toEqual({ invite: 0, remove: 1 });
 	});
 
+	// Kills a Remove offered on an organization's one member, its last Leader,
+	// which the API refuses, as it is offered to a server admin who is not a
+	// member.
+	test("the one member of an organization has no Remove", async () => {
+		open({ members: { members: [EUSTACE], total: 1 } });
+		await expect.element(table()).toBeVisible();
+		expect(shown()).toEqual({ invite: 1, remove: 0 });
+	});
+
 	// Kills controls drawn before the API has said what the reader may do.
 	test("nothing is drawn until the permissions are known", async () => {
 		open({ roles: null });

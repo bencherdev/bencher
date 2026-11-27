@@ -16,9 +16,9 @@ use bencher_schema::{
     model::{
         organization::plan::LicenseUsage,
         user::{
-            auth::AuthUser,
+            auth::{AuthSession, AuthUser},
             provider::{InsertProviderState, ProviderPin, ProviderSecrets, QueryProviderState},
-            session::{QuerySession, SessionId, cookie::ProviderCookie},
+            session::{QuerySession, cookie::ProviderCookie},
         },
     },
     public_conn, write_transaction,
@@ -33,7 +33,7 @@ use serde::Deserialize;
 use slog::Logger;
 use url::Url;
 
-use crate::sign_in::{admit, email::sign_in_context, fresh::session_of, refused};
+use crate::sign_in::{admit, email::sign_in_context, ended, fresh::session_of, refused};
 
 mod link;
 
@@ -89,6 +89,7 @@ pub async fn auth_provider_start_post(
         context,
         &client,
         InsertProviderState::new(provider, &carried, now)?,
+        None,
         now,
     )
     .await
@@ -125,33 +126,46 @@ pub async fn auth_fresh_provider_start_post(
     let ProviderParams { provider } = path_params.into_inner();
     admit(log, context, &rqctx.request)?;
     let auth_user = AuthUser::new(&rqctx).await?;
-    let session_id = session_of(&auth_user)?;
+    let session = session_of(&auth_user)?;
     let client = Client::new(log, context, provider).await?;
     let now = context.clock.now();
     start(
         context,
         &client,
-        InsertProviderState::fresh(provider, session_id, now)?,
+        InsertProviderState::fresh(provider, session.id, now)?,
+        Some(session),
         now,
     )
     .await
 }
 
-/// Record the sign-in, and answer with the provider's URL and the cookie that binds it to this
-/// browser.
+/// Record the sign-in, for `session` if it is a fresh one, unless that session has ended, and
+/// answer with the provider's URL and the cookie that binds it to this browser.
 async fn start(
     context: &ApiContext,
     client: &Client<'_>,
     (insert, secrets): (InsertProviderState, ProviderSecrets),
+    session: Option<AuthSession>,
     now: DateTime,
 ) -> Result<ResponseOk<JsonOAuthUrl>, HttpError> {
-    write_transaction!(context, |conn| insert.insert(conn, now)).map_err(|e| {
+    let started = write_transaction!(context, |conn| {
+        if let Some(session) = session
+            && !QuerySession::is_live(conn, session.id, session.uuid)?
+        {
+            return Ok(false);
+        }
+        insert.insert(conn, now).map(|()| true)
+    })
+    .map_err(|e| {
         issue_error(
             "Failed to start a sign-in",
             "Failed to start a provider's sign-in:",
             e,
         )
     })?;
+    if !started {
+        return Err(ended());
+    }
     let url = client.authorize_url(context, &secrets)?;
     let cookie = ProviderCookie::new(&context.console_url)
         .set(&secrets.binding)
@@ -208,8 +222,20 @@ pub async fn auth_provider_finish_post(
     let binding = cookie.binding(rqctx.request.headers(), &context.relay);
     let now = context.clock.now();
 
-    let started = write_transaction!(context, |conn| {
-        QueryProviderState::take(conn, provider, &state, binding.as_ref(), now)
+    let (started, fresh) = write_transaction!(context, |conn| {
+        let Some(started) =
+            QueryProviderState::take(conn, provider, &state, binding.as_ref(), now)?
+        else {
+            return Ok(None);
+        };
+        // A fresh sign-in's session, read while its state still ends with it, so the proof finds
+        // it by its UUID too and never takes a session that its row's ID went to since.
+        let fresh = started
+            .session_id
+            .map(|session_id| QuerySession::find(conn, session_id))
+            .transpose()?
+            .flatten();
+        diesel::QueryResult::Ok(Some((started, fresh)))
     })
     .map_err(|e| {
         issue_error(
@@ -223,8 +249,8 @@ pub async fn auth_provider_finish_post(
     // The sign-in has ended, so whatever it answers clears its cookie.
     let finished = match client.account(context, &started, code, now).await {
         Ok(account) => {
-            if let Some(session_id) = started.session_id {
-                prove_again(context, session_id, &account).await
+            if started.session_id.is_some() {
+                prove_again(context, fresh.as_ref(), &account).await
             } else {
                 link::link(log, context, &rqctx.request, account, started.context()).await
             }
@@ -246,25 +272,29 @@ pub async fn auth_provider_finish_post(
     }
 }
 
-/// Prove the session again by the provider account, only if it is pinned to the session's user,
-/// who is not locked. A fresh sign-in never pins, links, or makes anything.
+/// Prove `fresh`, the session that started the sign-in, again by the provider account, only if
+/// the session has not ended and the account is pinned to its user, who is not locked. A fresh
+/// sign-in never pins, links, or makes anything.
 async fn prove_again(
     context: &ApiContext,
-    session_id: SessionId,
+    fresh: Option<&QuerySession>,
     account: &ProviderAccount,
 ) -> Result<ResponseOk<JsonProviderSignIn>, HttpError> {
+    let Some(fresh) = fresh else {
+        return Err(provider_refused());
+    };
     let now = context.clock.now();
     let proved = write_transaction!(context, |conn| {
         let Some(user) = account.pin.user(conn)? else {
             return Ok(false);
         };
-        let Some(session) = QuerySession::find(conn, session_id)? else {
+        let Some(session) = QuerySession::find_live(conn, fresh.id, fresh.uuid)? else {
             return Ok(false);
         };
         if user.id != session.user_id || user.locked {
             return Ok(false);
         }
-        QuerySession::prove(conn, session_id, now).map(|proved| proved == 1)
+        QuerySession::prove(conn, session.id, now).map(|proved| proved == 1)
     })
     .map_err(|e: diesel::result::Error| {
         issue_error(

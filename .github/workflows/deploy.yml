@@ -27,6 +27,8 @@ on:
         required: true
       BENCHER_USER_AGENT:
         required: true
+      BENCHER_DEV_RELAY_SECRET:
+        required: false
 
 concurrency:
   group: deploy
@@ -86,6 +88,7 @@ jobs:
         continue-on-error: true
         env:
           RUST_BACKTRACE: full
+          BENCHER_RELAY_SECRET: ${{ secrets.BENCHER_DEV_RELAY_SECRET }}
         run: cargo test-api smoke dev
       - name: OCI Conformance Test Summary
         if: always()

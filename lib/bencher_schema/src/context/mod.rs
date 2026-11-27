@@ -64,6 +64,7 @@ pub use oauth::OAuthServer;
 #[cfg(feature = "plus")]
 pub use rate_limiting::{
     HeaderMap, OAuthCredential, RateLimiting, RateLimitingError, RateLimitingPruneTask,
+    SignInEmailCeiling, SignInEmailHold,
 };
 pub use rbac::{Rbac, RbacError};
 pub use relay::Relay;

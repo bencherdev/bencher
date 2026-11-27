@@ -10,6 +10,7 @@ import {
 	ended,
 	expect,
 	consolePath,
+	hintOf,
 	seed,
 	signedIn,
 	signedOut,
@@ -17,6 +18,7 @@ import {
 	RELAY,
 } from "./fixtures";
 import { GITHUB_FINISH, finishGitHub, startGitHub } from "./github";
+import { sentry } from "./sentry";
 import { inSession, signUp } from "./session";
 
 // The app the harness configures: it calls itself ChatGPT, but it is served from
@@ -546,9 +548,10 @@ test.describe("signed out", () => {
 	});
 
 	// Kills a link that signs in a browser that did not start the sign in, so
-	// a link planted on someone else signs them in to its account unasked, and
-	// a link that drops the request.
-	test("a link from another browser asks before signing in", async ({
+	// a link planted on someone else signs them in to its account unasked, one
+	// that carries the starter's request into that browser, and a report to
+	// Sentry that carries the link's secret.
+	test("a link from another browser asks before signing in, and lands on no request", async ({
 		page,
 		newContext,
 	}) => {
@@ -560,6 +563,7 @@ test.describe("signed out", () => {
 		expect(link.pathname).toBe("/auth/confirm");
 		expect(link.search).toBe("");
 		const fresh = await (await newContext()).newPage();
+		const envelopes = await sentry(fresh, "accept");
 		await fresh.goto(link.href);
 
 		const signIn = fresh.getByRole("button", {
@@ -568,9 +572,21 @@ test.describe("signed out", () => {
 		await expect(signIn).toBeVisible();
 		await expect(fresh).toHaveURL("/auth/confirm");
 		expect(await hint(fresh)).toBeNull();
+		// The page's load reaches Sentry while the link still waits.
+		await expect
+			.poll(() =>
+				envelopes.some((envelope) => envelope.includes("/auth/confirm")),
+			)
+			.toBe(true);
 		await signIn.click();
-		await expect(fresh).toHaveURL(`${CONSENT}?request=${uuid}`);
-		await signedInAs(fresh, user.email);
+		// A new account with no project lands on onboarding, where a sign in with no request goes.
+		await fresh.waitForURL("/console/onboard/project");
+		expect(await hint(fresh)).toBe(hintOf({ user }));
+		const secret = link.hash.slice(1);
+		expect(secret).not.toBe("");
+		for (const envelope of envelopes) {
+			expect(envelope).not.toContain(secret);
+		}
 	});
 
 	// Kills a provider sign in that drops the request on its way to the provider,

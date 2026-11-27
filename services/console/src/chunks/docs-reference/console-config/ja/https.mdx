@@ -4,6 +4,8 @@
 これは、HTTPS を処理するためのプロキシサーバーが前面にある場合に適しています。
 スタンドアロンの Console サーバーが自ら HTTPS を処理する必要がある場合には、
 SSL キーと証明書を提供する必要があります。
+Console は HTTPS の背後で運用してください。
+プレーンな HTTP で提供される Console は、HTTPS で提供される Console よりもセッション Cookie の保護が弱くなります。
 
 以下の環境変数を使用して HTTPS を構成できます：
   - `SERVER_KEY_PATH`: TLS キーへのファイルパス。

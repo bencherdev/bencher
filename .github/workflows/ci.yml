@@ -419,6 +419,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       BENCHER_USER_AGENT: ${{ secrets.BENCHER_USER_AGENT }}
+      BENCHER_DEV_RELAY_SECRET: ${{ secrets.BENCHER_DEV_RELAY_SECRET }}
 
   release:
     name: Release

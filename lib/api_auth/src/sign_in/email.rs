@@ -5,25 +5,28 @@ use bencher_json::{
 };
 #[cfg(feature = "plus")]
 use bencher_json::{OAuthAuthorizationUuid, PlanLevel};
+#[cfg(feature = "plus")]
+use bencher_schema::context::SignInEmailCeiling;
 use bencher_schema::{
     context::ApiContext,
     error::{issue_error, too_many_requests},
     model::{
         organization::{QueryOrganization, invite::QueryInvite},
         user::{
+            auth::AuthSession,
             session::cookie::PendingCookie,
             sign_in::{QueryPendingSignIn, SignInContext},
         },
     },
     public_conn, write_conn,
 };
-use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
+use dropshot::{HttpError, RequestContext, RequestInfo, TypedBody, endpoint};
 use http::header::{RETRY_AFTER, SET_COOKIE};
 use slog::Logger;
 
 use super::{
-    Emailed, Start, admit, admit_email, at_cap, binding, capped, email_sign_in, end_replaced,
-    ended, refused,
+    Emailed, Start, admit, admit_email, binding, capped, email_sign_in, end_replaced, ended, hold,
+    refused,
 };
 use crate::invite::{invalid_invite, invite_for_another_email};
 
@@ -217,13 +220,28 @@ pub async fn auth_email_resend_post(
             )
         })?
         .ok_or_else(ended)?;
-    resend(log, context, pending, now).await
+    resend(
+        log,
+        context,
+        &rqctx.request,
+        #[cfg(feature = "plus")]
+        SignInEmailCeiling::Address,
+        None,
+        pending,
+        now,
+    )
+    .await
 }
 
-/// End the pending sign-in and email another, which carries what it carries, once Resend opens.
+/// End the pending sign-in and email another, which carries what it carries, once Resend opens,
+/// under the tight caps and the day's `ceiling`, as the email it replaces was, and for `session`
+/// if it is a fresh one, unless that session has ended.
 pub(super) async fn resend(
     log: &Logger,
     context: &ApiContext,
+    request: &RequestInfo,
+    #[cfg(feature = "plus")] ceiling: SignInEmailCeiling,
+    session: Option<AuthSession>,
     pending: QueryPendingSignIn,
     now: DateTime,
 ) -> Result<ResponseAccepted<JsonSignInEmail>, HttpError> {
@@ -231,14 +249,28 @@ pub(super) async fn resend(
     if wait > 0 {
         return Err(resend_waiting(wait));
     }
-    if let Some(wait) = at_cap(context, &pending.email) {
-        return Ok(capped(pending.email, wait));
-    }
+    let mut held = match hold(
+        log,
+        context,
+        request,
+        &pending.email,
+        #[cfg(feature = "plus")]
+        ceiling,
+    ) {
+        Ok(held) => held,
+        Err(wait) => return Ok(capped(pending.email, wait)),
+    };
 
-    let sent = Start::insert(context, pending.again(&context.code_key, now)?, now)
-        .await?
-        .send(log, context)
-        .await?;
+    let sent = Start::insert(
+        context,
+        pending.again(&context.code_key, now)?,
+        session,
+        now,
+    )
+    .await?
+    .send(log, context)
+    .await?;
+    held.sent();
     // A proof or its last try may have ended the sign-in since it was read. Then Resend is refused
     // as ended, and the sign-in it started ends too, since the answer hands out no cookie for it.
     let replaced = end_replaced(context, |conn| {

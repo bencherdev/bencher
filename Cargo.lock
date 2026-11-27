@@ -7761,6 +7761,7 @@ dependencies = [
  "camino",
  "clap",
  "pretty_assertions",
+ "rustls",
  "serde_json",
  "ureq",
  "url",

@@ -4,6 +4,7 @@ use bencher_json::system::config::JsonPublicRateLimiter;
 use bencher_rate_limiter::{RateLimiter, RateLimits};
 use http::{HeaderValue, header::RETRY_AFTER};
 
+use super::IpKey;
 #[cfg(feature = "otel")]
 use super::interval_kind;
 use crate::{
@@ -23,10 +24,11 @@ const DEFAULT_RUNS_PER_MINUTE_LIMIT: usize = 1 << 6;
 const DEFAULT_RUNS_PER_HOUR_LIMIT: usize = 1 << 7;
 const DEFAULT_RUNS_PER_DAY_LIMIT: usize = 1 << 8;
 
+/// The limits on requests from one reader, keyed as [`IpKey`] keys an address.
 pub(super) struct PublicRateLimiter {
-    requests: RateLimiter<IpAddr>,
-    attempts: RateLimiter<IpAddr>,
-    runs: RateLimiter<IpAddr>,
+    requests: RateLimiter<IpKey>,
+    attempts: RateLimiter<IpKey>,
+    runs: RateLimiter<IpKey>,
 }
 
 impl Default for PublicRateLimiter {
@@ -129,7 +131,7 @@ impl PublicRateLimiter {
     }
 
     pub fn check_request(&self, ip: IpAddr) -> Result<(), dropshot::HttpError> {
-        if let Some(interval) = self.requests.check(ip) {
+        if let Some(interval) = self.requests.check(IpKey::from(ip)) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RequestMax(
                 interval_kind(interval),
@@ -144,6 +146,7 @@ impl PublicRateLimiter {
     }
 
     pub fn check_attempt(&self, ip: IpAddr) -> Result<(), dropshot::HttpError> {
+        let ip = IpKey::from(ip);
         if let Some(interval) = self.attempts.check(ip) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAttemptMax(
@@ -163,7 +166,7 @@ impl PublicRateLimiter {
     }
 
     pub fn check_run(&self, ip: IpAddr) -> Result<(), dropshot::HttpError> {
-        if let Some(interval) = self.runs.check(ip) {
+        if let Some(interval) = self.runs.check(IpKey::from(ip)) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunUnclaimedMax(
                 interval_kind(interval),
@@ -188,5 +191,60 @@ pub(super) fn request_limits(public: Option<JsonPublicRateLimiter>) -> RateLimit
         day: requests
             .and_then(|r| r.day)
             .unwrap_or(DEFAULT_REQUESTS_PER_DAY_LIMIT),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::net::IpAddr;
+
+    use bencher_rate_limiter::RateLimits;
+    use dropshot::HttpError;
+
+    use super::PublicRateLimiter;
+
+    type Check = fn(&PublicRateLimiter, IpAddr) -> Result<(), HttpError>;
+
+    const CHECKS: [Check; 3] = [
+        PublicRateLimiter::check_request,
+        PublicRateLimiter::check_attempt,
+        PublicRateLimiter::check_run,
+    ];
+
+    // An IPv6 reader is one reader across its /64, the block one subscriber holds, and another
+    // /64 is another reader.
+    #[test]
+    fn ipv6_readers_share_their_64() {
+        for check in CHECKS {
+            let limiter = one_each();
+            check(&limiter, ip("2001:db8:1:2::1")).unwrap();
+            assert!(check(&limiter, ip("2001:db8:1:2:ffff:ffff:ffff:ffff")).is_err());
+            check(&limiter, ip("2001:db8:1:3::1")).unwrap();
+        }
+    }
+
+    // An IPv4 reader is one reader whether its address comes as IPv4 or as IPv4-mapped IPv6.
+    #[test]
+    fn mapped_ipv4_shares_the_ipv4_bucket() {
+        for check in CHECKS {
+            let limiter = one_each();
+            check(&limiter, ip("203.0.113.7")).unwrap();
+            assert!(check(&limiter, ip("::ffff:203.0.113.7")).is_err());
+            check(&limiter, ip("203.0.113.8")).unwrap();
+        }
+    }
+
+    /// Room for one of each a minute, for each reader.
+    fn one_each() -> PublicRateLimiter {
+        let one = RateLimits {
+            minute: 1,
+            hour: usize::MAX,
+            day: usize::MAX,
+        };
+        PublicRateLimiter::new(one, one, one)
+    }
+
+    fn ip(address: &str) -> IpAddr {
+        address.parse().unwrap()
     }
 }

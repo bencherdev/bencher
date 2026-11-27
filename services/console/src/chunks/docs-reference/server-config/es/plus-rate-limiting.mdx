@@ -116,16 +116,18 @@ Si no se especifica, se utilizarán los valores predeterminados enumerados.
 
 #### `email`
 
-El limitador de tasa `email` se aplica por dirección de correo electrónico, a los correos que inician un inicio de sesión.
+El limitador de tasa `email` se aplica por dirección de correo electrónico y dirección IP del solicitante, a los correos que inician un inicio de sesión, y una solicitud sin dirección IP conocida cuenta como un solo solicitante.
 Contiene límites de `minute`, `hour` y `day`.
+Además, una dirección de correo electrónico recibe como máximo el doble del límite `day` en correos de inicio de sesión al día de todos los solicitantes juntos, salvo los correos que vuelven a iniciar la sesión de un usuario que ya inició sesión.
+Por cada sesión del navegador se envían como máximo el doble del límite `day` de esos correos al día, de todos los solicitantes juntos.
 Toda la sección es opcional.
 Si no se especifica, se utilizarán los valores predeterminados enumerados.
 Una dirección en su límite no recibe un correo nuevo, y su inicio de sesión anterior sigue funcionando.
 
 |       Nombre     | Ejemplo | Por defecto | Requerido |                           Descripción                                         |
 | :--------------: | :-----: | :---------: | :-------: | :---------------------------------------------------------------------------: |
-|      minute      |    2    |      2      |     No    | Correos máximos de inicio de sesión por minuto por dirección de correo electrónico. |
-|       hour       |    6    |      6      |     No    | Correos máximos de inicio de sesión por hora por dirección de correo electrónico. |
-|       day        |    12   |      12     |     No    | Correos máximos de inicio de sesión por día por dirección de correo electrónico. |
+|      minute      |    2    |      2      |     No    | Correos máximos de inicio de sesión por minuto por dirección de correo electrónico y solicitante. |
+|       hour       |    6    |      6      |     No    | Correos máximos de inicio de sesión por hora por dirección de correo electrónico y solicitante. |
+|       day        |    12   |      12     |     No    | Correos máximos de inicio de sesión por día por dirección de correo electrónico y solicitante. |
 
 [unclaimed projects]: /es/docs/how-to/claim/#unclaimed-projects

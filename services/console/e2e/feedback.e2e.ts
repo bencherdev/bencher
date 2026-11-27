@@ -1,26 +1,12 @@
 import type { Page } from "@playwright/test";
 import { expect, consolePath, seed, signedIn, test } from "./fixtures";
 import { publicPath } from "./public";
+import { sentry } from "./sentry";
 
 const { hashbrown } = seed.projects;
 const RUNS = consolePath(hashbrown.slug, "runs");
 
 test.use({ storageState: signedIn(seed.member) });
-
-/**
- * Answers what the console sends to its test Sentry DSN as Sentry would, or
- * blocks it as a browser's blocker does, and keeps every envelope.
- */
-const sentry = async (page: Page, answer: "accept" | "block") => {
-	const envelopes: string[] = [];
-	await page.route("http://127.0.0.1:9/**", (route) => {
-		envelopes.push(route.request().postData() ?? "");
-		return answer === "accept"
-			? route.fulfill({ status: 200, json: {} })
-			: route.abort("blockedbyclient");
-	});
-	return envelopes;
-};
 
 const dialog = (page: Page) =>
 	page.getByRole("dialog", { name: "Send feedback" });

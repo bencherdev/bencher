@@ -112,6 +112,11 @@ async fn get_one_inner(
     }
 }
 
+/// Create an organization's plan
+///
+/// Subscribe the organization to a plan from its completed checkout.
+/// Available to organization managers and requires a user session:
+/// a user API key or a deprecated user API token is refused.
 #[endpoint {
     method = POST,
     path =  "/v0/organizations/{organization}/plan",
@@ -124,6 +129,11 @@ pub async fn org_plan_post(
     body: TypedBody<JsonNewPlan>,
 ) -> Result<ResponseCreated<JsonPlan>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    if !auth_user.is_session() {
+        return Err(forbidden_error(
+            "Only a user session can create a subscription plan.",
+        ));
+    }
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),

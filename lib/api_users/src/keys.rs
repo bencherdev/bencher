@@ -222,7 +222,7 @@ pub async fn user_key_post(
             "Only a user session can create a user API key.",
         ));
     }
-    auth_user.check_fresh_sign_in(rqctx.context()).await?;
+    auth_user.check_fresh_sign_in(rqctx.context())?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),

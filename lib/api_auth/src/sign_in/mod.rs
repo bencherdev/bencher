@@ -7,8 +7,6 @@ use bencher_json::{
 };
 #[cfg(feature = "plus")]
 use bencher_json::{NonEmpty, SignInProvider};
-#[cfg(feature = "plus")]
-use bencher_schema::model::organization::sso::QuerySso;
 use bencher_schema::{
     context::{ApiContext, Body, DbConnection, Message, SignInBody},
     error::{forbidden_error, issue_error, service_unavailable_error, unauthorized_error},
@@ -19,8 +17,9 @@ use bencher_schema::{
         },
         user::{
             InsertUser, QueryUser,
+            auth::AuthSession,
             session::{
-                InsertSession, QuerySession, SessionId,
+                InsertSession, QuerySession,
                 cookie::{
                     CookieCredential, PendingCookie, SessionCookie, passes_same_origin_check,
                 },
@@ -31,6 +30,11 @@ use bencher_schema::{
         },
     },
     public_conn, write_transaction,
+};
+#[cfg(feature = "plus")]
+use bencher_schema::{
+    context::{RateLimiting, SignInEmailCeiling, SignInEmailHold},
+    model::organization::sso::QuerySso,
 };
 use dropshot::{HttpError, RequestInfo};
 use http::{HeaderValue, header::SET_COOKIE};
@@ -133,12 +137,12 @@ fn binding(context: &ApiContext, request: &RequestInfo) -> Option<BindingSecret>
     PendingCookie::new(&context.console_url).binding(request.headers(), &context.relay)
 }
 
-fn ended() -> HttpError {
+pub(crate) fn ended() -> HttpError {
     refused(unauthorized_error(ENDED), SignInRefusal::SignInEnded)
 }
 
-/// Start a sign-in by email for `email`, carrying `sign_in_context`, under the address's cap, in
-/// place of the one the browser holds once its email went out.
+/// Start a sign-in by email for `email`, carrying `sign_in_context`, under the address's caps,
+/// in place of the one the browser holds once its email went out.
 pub(crate) async fn email_sign_in(
     log: &Logger,
     context: &ApiContext,
@@ -146,24 +150,40 @@ pub(crate) async fn email_sign_in(
     email: Email,
     sign_in_context: SignInContext,
 ) -> Result<Emailed, HttpError> {
-    email_pending(log, context, request, email, |email, now| {
-        InsertPendingSignIn::new(&context.code_key, email, sign_in_context, now)
-    })
+    email_pending(
+        log,
+        context,
+        request,
+        email,
+        #[cfg(feature = "plus")]
+        SignInEmailCeiling::Address,
+        None,
+        |email, now| InsertPendingSignIn::new(&context.code_key, email, sign_in_context, now),
+    )
     .await
 }
 
-/// Start a fresh sign-in that proves `session_id` again by an email to `email`, as
-/// [`email_sign_in`] starts a sign-in.
+/// Start a fresh sign-in that proves `session` again by an email to `email`, as
+/// [`email_sign_in`] starts a sign-in, but held to the day's ceiling on the session, by its UUID,
+/// which no later session takes, in place of the address's, since the address's own user asks
+/// for it from a live session.
 pub(crate) async fn email_fresh(
     log: &Logger,
     context: &ApiContext,
     request: &RequestInfo,
     email: Email,
-    session_id: SessionId,
+    session: AuthSession,
 ) -> Result<Emailed, HttpError> {
-    email_pending(log, context, request, email, |email, now| {
-        InsertPendingSignIn::fresh(&context.code_key, email, session_id, now)
-    })
+    email_pending(
+        log,
+        context,
+        request,
+        email,
+        #[cfg(feature = "plus")]
+        SignInEmailCeiling::Session(session.uuid),
+        Some(session),
+        |email, now| InsertPendingSignIn::fresh(&context.code_key, email, session.id, now),
+    )
     .await
 }
 
@@ -172,19 +192,30 @@ async fn email_pending<F>(
     context: &ApiContext,
     request: &RequestInfo,
     email: Email,
+    #[cfg(feature = "plus")] ceiling: SignInEmailCeiling,
+    session: Option<AuthSession>,
     pending: F,
 ) -> Result<Emailed, HttpError>
 where
     F: FnOnce(Email, DateTime) -> Result<(InsertPendingSignIn, SignInSecrets), HttpError>,
 {
-    if let Some(wait) = at_cap(context, &email) {
-        return Ok(Emailed::Capped { email, wait });
-    }
+    let mut held = match hold(
+        log,
+        context,
+        request,
+        &email,
+        #[cfg(feature = "plus")]
+        ceiling,
+    ) {
+        Ok(held) => held,
+        Err(wait) => return Ok(Emailed::Capped { email, wait }),
+    };
     let now = context.clock.now();
-    let sent = Start::insert(context, pending(email, now)?, now)
+    let sent = Start::insert(context, pending(email, now)?, session, now)
         .await?
         .send(log, context)
         .await?;
+    held.sent();
     if let Some(earlier) = binding(context, request) {
         end_replaced(context, |conn| {
             QueryPendingSignIn::end_binding(conn, &earlier)
@@ -201,19 +232,58 @@ pub(crate) enum Emailed {
     Capped { email: Email, wait: u32 },
 }
 
-/// Count an email to `email`, unless the address is at its cap: then the seconds until it is not.
-fn at_cap(context: &ApiContext, email: &Email) -> Option<u32> {
+/// Hold an email to `email` against the address's caps, as `request` asks for it, until it is
+/// sent; or, at a cap, the seconds until it has room.
+fn hold(
+    log: &Logger,
+    context: &ApiContext,
+    request: &RequestInfo,
+    email: &Email,
+    #[cfg(feature = "plus")] ceiling: SignInEmailCeiling,
+) -> Result<Held, u32> {
     #[cfg(feature = "plus")]
-    if let Err(wait) = context.rate_limiting.sign_in_email(email) {
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::SignInRefused(
-            bencher_otel::SignInRefusalReason::AddressCapped,
-        ));
-        return Some(u32::try_from(wait.as_secs()).unwrap_or(u32::MAX));
-    }
+    let hold = context
+        .rate_limiting
+        .sign_in_email(email, context.remote_ip(log, request.headers()), ceiling)
+        .map_err(|wait| {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::SignInRefused(
+                bencher_otel::SignInRefusalReason::AddressCapped,
+            ));
+            u32::try_from(wait.as_secs()).unwrap_or(u32::MAX)
+        })?;
     #[cfg(not(feature = "plus"))]
-    let _ = (context, email);
-    None
+    let _ = (log, context, request, email);
+    Ok(Held {
+        #[cfg(feature = "plus")]
+        hold: Some((std::sync::Arc::clone(&context.rate_limiting), hold)),
+    })
+}
+
+/// An email held against its address's caps until it is sent, and given back on any way out
+/// that sends nothing, so that only a sent email counts.
+struct Held {
+    #[cfg(feature = "plus")]
+    hold: Option<(std::sync::Arc<RateLimiting>, SignInEmailHold)>,
+}
+
+impl Held {
+    /// Keep the hold, since its email went out.
+    fn sent(&mut self) {
+        #[cfg(feature = "plus")]
+        {
+            self.hold = None;
+        }
+    }
+}
+
+#[cfg(feature = "plus")]
+impl Drop for Held {
+    fn drop(&mut self) {
+        if let Some((rate_limiting, hold)) = self.hold.take() {
+            hold.release(&rate_limiting);
+        }
+    }
 }
 
 /// A pending sign-in that has started: its row and its secrets.
@@ -223,16 +293,28 @@ struct Start {
 }
 
 impl Start {
-    /// Record a new pending sign-in.
+    /// Record a new pending sign-in, for `session` if it is a fresh one, unless that session has
+    /// ended.
     async fn insert(
         context: &ApiContext,
         (insert, secrets): (InsertPendingSignIn, SignInSecrets),
+        session: Option<AuthSession>,
         now: DateTime,
     ) -> Result<Self, HttpError> {
-        write_transaction!(context, |conn| insert.insert(conn, now)).map_err(|e| {
-            issue_error("Failed to start a sign-in", "Failed to start a sign-in:", e)
-        })?;
-        Ok(Self { insert, secrets })
+        let started = write_transaction!(context, |conn| {
+            if let Some(session) = session
+                && !QuerySession::is_live(conn, session.id, session.uuid)?
+            {
+                return Ok(false);
+            }
+            insert.insert(conn, now).map(|()| true)
+        })
+        .map_err(|e| issue_error("Failed to start a sign-in", "Failed to start a sign-in:", e))?;
+        if started {
+            Ok(Self { insert, secrets })
+        } else {
+            Err(ended())
+        }
     }
 
     /// Email its code and link.

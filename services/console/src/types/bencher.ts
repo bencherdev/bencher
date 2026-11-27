@@ -3148,6 +3148,11 @@ export enum SignInRefusal {
 	EmailChangeExpired = "email_change_expired",
 	/** The email change was already confirmed. */
 	EmailChangeUsed = "email_change_used",
+	/**
+	 * The email change's confirm came from no session, or from one other than the live session
+	 * that asked for the change, which alone confirms it.
+	 */
+	EmailChangeElsewhere = "email_change_elsewhere",
 }
 
 export enum UpdateChannel {

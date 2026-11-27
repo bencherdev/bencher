@@ -1,4 +1,9 @@
-import type { APIRequestContext, Page } from "@playwright/test";
+import type {
+	APIRequestContext,
+	BrowserContext,
+	BrowserContextOptions,
+	Page,
+} from "@playwright/test";
 import type { JsonUser } from "../src/types/bencher";
 import { axeInBothThemes } from "./axe";
 import { typeCode } from "./door";
@@ -21,15 +26,17 @@ const HOUR = 60 * 60;
 const CONFIRM = "Confirm Bencher Email Change";
 const ASKED = "Bencher Email Change Asked For";
 const PROFILE = "/console/users/settings";
+const ELSEWHERE =
+	"Open this link in the browser where you asked for the change.";
 const settings = (slug: string) => `/console/users/${slug}/settings`;
 
 test.describe("a new email", () => {
 	// Kills an email change that skips the fresh sign-in, applies before its
 	// link, tells the old address nothing or gives it a link, carries its secret
 	// anywhere but the fragment, leaves it in the address or puts it in a
-	// request's URL, needs the browser that asked, or keeps any session of the
-	// reader's but the one that asked.
-	test("asks to sign in again, tells the old address, and its link confirms in another browser, keeping only the asking session", async ({
+	// request's URL, or keeps any session of the reader's but the one that
+	// asked.
+	test("asks to sign in again, tells the old address, and its link confirms in the browser that asked, keeping only its session", async ({
 		newContext,
 		request,
 	}) => {
@@ -68,19 +75,16 @@ test.describe("a new email", () => {
 		const secret = new URLSearchParams(link.hash.slice(1)).get("secret") ?? "";
 		expect(secret).toMatch(/^[\w-]{43}$/);
 
-		const elsewhere = await (
-			await newContext({ storageState: signedOut })
-		).newPage();
 		const urls: string[] = [];
-		elsewhere.on("request", (sent) => urls.push(sent.url()));
-		await elsewhere.goto(link.href);
-		await expect(elsewhere).toHaveURL("/auth/email");
-		await expect(elsewhere.locator(".kv")).toHaveText([
+		asking.on("request", (sent) => urls.push(sent.url()));
+		await asking.goto(link.href);
+		await expect(asking).toHaveURL("/auth/email");
+		await expect(asking.locator(".kv")).toHaveText([
 			`from${reader.user.email}`,
 			`to${newEmail}`,
 		]);
-		await elsewhere.getByRole("button", { name: "Change email" }).click();
-		await elsewhere.waitForURL(/\/auth\/login/);
+		await asking.getByRole("button", { name: "Change email" }).click();
+		await asking.waitForURL(settings(reader.user.slug));
 		expect(urls.filter((url) => url.includes(secret))).toEqual([]);
 
 		expect(await apiEmail(request, reader)).toBe(newEmail);
@@ -129,24 +133,40 @@ test.describe("a confirm link", () => {
 		expect(await hint(same)).toBe(hintOf(reader));
 	});
 
-	// Kills a confirm that signs the browser in as the confirmed user over
-	// another, or lands anywhere but that browser's own Profile.
-	test("opened while another user is signed in keeps that user signed in and opens their Profile", async ({
+	// Kills a confirm taken anywhere but the session that asked: signed out,
+	// in another session of the reader's, or in another user's, which would
+	// also sign that browser in as the reader; and a refusal that offers the
+	// press again.
+	test("opened anywhere but the browser that asked says where to open it and changes nothing", async ({
 		newContext,
 		request,
 	}) => {
 		const reader = await signUp();
-		const newEmail = `new-${reader.user.email}`;
-		const link = await askForEmail(reader, newEmail);
-		const page = await (
-			await newContext({ storageState: signedIn(seed.member) })
-		).newPage();
+		const other = await signInByEmail(reader.user.email);
+		const link = await askForEmail(reader, `new-${reader.user.email}`);
 
-		await page.goto(link.href);
-		await page.getByRole("button", { name: "Change email" }).click();
-		await page.waitForURL(settings(seed.member.user.slug));
-		expect(await hint(page)).toBe(hintOf(seed.member));
-		expect(await apiEmail(request, reader)).toBe(newEmail);
+		for (const [storageState, signedInAs] of [
+			[signedOut, null],
+			[signedIn({ ...reader, session: other.session }), hintOf(reader)],
+			[signedIn(seed.member), hintOf(seed.member)],
+		] as const) {
+			const page = await (await newContext({ storageState })).newPage();
+			await page.goto(link.href);
+			await page.getByRole("button", { name: "Change email" }).click();
+			await expect(page.getByRole("alert")).toHaveText(ELSEWHERE);
+			await expect(
+				page.getByRole("button", { name: "Change email" }),
+			).toHaveCount(0);
+			await expect(
+				page.getByRole("link", { name: "Open Profile" }),
+			).toHaveAttribute("href", PROFILE);
+			await expect(page).toHaveURL("/auth/email");
+			expect(await hint(page)).toBe(signedInAs);
+		}
+		expect(await apiEmail(request, reader)).toBe(reader.user.email);
+		expect((await inSession(other, "GET", "/v0/auth/session")).status).toBe(
+			200,
+		);
 	});
 
 	// Kills a confirm that keeps the console's saved responses, so the reader's
@@ -205,7 +225,7 @@ test.describe("a confirm link", () => {
 	// not read as expired, a second use not read as used, a taken address not
 	// named, a refused link that offers the press, and Open Profile that goes
 	// anywhere but the reader's Profile.
-	test("each state of board 05", async ({ page, request }) => {
+	test("each state of board 05", async ({ page, newContext, request }) => {
 		const banner = page.getByRole("alert");
 		const openProfile = page.getByRole("link", { name: "Open Profile" });
 		const press = page.getByRole("button", { name: "Change email" });
@@ -222,9 +242,10 @@ test.describe("a confirm link", () => {
 
 		const used = await signUp();
 		const usedLink = await askForEmail(used, `new-${used.user.email}`);
-		await page.goto(usedLink.href);
-		await press.click();
-		await page.waitForURL(/\/auth\/login/);
+		const usedAsking = await asking(newContext, used);
+		await usedAsking.goto(usedLink.href);
+		await usedAsking.getByRole("button", { name: "Change email" }).click();
+		await usedAsking.waitForURL(settings(used.user.slug));
 		await page.goto(usedLink.href);
 		await expect(page.getByRole("heading", { level: 1 })).toHaveText(
 			"Change email",
@@ -237,16 +258,30 @@ test.describe("a confirm link", () => {
 		const takenEmail = `new-${taken.user.email}`;
 		const takenLink = await askForEmail(taken, takenEmail);
 		await signUp({ email: takenEmail });
-		await page.goto(takenLink.href);
-		await press.click();
-		await expect(banner).toHaveText("Address taken");
-		await expect(page.locator(".kv")).toHaveText([`to${takenEmail}`]);
-		await expect(press).toHaveCount(0);
+		const takenAsking = await asking(newContext, taken);
+		const takenBanner = takenAsking.getByRole("alert");
+		const takenPress = takenAsking.getByRole("button", {
+			name: "Change email",
+		});
+		await takenAsking.goto(takenLink.href);
+		await takenPress.click();
+		await expect(takenBanner).toHaveText("Address taken");
+		await expect(takenAsking.locator(".kv")).toHaveText([`to${takenEmail}`]);
+		await expect(takenPress).toHaveCount(0);
 		expect(await apiEmail(request, taken)).toBe(taken.user.email);
+
+		const elsewhere = await signUp();
+		await page.goto(
+			(await askForEmail(elsewhere, `new-${elsewhere.user.email}`)).href,
+		);
+		await press.click();
+		await expect(banner).toHaveText(ELSEWHERE);
+		await expect(openProfile).toHaveAttribute("href", PROFILE);
+		await expect(press).toHaveCount(0);
 	});
 
 	// Kills a state of board 05 that fails axe in either theme.
-	test("each state passes axe in both themes", async ({ page }) => {
+	test("each state passes axe in both themes", async ({ page, newContext }) => {
 		const reader = await signUp();
 		const link = await askForEmail(reader, `new-${reader.user.email}`);
 		// Each scan opens the link afresh, as a new page: the page took the secret
@@ -264,22 +299,33 @@ test.describe("a confirm link", () => {
 			expect(page.getByRole("alert")).toHaveText("Expired"),
 		);
 
-		const taken = await signUp();
-		const takenEmail = `new-${taken.user.email}`;
-		const takenLink = await askForEmail(taken, takenEmail);
-		await signUp({ email: takenEmail });
 		await axeInBothThemes(
 			page,
-			afresh(takenLink),
-			() => expect(page.getByRole("alert")).toHaveText("Address taken"),
+			afresh(link),
+			() => expect(page.getByRole("alert")).toHaveText(ELSEWHERE),
 			async () => {
 				await page.getByRole("button", { name: "Change email" }).click();
 			},
 		);
 
-		await page.goto(link.href);
-		await page.getByRole("button", { name: "Change email" }).click();
-		await page.waitForURL(/\/auth\/login/);
+		const taken = await signUp();
+		const takenEmail = `new-${taken.user.email}`;
+		const takenLink = await askForEmail(taken, takenEmail);
+		await signUp({ email: takenEmail });
+		const takenAsking = await asking(newContext, taken);
+		await axeInBothThemes(
+			takenAsking,
+			afresh(takenLink),
+			() => expect(takenAsking.getByRole("alert")).toHaveText("Address taken"),
+			async () => {
+				await takenAsking.getByRole("button", { name: "Change email" }).click();
+			},
+		);
+
+		const readerAsking = await asking(newContext, reader);
+		await readerAsking.goto(link.href);
+		await readerAsking.getByRole("button", { name: "Change email" }).click();
+		await readerAsking.waitForURL(settings(reader.user.slug));
 		await axeInBothThemes(
 			page,
 			afresh(link),
@@ -288,6 +334,12 @@ test.describe("a confirm link", () => {
 		);
 	});
 });
+
+/** A page in the browser of the session `reader` asks for an email change in. */
+const asking = async (
+	newContext: (options?: BrowserContextOptions) => Promise<BrowserContext>,
+	reader: Reader,
+) => (await newContext({ storageState: signedIn(reader) })).newPage();
 
 /** Ask for `newEmail` in the reader's session, as only a session may, and return the confirm link it sends. */
 const askForEmail = async (reader: Reader, newEmail: string) => {

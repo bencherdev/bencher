@@ -488,12 +488,15 @@ fn start(agent: &ureq::Agent, url: &Url, email: &str) -> anyhow::Result<Answer> 
         "POST",
         "/v0/auth/email",
         None,
-        Some(&serde_json::json!({ "email": email })),
+        // Cloudflare's dummy token, which its test secrets accept.
+        Some(&serde_json::json!({ "email": email, "turnstile": "XXXX.DUMMY.TOKEN.XXXX" })),
     )?
     .ok()
 }
 
-/// Send `method` to `path` as the console's own origin, with `cookie` and any JSON `body`.
+/// Send `method` to `path` as the console's relay sends a page's own: from its origin, with
+/// `cookie` and any JSON `body`, and with the relay's secret when `BENCHER_RELAY_SECRET` holds
+/// one, since an API that has one honors a cookie only on a request that carries it.
 fn send(
     agent: &ureq::Agent,
     url: &Url,
@@ -507,6 +510,11 @@ fn send(
         .method(method)
         .uri(&target)
         .header("Sec-Fetch-Site", "same-origin");
+    if let Ok(secret) = std::env::var("BENCHER_RELAY_SECRET")
+        && !secret.is_empty()
+    {
+        request = request.header(bencher_json::RELAY_SECRET, secret);
+    }
     if let Some(cookie) = cookie {
         request = request.header("Cookie", cookie);
     }
