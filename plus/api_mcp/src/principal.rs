@@ -84,13 +84,13 @@ pub enum McpPrincipal {
 }
 
 impl McpPrincipal {
-    /// The MCP sibling of `ApiActor::new`: once OAuth is configured,
-    /// it also accepts an OAuth access token, and every credential it refuses
+    /// The MCP sibling of `ApiActor::new`, which takes bearer credentials alone: once OAuth is
+    /// configured, it also accepts an OAuth access token, and every credential it refuses
     /// is answered with a challenge to sign in again.
     pub async fn new(rqctx: &RequestContext<ApiContext>) -> Result<Self, HttpError> {
         let context = rqctx.context();
         let Some(oauth) = &context.oauth else {
-            return ApiActor::new(rqctx).await.map(Self::Actor);
+            return ApiActor::new_bearer_only(rqctx).await.map(Self::Actor);
         };
         let oauth_token =
             bearer_token(rqctx.request.headers()).filter(|token| is_oauth_token(token));
@@ -102,7 +102,7 @@ impl McpPrincipal {
                     scopes,
                 })
         } else {
-            ApiActor::new(rqctx).await.map(Self::Actor)
+            ApiActor::new_bearer_only(rqctx).await.map(Self::Actor)
         };
         principal.map_err(|error| with_invalid_token_challenge(error, oauth, rqctx))
     }

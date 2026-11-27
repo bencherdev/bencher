@@ -221,6 +221,7 @@ impl Default for Config {
             security: JsonSecurity {
                 issuer: Some(DEFAULT_CONSOLE_URL.to_string()),
                 secret_key: DEFAULT_SECRET_KEY.clone(),
+                relay_secret: None,
             },
             server: JsonServer {
                 bind_address: *DEFAULT_BIND_ADDRESS,

@@ -12,5 +12,5 @@ pub use api_meter::{
     JobStatusKind, McpChallengeKind, McpClientStyle, OAuthAuthorizeFailureReason, OAuthConsentKind,
     OAuthGrantKind, OAuthProvider, OAuthRevokeKind, OAuthTokenAuthFailureReason,
     OAuthTokenFailureReason, PauseReasonKind, PlanKind, ProjectKeyAuthFailureReason,
-    UpdateChannelKind, UserKeyAuthFailureReason,
+    SessionAuthFailureReason, UpdateChannelKind, UserKeyAuthFailureReason,
 };

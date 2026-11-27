@@ -4,7 +4,7 @@ use bencher_json::{
     OAuthAuthorizationUuid, OAuthCode, OAuthCodeHash, ProjectKey, UserKey,
 };
 use bencher_schema::{
-    context::{ApiContext, OAuthServer, RateLimiting},
+    context::{ApiContext, OAuthServer},
     error::{conflict_error, forbidden_error, issue_error, not_found_error, unauthorized_error},
     model::user::{
         QueryUser,
@@ -224,7 +224,7 @@ async fn approver(
     };
     let is_project_key = token.starts_with(ProjectKey::PREFIX);
     if (is_project_key || token.starts_with(UserKey::PREFIX))
-        && let Some(remote_ip) = RateLimiting::remote_ip(&rqctx.log, headers)
+        && let Some(remote_ip) = context.remote_ip(&rqctx.log, headers)
     {
         context.rate_limiting.public_auth_attempt(remote_ip)?;
     }
@@ -253,7 +253,7 @@ async fn approver(
     let auth_user = AuthUser::from_token(context, bearer_token).await?;
     if !matches!(
         auth_user.credential,
-        AuthCredential::Session | AuthCredential::UserKey(_)
+        AuthCredential::Session(_) | AuthCredential::UserKey(_)
     ) {
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthConsentBlocked);
@@ -265,7 +265,10 @@ async fn approver(
 }
 
 fn charge_public_request(rqctx: &RequestContext<ApiContext>) -> Result<(), HttpError> {
-    if let Some(remote_ip) = RateLimiting::remote_ip(&rqctx.log, rqctx.request.headers()) {
+    if let Some(remote_ip) = rqctx
+        .context()
+        .remote_ip(&rqctx.log, rqctx.request.headers())
+    {
         rqctx.context().rate_limiting.public_request(remote_ip)?;
     }
     Ok(())
