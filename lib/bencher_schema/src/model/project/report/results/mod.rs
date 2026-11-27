@@ -187,10 +187,7 @@ impl ReportResults {
             match results_array.foldable() {
                 Ok(foldable) => vec![foldable.fold(fold).into()],
                 Err(unfoldable) => {
-                    slog::warn!(
-                        log,
-                        "Ignoring the requested fold ({fold:?}) for report ({report_id}): fold is not supported for benchmark parameters or named metric values"
-                    );
+                    warnings.ignore_with_count(ReportWarningResource::Fold, 1);
                     unfoldable.inner
                 },
             }
@@ -653,21 +650,20 @@ impl ReportBmfVersion {
         }
     }
 
-    /// The 400 for results that parsed at the other version, naming only the fixes this server
+    /// The 400 for results that parsed at the other version, naming every fix this server
     /// takes.
     fn refusal(self, parsed: BmfVersion) -> HttpError {
         let Self { version, source } = self;
         bad_request_error(match source {
             BmfVersionSource::Declared => format!(
-                "Results parsed as BMF version {parsed}, but the report declared `bmf_version` {version}. Send BMF version {version} results, or declare `bmf_version` {parsed}."
+                "Results parsed as BMF version {parsed}, but the report declared `bmf_version` {version}. Send BMF version {version} results, or declare `bmf_version` {parsed}. {} {}",
+                move_sentence(parsed),
+                cli_sentence(parsed)
             ),
             BmfVersionSource::Project => format!(
-                "Results parsed as BMF version {parsed}, but the report declared no `bmf_version`, so it was read at its project's BMF version, {version}. Send BMF version {version} results, or declare `bmf_version` {parsed} through the API. {} to BMF version {parsed} with `bencher project update --bmf-version {parsed}`.",
-                if parsed == BmfVersion::V1 {
-                    "A user who can edit the project can also move it"
-                } else {
-                    "A server admin can also move the project"
-                }
+                "Results parsed as BMF version {parsed}, but the report declared no `bmf_version`, so it was read at its project's BMF version, {version}. Send BMF version {version} results, or declare `bmf_version` {parsed} through the API. {} {}",
+                move_sentence(parsed),
+                cli_sentence(parsed)
             ),
             BmfVersionSource::Job => format!(
                 "Results parsed as BMF version {parsed}, but the remote job was accepted at BMF version {version}. Send BMF version {version} results, or run the job again at BMF version {parsed}: declare `bmf_version` {parsed} through the API, or, for a run that declares none, have {} move the project to BMF version {parsed} with `bencher project update --bmf-version {parsed}`.",
@@ -683,7 +679,8 @@ impl ReportBmfVersion {
         let to = BmfVersion::V1;
         bad_request_error(match source {
             BmfVersionSource::Declared => format!(
-                "`{adapter}` reads results at BMF version {to} only, but the report declared `bmf_version` {version}. Declare `bmf_version` {to} to read them."
+                "`{adapter}` reads results at BMF version {to} only, but the report declared `bmf_version` {version}. Declare `bmf_version` {to} to read them. {}",
+                move_sentence(to)
             ),
             BmfVersionSource::Project => format!(
                 "`{adapter}` reads results at BMF version {to} only, and this project is at BMF version {version}. A user who can edit the project can move it to BMF version {to} with `bencher project update --bmf-version {to}`."
@@ -694,6 +691,24 @@ impl ReportBmfVersion {
             ),
         })
     }
+}
+
+/// The project's move to `to`, which fixes a declared version too, as the `bencher` CLI declares
+/// the version it reads from the project.
+fn move_sentence(to: BmfVersion) -> String {
+    let mover = if to == BmfVersion::V1 {
+        "A user who can edit the project can also move it"
+    } else {
+        "A server admin can also move the project"
+    };
+    format!("{mover} to BMF version {to} with `bencher project update --bmf-version {to}`.")
+}
+
+/// The `bencher` CLI's fix, read both by a current CLI and by one too old to know the flag.
+fn cli_sentence(parsed: BmfVersion) -> String {
+    format!(
+        "With a current `bencher` CLI, pass `--adapter json_v{parsed}` (upgrade if it does not know the flag)."
+    )
 }
 
 /// Who can move a project to `to`: a user who can edit it moves it to version 1, and only a

@@ -1,6 +1,9 @@
 use std::env;
 
-use bencher_json::{BENCHER_API_URL, BencherKey, Jwt};
+use bencher_json::{
+    BENCHER_API_URL, BencherKey, Jwt,
+    project::report::{ReportWarningAction, ReportWarningResource},
+};
 use reqwest::ClientBuilder;
 use serde::{Serialize, de::DeserializeOwned};
 use tokio::time::{Duration, sleep};
@@ -119,7 +122,7 @@ impl BencherClient {
                 codegen::Error<codegen::types::Error>,
             >,
         >,
-        T: Serialize,
+        T: Serialize + DeserializeOwned,
         E: std::error::Error + Send + Sync + 'static,
         crate::JsonValue: TryFrom<T, Error = E>,
     {
@@ -147,7 +150,30 @@ impl BencherClient {
                 codegen::Error<codegen::types::Error>,
             >,
         >,
-        T: Serialize,
+        T: Serialize + DeserializeOwned,
+        Json: DeserializeOwned + Serialize + TryFrom<T, Error = E>,
+        E: std::error::Error + Send + Sync + 'static,
+    {
+        self.send_with_unread(sender)
+            .await
+            .map(|(json, _unread_warnings)| json)
+    }
+
+    /// As [`Self::send_with`], with the count of the report warnings in the response that this
+    /// build cannot read, which it sets aside, so a server with a new warning breaks no client.
+    pub async fn send_with_unread<F, R, T, Json, E>(
+        &self,
+        sender: F,
+    ) -> Result<(Json, u32), ClientError>
+    where
+        F: Fn(codegen::Client) -> R,
+        R: Future<
+            Output = Result<
+                progenitor_client::ResponseValue<T>,
+                codegen::Error<codegen::types::Error>,
+            >,
+        >,
+        T: Serialize + DeserializeOwned,
         Json: DeserializeOwned + Serialize + TryFrom<T, Error = E>,
         E: std::error::Error + Send + Sync + 'static,
     {
@@ -173,7 +199,7 @@ impl BencherClient {
                         .map_err(Into::into)
                         .map_err(ClientError::DeserializeResponse)?;
                     self.log_json(&json_response)?;
-                    return Ok(json_response);
+                    return Ok((json_response, 0));
                 },
                 Err(codegen::Error::CommunicationError(e)) => e.to_string(),
                 Err(codegen::Error::ErrorResponse(e)) if e.status().is_server_error() => {
@@ -203,17 +229,7 @@ impl BencherClient {
                     return Err(ClientError::ResponseBodyError(e));
                 },
                 Err(codegen::Error::InvalidResponsePayload(bytes, e)) => {
-                    return if self.strict {
-                        Err(ClientError::InvalidResponsePayloadStrict(bytes, e))
-                    } else {
-                        match serde_json::from_slice(&bytes) {
-                            Ok(json_response) => {
-                                self.log_json(&json_response)?;
-                                Ok(json_response)
-                            },
-                            Err(e) => Err(ClientError::InvalidResponsePayload(e)),
-                        }
-                    };
+                    return self.invalid_payload::<T, Json, E>(bytes, e);
                 },
                 Err(codegen::Error::UnexpectedResponse(response)) => {
                     return if response.status().is_success() {
@@ -223,7 +239,7 @@ impl BencherClient {
                             match response.json().await {
                                 Ok(json_response) => {
                                     self.log_json(&json_response)?;
-                                    Ok(json_response)
+                                    Ok((json_response, 0))
                                 },
                                 Err(e) => Err(ClientError::UnexpectedResponseOk(e)),
                             }
@@ -250,6 +266,48 @@ impl BencherClient {
         }
 
         Err(ClientError::SendTimeout(attempts))
+    }
+
+    /// A response the generated client could not decode: strict mode refuses it and the default
+    /// reads it as `Json`, unless setting aside the warnings this build cannot read decodes it.
+    fn invalid_payload<T, Json, E>(
+        &self,
+        bytes: bytes::Bytes,
+        mut err: serde_json::Error,
+    ) -> Result<(Json, u32), ClientError>
+    where
+        T: DeserializeOwned,
+        Json: DeserializeOwned + Serialize + TryFrom<T, Error = E>,
+        E: std::error::Error + Send + Sync + 'static,
+    {
+        if !self.strict {
+            match serde_json::from_slice(&bytes) {
+                Ok(json_response) => {
+                    self.log_json(&json_response)?;
+                    return Ok((json_response, 0));
+                },
+                Err(e) => err = e,
+            }
+        }
+        if let Some((value, unread_warnings)) = set_aside_unread_warnings(&bytes) {
+            let json_response = if self.strict {
+                serde_json::from_value::<T>(value).ok().map(Json::try_from)
+            } else {
+                serde_json::from_value::<Json>(value).ok().map(Ok)
+            };
+            if let Some(json_response) = json_response {
+                let json_response = json_response
+                    .map_err(Into::into)
+                    .map_err(ClientError::DeserializeResponse)?;
+                self.log_json(&json_response)?;
+                return Ok((json_response, unread_warnings));
+            }
+        }
+        Err(if self.strict {
+            ClientError::InvalidResponsePayloadStrict(bytes, err)
+        } else {
+            ClientError::InvalidResponsePayload(err)
+        })
     }
 
     fn client_builder(&self) -> Result<ClientBuilder, ClientError> {
@@ -472,5 +530,77 @@ impl BencherClientBuilder {
             strict: strict.unwrap_or_default(),
             log: log.unwrap_or_default(),
         }
+    }
+}
+
+/// The response with the report warnings whose resource or action this build does not know
+/// removed, and the sum of their counts, when it holds any.
+fn set_aside_unread_warnings(bytes: &[u8]) -> Option<(serde_json::Value, u32)> {
+    let mut json = serde_json::from_slice::<serde_json::Value>(bytes).ok()?;
+    let warnings = json
+        .get_mut("warnings")
+        .and_then(serde_json::Value::as_array_mut)?;
+    let mut unread_warnings = 0u32;
+    warnings.retain(|warning| {
+        let Some(count) = unread_count(warning) else {
+            return true;
+        };
+        unread_warnings = unread_warnings.saturating_add(count);
+        false
+    });
+    (unread_warnings > 0).then_some((json, unread_warnings))
+}
+
+/// The count of a well formed warning whose resource or action this build does not know.
+fn unread_count(warning: &serde_json::Value) -> Option<u32> {
+    let resource = warning.get("resource")?.as_str()?;
+    let action = warning.get("action")?.as_str()?;
+    let count = u32::try_from(warning.get("count")?.as_u64()?).ok()?;
+    let known = serde_json::from_value::<ReportWarningResource>(resource.into()).is_ok()
+        && serde_json::from_value::<ReportWarningAction>(action.into()).is_ok();
+    (!known).then_some(count)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::set_aside_unread_warnings;
+
+    // Kills a warning this build knows that is set aside, an unknown resource or action that is
+    // kept, a total of the entries rather than what they count, a malformed entry set aside
+    // rather than left to fail the decode, and a decode error swallowed with nothing set aside.
+    #[test]
+    fn sets_aside_only_well_formed_warnings_it_cannot_read() {
+        let report = serde_json::json!({
+            "warnings": [
+                { "resource": "threshold", "action": "skip", "count": 2 },
+                { "resource": "teleport", "action": "skip", "count": 3 },
+                { "resource": "benchmark", "action": "vanish", "count": 4 },
+                { "resource": "teleport", "action": "skip", "count": "many" },
+                { "resource": "teleport", "action": "skip" },
+            ]
+        });
+        let set_aside = set_aside_unread_warnings(report.to_string().as_bytes());
+        assert_eq!(
+            set_aside,
+            Some((
+                serde_json::json!({
+                    "warnings": [
+                        { "resource": "threshold", "action": "skip", "count": 2 },
+                        { "resource": "teleport", "action": "skip", "count": "many" },
+                        { "resource": "teleport", "action": "skip" },
+                    ]
+                }),
+                7
+            ))
+        );
+
+        let known = serde_json::json!({
+            "warnings": [{ "resource": "threshold", "action": "skip", "count": 2 }]
+        });
+        assert_eq!(
+            set_aside_unread_warnings(known.to_string().as_bytes()),
+            None,
+            "nothing to set aside, so the decode error stands"
+        );
     }
 }

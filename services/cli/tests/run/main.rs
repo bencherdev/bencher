@@ -191,6 +191,8 @@ struct Scene {
     report_ok_then_fail: Option<(&'static str, usize)>,
     /// The name GitHub answers a check completion with, as if it normalized the request's.
     completed_name: Option<&'static str>,
+    /// The warnings of the report a run creates.
+    warnings: Option<serde_json::Value>,
 }
 
 /// An answer to a list of the check runs on the head SHA.
@@ -225,6 +227,7 @@ impl Default for Scene {
             report_failures: Vec::new(),
             report_ok_then_fail: None,
             completed_name: None,
+            warnings: None,
         }
     }
 }
@@ -680,7 +683,13 @@ fn respond(request: &Request, stand_in: StandIn, scene: &mut Scene) -> (&'static
             OK,
             serde_json::json!({ "url": "http://localhost:3000" }).to_string(),
         ),
-        ("POST", "/v0/run") => (CREATED, json_report().to_string()),
+        ("POST", "/v0/run") => {
+            let mut report = json_report();
+            if let (Some(warnings), Some(report)) = (&scene.warnings, report.as_object_mut()) {
+                report.insert("warnings".to_owned(), warnings.clone());
+            }
+            (CREATED, report.to_string())
+        },
         ("GET", JOB_PATH) => match job_read {
             JobRead::Callback(state) => (
                 OK,
@@ -1091,6 +1100,86 @@ fn json_job(callback: Option<serde_json::Value>) -> serde_json::Value {
         json_job.insert("callback".to_owned(), callback);
     }
     json_job
+}
+
+const UNREAD_LINE: &str = "- 4 more warnings: upgrade the CLI to read them";
+
+// Kills a run that fails on a warning value this build does not know, in either mode, one
+// that drops their count, and one that counts the entries rather than what they count.
+#[test]
+fn a_run_counts_the_warnings_it_cannot_read() {
+    for strict in [&[][..], &["--strict"]] {
+        let run = run_with_unread_warnings(strict);
+        run.assert_success();
+        let stdout = run.stdout();
+        assert!(
+            stdout.contains(&format!(
+                "\n\nWarnings:\n- 2 thresholds skipped\n{UNREAD_LINE}\n"
+            )),
+            "{strict:?}: {stdout}"
+        );
+        assert!(
+            !run.stderr().contains(UNREAD_LINE),
+            "{strict:?}: {}",
+            run.stderr()
+        );
+    }
+}
+
+// Kills a JSON or HTML run that drops the count of the warnings it cannot read, prints it on
+// standard out, where it breaks the shape a script reads, or lets `--quiet` hide it.
+#[test]
+fn a_json_or_html_run_counts_the_warnings_it_cannot_read_on_stderr() {
+    for format in ["json", "html"] {
+        let run = run_with_unread_warnings(&["--quiet", "--format", format]);
+        run.assert_success();
+        let stdout = run.stdout();
+        assert!(!stdout.contains("more warning"), "{format}: {stdout}");
+        if format == "json" {
+            let report: serde_json::Value =
+                serde_json::from_str(&stdout).unwrap_or_else(|e| panic!("{e}: {stdout}"));
+            assert_eq!(
+                report.get("warnings"),
+                Some(&serde_json::json!([
+                    { "resource": "threshold", "action": "skip", "count": 2 }
+                ])),
+                "{stdout}"
+            );
+        }
+        assert!(
+            run.stderr_lines().iter().any(|line| line == UNREAD_LINE),
+            "{format}: {}",
+            run.stderr()
+        );
+    }
+}
+
+/// A run whose report holds a warning this build reads and 2 it does not, counting 4.
+fn run_with_unread_warnings(args: &[&str]) -> Run {
+    bencher_run_in_scene(
+        StandIn {
+            job_read: JobRead::NotFound,
+            version: VersionRead::Current,
+            check_runs: CheckRuns::Create,
+        },
+        Scene {
+            warnings: Some(serde_json::json!([
+                { "resource": "threshold", "action": "skip", "count": 2 },
+                { "resource": "teleport", "action": "skip", "count": 3 },
+                { "resource": "benchmark", "action": "vanish", "count": 1 },
+            ])),
+            ..Scene::default()
+        },
+        None,
+        &[],
+        &[
+            &ATTEMPTS[..],
+            &PROJECT,
+            args,
+            &[env!("CARGO_BIN_EXE_bencher"), "mock"],
+        ]
+        .concat(),
+    )
 }
 
 #[test]

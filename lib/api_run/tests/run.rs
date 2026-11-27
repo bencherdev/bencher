@@ -861,6 +861,108 @@ async fn run_post_absent_bmf_version_is_the_projects_version() {
     );
 }
 
+/// POST /v0/run - the plain threshold flags of a CLI, which name no metric, land on a run read
+/// at version 1 with a warning for each, as a released CLI sends them.
+///
+/// Kills: the version 1 refusal of a map on a run, and a warning counted once per run rather
+/// than once per threshold.
+#[tokio::test]
+async fn run_post_bmf_version_1_skips_plain_thresholds() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "runplain@example.com").await;
+    let org = server.create_org(&user, "Run Plain Org").await;
+    let project = server
+        .create_project(&user, &org, "Run Plain Project")
+        .await;
+    set_project_bmf_version(&server, &user, &project, BmfVersion::V1).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let model = serde_json::json!({ "test": "t_test", "upper_boundary": 0.99 });
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_v1_results().to_string()],
+        "thresholds": { "models": { "latency": model, "throughput": model } },
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+    assert_eq!(
+        report.warnings,
+        Some(vec![JsonReportWarning {
+            resource: ReportWarningResource::Threshold,
+            action: ReportWarningAction::Skip,
+            count: 2,
+        }])
+    );
+}
+
+/// POST /v0/run - `--fold` on a run read at version 1 is ignored with one warning, and a fold at
+/// version 0 folds with none.
+///
+/// Kills: an ignored fold with no warning, a warning on a fold that folded, and a warning per
+/// iteration.
+#[tokio::test]
+async fn run_post_fold_warns_only_at_bmf_version_1() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "runfold@example.com").await;
+    let org = server.create_org(&user, "Run Fold Org").await;
+    let project = server.create_project(&user, &org, "Run Fold Project").await;
+
+    let project_slug: &str = project.slug.as_ref();
+    for (bmf_version, results, warnings) in [
+        (0, bmf_results(), None),
+        (
+            1,
+            bmf_v1_results(),
+            Some(vec![JsonReportWarning {
+                resource: ReportWarningResource::Fold,
+                action: ReportWarningAction::Ignore,
+                count: 1,
+            }]),
+        ),
+    ] {
+        let body = serde_json::json!({
+            "project": project_slug,
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": [results.to_string(), results.to_string()],
+            "bmf_version": bmf_version,
+            "settings": { "fold": "mean" },
+        });
+        let resp = server
+            .client
+            .post(server.api_url("/v0/run"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::CREATED, "version {bmf_version}");
+        let report: JsonReport = resp.json().await.expect("Failed to parse response");
+        assert_eq!(report.warnings, warnings, "version {bmf_version}");
+    }
+}
+
 /// Move the project's `bmf_version` as `user`, who has to be the server admin.
 async fn set_project_bmf_version(
     server: &TestServer,

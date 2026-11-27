@@ -1413,6 +1413,7 @@ export enum ReportWarningResource {
 	Threshold = "threshold",
 	Adapter = "adapter",
 	Average = "average",
+	Fold = "fold",
 }
 
 /** What a report did with the resources a warning counts. */

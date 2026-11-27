@@ -200,7 +200,8 @@ impl QueryReport {
         let report_version =
             ReportBmfVersion::new(json_report.bmf_version, query_project.bmf_version);
         let bmf_version = report_version.version;
-        check_report_thresholds_shape(bmf_version, json_report.thresholds.as_ref())?;
+        let mut warnings = ReportWarnings::default();
+        check_report_thresholds_shape(bmf_version, json_report.thresholds.as_mut(), &mut warnings)?;
         #[cfg(feature = "plus")]
         if let Some(new_run_job) = &new_run_job {
             check_minted_dispatch(
@@ -224,8 +225,6 @@ impl QueryReport {
         let run_job = new_run_job
             .as_ref()
             .map_or(RunJob::None, NewRunJob::run_job);
-
-        let mut warnings = ReportWarnings::default();
 
         // Get or create the branch and testbed
         let (branch_id, head_id) = QueryBranch::get_or_create(
