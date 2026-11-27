@@ -66,7 +66,7 @@ test("a run page shows each report's job and asks again while one runs", async (
 	page,
 }) => {
 	await page.goto(consolePath(runner.slug, "runs"));
-	const asked = counting(page, `/v0/console/projects/${runner.slug}/runs`);
+	const asked = counting(page, `/api/v0/console/projects/${runner.slug}/runs`);
 	await page
 		.getByRole("table", { name: "Runs, newest first" })
 		.getByRole("link", { name: seed.jobs_hash, exact: true })
@@ -92,7 +92,7 @@ test("a run page shows each report's job and asks again while one runs", async (
 	const runPath = new URL(page.url()).pathname.split("/").at(-1);
 	const runAsked = counting(
 		page,
-		`/v0/console/projects/${runner.slug}/runs/${runPath}`,
+		`/api/v0/console/projects/${runner.slug}/runs/${runPath}`,
 	);
 	await expect.poll(runAsked, { timeout: 12_000 }).toBeGreaterThanOrEqual(1);
 	expect(asked()).toBeLessThanOrEqual(1);
@@ -112,10 +112,13 @@ test("an opened running run keeps its rows and the focus across polls", async ({
 	)
 		.split("/")
 		.at(-1);
-	const listAsked = counting(page, `/v0/console/projects/${runner.slug}/runs`);
+	const listAsked = counting(
+		page,
+		`/api/v0/console/projects/${runner.slug}/runs`,
+	);
 	const runAsked = counting(
 		page,
-		`/v0/console/projects/${runner.slug}/runs/${run}`,
+		`/api/v0/console/projects/${runner.slug}/runs/${run}`,
 	);
 	await table
 		.getByRole("button", { name: new RegExp(`^main, run ${seed.jobs_hash}, `) })
@@ -149,7 +152,7 @@ test("a finished run's page does not ask again", async ({ page }) => {
 	const href = (await link.getAttribute("href")) ?? "";
 	const asked = counting(
 		page,
-		`/v0/console/projects/${runner.slug}/runs/${href.split("/").at(-1)}`,
+		`/api/v0/console/projects/${runner.slug}/runs/${href.split("/").at(-1)}`,
 	);
 	await link.click();
 	await expect(page.locator(".rp-titlerow")).toContainText("5f3c9a0");

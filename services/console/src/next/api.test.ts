@@ -10,17 +10,18 @@ const respond =
 let calls: { url: string; init: RequestInit | undefined }[] = [];
 
 const api = (fetch: typeof globalThis.fetch) =>
-	createApi({ url: "https://api.example.com", token: "tok", fetch });
+	createApi({ token: "tok", fetch });
 
 describe("createApi", () => {
-	// Kills a request sent to the wrong host or without the reader's token.
-	test("sends the bearer token to the API", async () => {
+	// Kills a request sent anywhere but the console's own relay, or without the
+	// reader's token.
+	test("sends the bearer token to the relay", async () => {
 		calls = [];
 		const { data } = await api(respond(200, { name: "Hashbrown" })).get<{
 			name: string;
 		}>("/v0/projects/hashbrown");
 		expect(data).toEqual({ name: "Hashbrown" });
-		expect(calls[0]?.url).toBe("https://api.example.com/v0/projects/hashbrown");
+		expect(calls[0]?.url).toBe("/api/v0/projects/hashbrown");
 		expect(new Headers(calls[0]?.init?.headers).get("authorization")).toBe(
 			"Bearer tok",
 		);
@@ -83,7 +84,6 @@ describe("createApi", () => {
 	test("an ended session sends nothing and reads as refused", async () => {
 		calls = [];
 		const error = await createApi({
-			url: "https://api.example.com",
 			token: "tok",
 			expiration: 1_000,
 			now: () => 1_000,
@@ -125,7 +125,7 @@ describe("createApi", () => {
 		}>("PATCH", "/v0/projects/hashbrown", { name: "Hash Browns" });
 		expect(data).toEqual({ name: "Hash Browns" });
 		const [call] = calls;
-		expect(call?.url).toBe("https://api.example.com/v0/projects/hashbrown");
+		expect(call?.url).toBe("/api/v0/projects/hashbrown");
 		expect(call?.init?.method).toBe("PATCH");
 		expect(call?.init?.body).toBe('{"name":"Hash Browns"}');
 		const headers = new Headers(call?.init?.headers);

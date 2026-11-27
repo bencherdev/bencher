@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 
-import { BENCHER_API_URL, OAUTH_GITHUB, OAUTH_GOOGLE } from "astro:env/server";
+import { OAUTH_GITHUB, OAUTH_GOOGLE } from "astro:env/server";
 
 import AuthLayout from "../../layouts/auth/AuthLayout.astro";
 import AuthForm from "../../components/auth/AuthForm";
@@ -25,14 +25,14 @@ const description =
 ---
 
 <AuthLayout title={title} description={description}>
-  <AuthRedirect client:only="solid-js" apiUrl={BENCHER_API_URL} path="/console" back="keep" />
+  <AuthRedirect client:only="solid-js" accept path="/console" back="keep" />
 
   <h1 class="title is-1">{title}</h1>
 
-  <AuthForm client:only="solid-js" apiUrl={BENCHER_API_URL} newUser={newUser} >
+  <AuthForm client:only="solid-js" newUser={newUser} >
     <SignupForm slot="fallback"/>
   </AuthForm>
-  <OAuthForm client:only="solid-js" apiUrl={BENCHER_API_URL} newUser={newUser} github={OAUTH_GITHUB} google={OAUTH_GOOGLE}>
+  <OAuthForm client:only="solid-js" newUser={newUser} github={OAUTH_GITHUB} google={OAUTH_GOOGLE}>
     <div slot="fallback">
 				<a class="button is-fullwidth" style="margin-top: 3rem;">
 					<span class="icon">

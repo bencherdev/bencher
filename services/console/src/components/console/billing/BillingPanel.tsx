@@ -50,7 +50,6 @@ import CheckoutLoading from "./plan/CheckoutLoading";
 import PaymentMethod from "./plan/PaymentMethod";
 
 interface Props {
-	apiUrl: string;
 	isBencherCloud: boolean;
 	params: Params;
 	onboard?: boolean;
@@ -87,7 +86,7 @@ const BillingPanel = (props: Props) => {
 			return null;
 		}
 		const path = `/v0/organizations/${fetcher.params.organization}/usage`;
-		return await httpGet(props.apiUrl, path, fetcher.token)
+		return await httpGet(path, fetcher.token)
 			.then((resp) => {
 				// console.log(resp.data);
 				return resp?.data;
@@ -108,7 +107,6 @@ const BillingPanel = (props: Props) => {
 			when={!props.onboard}
 			fallback={
 				<BillingPanelSwitch
-					apiUrl={props.apiUrl}
 					params={props.params}
 					onboard={true}
 					bencher_valid={bencher_valid}
@@ -124,7 +122,6 @@ const BillingPanel = (props: Props) => {
 					<div class="columns">
 						<div class="column">
 							<BillingPanelSwitch
-								apiUrl={props.apiUrl}
 								params={props.params}
 								onboard={false}
 								bencher_valid={bencher_valid}
@@ -141,7 +138,6 @@ const BillingPanel = (props: Props) => {
 };
 
 const BillingPanelSwitch = (props: {
-	apiUrl: string;
 	params: Params;
 	onboard: boolean;
 	bencher_valid: Resource<InitValid>;
@@ -177,7 +173,6 @@ const BillingPanelSwitch = (props: {
 			{/* Bencher Cloud */}
 			<Match when={props.usage()?.kind === UsageKind.CloudFree}>
 				<BillingForm
-					apiUrl={props.apiUrl}
 					params={props.params}
 					onboard={props.onboard ?? false}
 					bencher_valid={props.bencher_valid}
@@ -188,7 +183,6 @@ const BillingPanelSwitch = (props: {
 			</Match>
 			<Match when={props.usage()?.kind === UsageKind.CloudMetered}>
 				<CloudMeteredPanel
-					apiUrl={props.apiUrl}
 					user={props.user}
 					usage={props.usage}
 					handleRefresh={props.handleRefresh}
@@ -203,7 +197,6 @@ const BillingPanelSwitch = (props: {
 			{/* Self-Hosted */}
 			<Match when={props.usage()?.kind === UsageKind.SelfHostedFree}>
 				<SelfHostedFreePanel
-					apiUrl={props.apiUrl}
 					params={props.params}
 					onboard={props.onboard}
 					bencher_valid={props.bencher_valid}
@@ -225,7 +218,6 @@ const manageSubscription = (
 );
 
 const CancelPlanButton = (props: {
-	apiUrl: string;
 	user: JsonAuthUser;
 	organization: undefined | string;
 	handleRefresh: () => void;
@@ -240,7 +232,7 @@ const CancelPlanButton = (props: {
 			return;
 		}
 		setCanceling(true);
-		httpPatch(props.apiUrl, `/v0/organizations/${organization}/plan`, token, {
+		httpPatch(`/v0/organizations/${organization}/plan`, token, {
 			cancel_at_period_end: true,
 		})
 			.then((_resp) => {
@@ -318,7 +310,6 @@ const CancelPlanButton = (props: {
 };
 
 const ResumePlanButton = (props: {
-	apiUrl: string;
 	user: JsonAuthUser;
 	organization: undefined | string;
 	handleRefresh: () => void;
@@ -332,7 +323,7 @@ const ResumePlanButton = (props: {
 			return;
 		}
 		setResuming(true);
-		httpPatch(props.apiUrl, `/v0/organizations/${organization}/plan`, token, {
+		httpPatch(`/v0/organizations/${organization}/plan`, token, {
 			cancel_at_period_end: false,
 		})
 			.then((_resp) => {
@@ -371,7 +362,6 @@ const ResumePlanButton = (props: {
 
 // Shared cancel/resume control for any Bencher Cloud metered plan.
 const PlanCancelResume = (props: {
-	apiUrl: string;
 	user: JsonAuthUser;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
@@ -381,7 +371,6 @@ const PlanCancelResume = (props: {
 			when={props.usage()?.plan?.cancel_at_period_end}
 			fallback={
 				<CancelPlanButton
-					apiUrl={props.apiUrl}
 					user={props.user}
 					organization={props.usage()?.organization}
 					handleRefresh={props.handleRefresh}
@@ -394,7 +383,6 @@ const PlanCancelResume = (props: {
 				until then.
 			</p>
 			<ResumePlanButton
-				apiUrl={props.apiUrl}
 				user={props.user}
 				organization={props.usage()?.organization}
 				handleRefresh={props.handleRefresh}
@@ -406,7 +394,6 @@ const PlanCancelResume = (props: {
 // Bencher Cloud metered plans. Pro bills on active series (its own panel); legacy Team and
 // metered Enterprise still bill on metrics.
 const CloudMeteredPanel = (props: {
-	apiUrl: string;
 	user: JsonAuthUser;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
@@ -417,7 +404,6 @@ const CloudMeteredPanel = (props: {
 			when={isPro()}
 			fallback={
 				<MeteredMetricsPanel
-					apiUrl={props.apiUrl}
 					user={props.user}
 					usage={props.usage}
 					handleRefresh={props.handleRefresh}
@@ -425,7 +411,6 @@ const CloudMeteredPanel = (props: {
 			}
 		>
 			<ProMeteredPanel
-				apiUrl={props.apiUrl}
 				user={props.user}
 				usage={props.usage}
 				handleRefresh={props.handleRefresh}
@@ -437,7 +422,6 @@ const CloudMeteredPanel = (props: {
 // Legacy metered metrics plans (Team and metered Enterprise): billed per metric plus bare
 // metal runner minutes.
 const MeteredMetricsPanel = (props: {
-	apiUrl: string;
 	user: JsonAuthUser;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
@@ -486,7 +470,6 @@ const MeteredMetricsPanel = (props: {
 			<br />
 			<br />
 			<PlanCancelResume
-				apiUrl={props.apiUrl}
 				user={props.user}
 				usage={props.usage}
 				handleRefresh={props.handleRefresh}
@@ -500,7 +483,6 @@ const MeteredMetricsPanel = (props: {
 // during the first-month free trial, when the base fee is waived and runner minutes are
 // included (the whole bill is $0).
 const ProMeteredPanel = (props: {
-	apiUrl: string;
 	user: JsonAuthUser;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
@@ -638,7 +620,6 @@ const ProMeteredPanel = (props: {
 			<br />
 			<br />
 			<PlanCancelResume
-				apiUrl={props.apiUrl}
 				user={props.user}
 				usage={props.usage}
 				handleRefresh={props.handleRefresh}
@@ -725,7 +706,6 @@ const CloudSelfHostedLicensedPanel = (props: {
 };
 
 const SelfHostedFreePanel = (props: {
-	apiUrl: string;
 	params: Params;
 	onboard: boolean;
 	bencher_valid: Resource<InitValid>;
@@ -756,7 +736,7 @@ const SelfHostedFreePanel = (props: {
 			license: license()?.trim(),
 		};
 		const path = `/v0/organizations/${props.params.organization}`;
-		httpPatch(props.apiUrl, path, token, data)
+		httpPatch(path, token, data)
 			.then((_resp) => {
 				setSubmitting(false);
 				props.refetch();

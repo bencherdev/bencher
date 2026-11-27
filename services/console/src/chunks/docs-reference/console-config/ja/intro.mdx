@@ -1,12 +1,16 @@
 Bencher コンソール UI には設定は必要ありません。
 ただし、いくつかのデフォルトは次の環境変数を使って用途に合わせてカスタマイズできます:
 
-- `BENCHER_API_URL`: Bencher API サーバーである [Bencher API サーバー][server config] の URL。デフォルトは `http://localhost:6610` に設定されています。
-- `INTERNAL_API_URL`: `docker compose` のような Docker ベースのネットワーキングを使用する場合、ローカルの `BENCHER_API_URL` を使用する際の Docker 間通信に必要です。`https://bencher.example.com` のようなリモートの `BENCHER_API_URL` を使用する場合は設定しないでください。デフォルトでは設定されていません。
+- `BENCHER_API_URL`: Bencher API サーバーである [Bencher API サーバー][server config] の URL。コンソールサーバーは、ブラウザからのすべてのリクエストを、コンソール自身の URL の `/api` 配下でこの URL に中継します。デフォルトは `http://localhost:6610` に設定されています。
+- `INTERNAL_API_URL`: コンソールサーバーが別のアドレスで API サーバーに到達する場合に、`BENCHER_API_URL` の代わりに中継先として使う URL です。[Docker Compose][docker compose] は、これを両者が共有する Docker ネットワーク上の API サーバーのコンテナである `http://bencher_api:6610` に設定します。[`bencher up`][bencher up] も、`BENCHER_API_URL` が未設定か、`localhost` などのループバックアドレスを指す場合は同様に設定します。それ以外の場合、デフォルトでは設定されていません。
+- `BENCHER_RELAY_SECRET`: コンソールサーバーが [API サーバーの `security.relay_secret`][security] と共有するシークレットです。両方のサーバーに同じ値を設定すると、API サーバーはコンソールサーバーが中継するブラウザの IP アドレスを信頼し、コンソールサーバーが中継したリクエストでのみセッションを受け付けます。デフォルトでは設定されていません。
 - `OAUTH_GITHUB`: [セルフホスト型 GitHub アプリ][github app] を使って `Login with GitHub` を有効にするには `true` に設定します。これは [Bencher Plus Enterprise プラン][bencher plus enterprise] が必要です。デフォルトでは設定されていません。
 - `OAUTH_GOOGLE`: [セルフホスト型 Google OAuth2][google oauth2] を使って `Login with Google` を有効にするには `true` に設定します。これは [Bencher Plus Enterprise プラン][bencher plus enterprise] が必要です。デフォルトでは設定されていません。
 
 [server config]: /ja/docs/reference/server-config/
+[security]: /ja/docs/reference/server-config/#security
+[bencher up]: /ja/docs/reference/bencher-compose/#bencher-up
+[docker compose]: /ja/docs/reference/bencher-compose/#docker-compose
 [github app]: /ja/docs/how-to/github-app/
 [bencher plus enterprise]: /pricing/?level=enterprise
 [google oauth2]: /ja/docs/how-to/google-oauth/

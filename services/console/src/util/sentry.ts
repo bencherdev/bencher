@@ -5,7 +5,8 @@ const PII = ["forwarded", "-ip", "remote-", "via", "-user"];
 // What Sentry 10 collected with `sendDefaultPii` unset, since Sentry 11 collects more by default.
 export const dataCollection: NonNullable<BrowserOptions["dataCollection"]> = {
 	userInfo: false,
-	cookies: { deny: PII },
+	// The API's own cookies, which the relay puts on the console's origin.
+	cookies: { deny: [...PII, "bencher_"] },
 	httpHeaders: { request: { deny: PII }, response: { deny: PII } },
 	httpBodies: [],
 	urlQueryParams: { deny: PII },

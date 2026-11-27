@@ -8,7 +8,7 @@ import type {
 } from "../src/types/bencher";
 import { unique } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, seed, signedIn, test } from "./fixtures";
+import { expect, seed, signedIn, test, RELAY } from "./fixtures";
 
 // The app the harness configures, which calls itself ChatGPT.
 const CLIENT_ID = "https://client.example/oauth/client.json";
@@ -17,7 +17,7 @@ const CALLBACK = "https://client.example/callback";
 const appsPath = (user: JsonAuthUser) =>
 	`/console/users/${user.user.slug}/apps`;
 const grantsUrl = (user: JsonAuthUser) =>
-	`${seed.api_url}/v0/users/${user.user.slug}/oauth/grants`;
+	`${RELAY}/v0/users/${user.user.slug}/oauth/grants`;
 
 // Each test that connects an app does so for a user of its own, since every
 // app the harness connects looks the same.

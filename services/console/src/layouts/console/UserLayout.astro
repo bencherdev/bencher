@@ -5,15 +5,14 @@ import UserMenu from "../../components/console/menu/UserMenu";
 import UserFallbackMenu from "../../components/console/menu/UserFallbackMenu";
 
 interface Props {
-	apiUrl: string;
 	params: Params;
 	title: string;
 }
 
-const { apiUrl, params, title } = Astro.props;
+const { params, title } = Astro.props;
 ---
 
-<ConsoleLayout apiUrl={apiUrl} params={params} title={title}>
+<ConsoleLayout params={params} title={title}>
   <slot name="head" slot="head" />
   <UserMenu client:only="solid-js" slot="menu">
 	<UserFallbackMenu slot="fallback" />

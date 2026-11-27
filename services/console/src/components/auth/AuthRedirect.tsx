@@ -16,7 +16,8 @@ import { AUTHORIZATION_PARAM, consentPath } from "./authorize/path";
 import { keepBack, signedInPath } from "./back";
 
 const AuthRedirect = (props: {
-	apiUrl?: string;
+	/** Accepts the invite or the claim the address carries. */
+	accept?: boolean;
 	path: string;
 	/** A sign in page keeps its way back; the confirm page only returns to one. */
 	back?: "keep" | "take";
@@ -39,13 +40,13 @@ const AuthRedirect = (props: {
 	}) => {
 		const token = fetcher.user?.token;
 		const invite = fetcher.invite;
-		if (!props.apiUrl || !token || !invite) {
+		if (!props.accept || !token || !invite) {
 			return null;
 		}
 		const accept = {
 			invite,
 		} as JsonAccept;
-		return await httpPost(props.apiUrl, "/v0/auth/accept", token, accept)
+		return await httpPost("/v0/auth/accept", token, accept)
 			.then((_resp) => {
 				navigateNotify(
 					NotifyKind.OK,
@@ -85,18 +86,14 @@ const AuthRedirect = (props: {
 	}) => {
 		const token = fetcher.user?.token;
 		const organization_uuid = fetcher.organization_uuid;
-		if (!props.apiUrl || !token || !organization_uuid) {
+		if (!props.accept || !token || !organization_uuid) {
 			return null;
 		}
 		const path = `/v0/organizations/${organization_uuid}/claim`;
-		return await httpPost(props.apiUrl, path, token, {})
+		return await httpPost(path, token, {})
 			.then(async () => {
 				hiddenRedirect(
-					(await claimedProject(
-						props.apiUrl ?? "",
-						organization_uuid,
-						token,
-					)) ?? "/console",
+					(await claimedProject(organization_uuid, token)) ?? "/console",
 				);
 			})
 			.catch((error) => {
@@ -143,8 +140,8 @@ const AuthRedirect = (props: {
 export default AuthRedirect;
 
 // An unclaimed organization holds the one project its run made; `projectAt` here would split its module out of every console page's entry.
-const claimedProject = (apiUrl: string, organization: string, token: string) =>
-	httpGet(apiUrl, `/v0/organizations/${organization}/projects`, token)
+const claimedProject = (organization: string, token: string) =>
+	httpGet(`/v0/organizations/${organization}/projects`, token)
 		.then((resp) => {
 			const [project]: JsonProject[] = resp?.data ?? [];
 			return project && projectPath(project.slug);

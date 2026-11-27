@@ -69,7 +69,7 @@ const OnboardRun = (props: Props) => {
 			return null;
 		}
 		const path = "/v0/organizations";
-		return await httpGet(props.apiUrl, path, fetcher.token)
+		return await httpGet(path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -124,7 +124,7 @@ const OnboardRun = (props: Props) => {
 			return null;
 		}
 		const path = `/v0/organizations/${fetcher.organization?.slug}/projects`;
-		return await httpGet(props.apiUrl, path, fetcher.token)
+		return await httpGet(path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
 			})

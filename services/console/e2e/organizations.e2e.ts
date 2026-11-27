@@ -11,7 +11,7 @@ import type {
 } from "../src/types/bencher";
 import { createReader, unique } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, seed, signedIn, test } from "./fixtures";
+import { expect, seed, signedIn, test, RELAY } from "./fixtures";
 
 const ORGANIZATIONS = "/console/organizations";
 const heading = (page: Page) =>
@@ -88,7 +88,7 @@ test.describe("Organizations", () => {
 		await expect(page).toHaveURL(/\/console\/projects\/[a-z0-9-]+\/$/);
 
 		// The bootstrap never answers, so the row can come only from the cache.
-		await page.route(`${seed.api_url}/v0/console/users/**`, () => {});
+		await page.route(`${RELAY}/v0/console/users/**`, () => {});
 		await page.goto(ORGANIZATIONS);
 		await expect(
 			table(page).getByRole("row", { name: new RegExp(name) }),

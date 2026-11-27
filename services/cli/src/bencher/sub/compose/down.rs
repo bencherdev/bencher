@@ -10,7 +10,7 @@ use bollard::{
 
 use crate::cli_println;
 
-use super::{Container, DockerError};
+use super::{Container, DockerError, network::remove_network};
 
 #[derive(Debug, Clone)]
 pub struct Down {
@@ -31,6 +31,7 @@ impl SubCmd for Down {
         docker.ping().await.map_err(DockerError::Ping)?;
 
         stop_containers(&docker, self.service).await?;
+        remove_network(&docker).await?;
         cli_println!("🐰 Bencher Self-Hosted has been stopped.");
 
         Ok(())

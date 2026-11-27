@@ -3,10 +3,17 @@
 с помощью следующих переменных окружения:
 
 - `BENCHER_API_URL`: URL для [сервера Bencher API][server config].
+  Сервер Console передаёт на него каждый запрос браузера по пути `/api` на собственном URL Console.
   По умолчанию установлено значение `http://localhost:6610`.
-- `INTERNAL_API_URL`: При использовании сетевой конфигурации Docker, например с `docker compose`,
-  это необходимо для связи контейнеров Docker при использовании локального `BENCHER_API_URL`.
-  Не устанавливайте эту переменную при использовании удалённого `BENCHER_API_URL`, например `https://bencher.example.com`.
+- `INTERNAL_API_URL`: URL, на который сервер Console передаёт запросы вместо `BENCHER_API_URL`,
+  когда достигает сервера API по другому адресу.
+  [Docker Compose][docker compose] задаёт её как `http://bencher_api:6610`,
+  контейнер сервера API в общей для обоих сети Docker,
+  как и [`bencher up`][bencher up], когда `BENCHER_API_URL` не задан или указывает на loopback-адрес, например `localhost`.
+  В остальных случаях по умолчанию не задана.
+- `BENCHER_RELAY_SECRET`: Секрет, который сервер Console разделяет с [параметром `security.relay_secret` сервера API][security].
+  Если на обоих серверах задано одно и то же значение, сервер API доверяет IP-адресу браузера, который передаёт сервер Console,
+  и принимает сессию только в запросе, который передаёт сервер Console.
   По умолчанию не задана.
 - `OAUTH_GITHUB`: Установите в `true`, чтобы включить `Login with GitHub` с использованием [локально размещённого приложения GitHub][github app].
   Это требует [плана Bencher Plus Enterprise][bencher plus enterprise]. По умолчанию не задана.
@@ -14,6 +21,9 @@
   Это требует [плана Bencher Plus Enterprise][bencher plus enterprise]. По умолчанию не задана.
 
 [server config]: /ru/docs/reference/server-config/
+[security]: /ru/docs/reference/server-config/#security
+[bencher up]: /ru/docs/reference/bencher-compose/#bencher-up
+[docker compose]: /ru/docs/reference/bencher-compose/#docker-compose
 [github app]: /ru/docs/how-to/github-app/
 [bencher plus enterprise]: /pricing/?level=enterprise
 [google oauth2]: /ru/docs/how-to/google-oauth/

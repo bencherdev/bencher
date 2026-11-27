@@ -1,12 +1,12 @@
 import type { Page } from "@playwright/test";
 import { createUserKey, unique } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, seed, settle, signedIn, test } from "./fixtures";
+import { expect, seed, settle, signedIn, test, RELAY } from "./fixtures";
 
 const { slug } = seed.member.user;
 const keysPath = `/console/users/${slug}/keys`;
 const tokensPath = `/console/users/${slug}/tokens`;
-const TOKENS = `${seed.api_url}/v0/users/${slug}/tokens`;
+const TOKENS = `${RELAY}/v0/users/${slug}/tokens`;
 
 const status = (page: Page) => page.getByRole("main").getByRole("status");
 

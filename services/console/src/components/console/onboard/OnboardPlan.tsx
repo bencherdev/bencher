@@ -17,7 +17,6 @@ import OnboardSteps from "./OnboardSteps";
 import { OnboardStep } from "./OnboardStepsInner";
 
 export interface Props {
-	apiUrl: string;
 	isBencherCloud: boolean;
 }
 
@@ -63,7 +62,7 @@ const OnboardPlan = (props: Props) => {
 			return;
 		}
 		const path = "/v0/organizations";
-		return await httpGet(props.apiUrl, path, fetcher.token)
+		return await httpGet(path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -100,7 +99,6 @@ const OnboardPlan = (props: Props) => {
 				</div>
 				<br />
 				<BillingPanel
-					apiUrl={props.apiUrl}
 					isBencherCloud={props.isBencherCloud}
 					params={{ organization: organization()?.slug ?? "" }}
 					onboard={true}

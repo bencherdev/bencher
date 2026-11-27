@@ -113,4 +113,18 @@ Si elle n'est pas spécifiée, les valeurs par défaut énumérées seront utili
 |    free     | 10737418240  | 10737418240  |  Non   | Octets maximum par jour pour les organisations gratuites (réclamées, sans plan payant). Par défaut 10 Gio. |
 |    plus     | 107374182400 | 107374182400 |  Non   | Octets maximum par jour pour les organisations Plus (Pro/Enterprise). Par défaut 100 Gio.  |
 
+#### `email`
+
+Le limiteur de débit `email` s'applique par adresse e-mail, aux e-mails qui démarrent une connexion.
+Il contient des limites `minute`, `hour` et `day`.
+Toute la section est facultative.
+Si elle n'est pas spécifiée, les valeurs par défaut énumérées seront utilisées.
+Une adresse à sa limite ne reçoit pas de nouvel e-mail, et sa connexion précédente fonctionne toujours.
+
+|       Nom        | Exemple | Défaut | Requis |                           Description                                          |
+| :--------------: | :-----: | :----: | :----: | :----------------------------------------------------------------------------: |
+|      minute      |    2    |   2    |  Non   |          E-mails de connexion maximum par minute par adresse e-mail.           |
+|       hour       |    6    |   6    |  Non   |           E-mails de connexion maximum par heure par adresse e-mail.           |
+|       day        |    12   |   12   |  Non   |           E-mails de connexion maximum par jour par adresse e-mail.            |
+
 [unclaimed projects]: /fr/docs/how-to/claim/#unclaimed-projects
