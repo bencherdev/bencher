@@ -183,6 +183,11 @@ async fn run_post_claim_of_an_organization_claimed_meanwhile_conflicts() {
     let text = resp.text().await.expect("Failed to read the response");
     assert_eq!(status, StatusCode::CONFLICT, "{text}");
     assert!(text.contains("has already been claimed"), "{text}");
+    assert_eq!(
+        server.project_organization_roles(project_slug),
+        0,
+        "the refused claim wrote a role"
+    );
 }
 
 // POST /v0/run - a run made with a project key names that key on its report

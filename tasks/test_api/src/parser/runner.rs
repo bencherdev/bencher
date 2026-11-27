@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use bencher_json::{Jwt, Url};
+use bencher_json::Url;
 use clap::Parser;
 
 /// Run runner smoke test (docker pull/push + bencher run --image)
@@ -10,24 +10,17 @@ pub struct TaskRunner {
     #[clap(long)]
     pub url: Option<Url>,
 
-    /// Admin token for runner key rotation
-    #[clap(long, requires = "with_daemon")]
-    pub admin_token: Option<Jwt>,
-
     /// Username for OCI authentication (email address)
     #[clap(long)]
     pub username: Option<String>,
-
-    /// User session token, which creates the user API keys the test logs in to the registry with
-    #[clap(long)]
-    pub token: Option<Jwt>,
 
     /// Start a runner daemon locally for the test
     #[clap(long)]
     pub with_daemon: bool,
 
     /// The API's log, where a server that sends no email writes each sign-in email,
-    /// to make keys from a browser session signed in by its code rather than by the tokens
+    /// to sign the seed's users in by its code and make keys from their sessions.
+    /// Dev's API is read from its Fly.io logs.
     #[clap(long)]
     pub api_log: Option<PathBuf>,
 }

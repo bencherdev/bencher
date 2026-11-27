@@ -326,11 +326,17 @@ mod tests {
             run_migrations(&mut conn).unwrap();
             let fixture = create_job_fixture(&mut conn);
             // A short wait for a connection, so a test that holds both waits out the pool quickly.
+            // Building the pool would wait only that long for both connections to open, which a busy
+            // machine can take longer to do, so they open first, with time to spare.
             let reader = Pool::builder()
                 .max_size(2)
                 .connection_timeout(Duration::from_millis(50))
-                .build(ConnectionManager::<DbConnection>::new(&path))
-                .unwrap();
+                .build_unchecked(ConnectionManager::<DbConnection>::new(&path));
+            let opened = [
+                reader.get_timeout(Duration::from_secs(30)).unwrap(),
+                reader.get_timeout(Duration::from_secs(30)).unwrap(),
+            ];
+            drop(opened);
             let connection = Arc::new(tokio::sync::Mutex::new(conn));
             let key = CallbackKey::new(&secret("callbacks-test-secret")).unwrap();
             let sender = Arc::new(ScriptedSender {

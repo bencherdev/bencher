@@ -1720,15 +1720,14 @@ mod concurrency_safety {
 // Auth Cross-validation Tests
 // =============================================================================
 
-// A valid user JWT token should be rejected on runner channel endpoint
+// A valid user API key, not a runner key, should be rejected on the runner channel endpoint
 #[tokio::test]
-async fn user_jwt_rejected_on_runner_endpoint() {
+async fn user_key_rejected_on_runner_endpoint() {
     let server = TestServer::new().await;
-    let admin = server.signup("Admin", "userjwt@example.com").await;
+    let admin = server.signup("Admin", "userkey@example.com").await;
 
-    let runner = create_runner(&server, &admin.token, "JWT Test Runner").await;
+    let runner = create_runner(&server, &admin.token, "User Key Test Runner").await;
 
-    // Use the user's JWT (not a runner key) on the runner channel endpoint
     let result = try_connect_channel_ws(&server, runner.uuid, &admin.token).await;
     match result {
         Err(_) => {},

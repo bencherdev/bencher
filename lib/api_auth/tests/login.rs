@@ -176,10 +176,7 @@ async fn login_link_returns_to_a_pending_authorization() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/oauth/authorizations/{answered}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&JsonOAuthDecision {
             approve: true,
             key: None,

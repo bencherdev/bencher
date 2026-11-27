@@ -47,7 +47,8 @@ pub struct TaskOci {
     pub password: Option<UserKey>,
 
     /// The API's log, where a server that sends no email writes each sign-in email,
-    /// to make the admin's key from a browser session signed in by its code
+    /// to make the admin's key from a browser session signed in by its code when no password is
+    /// given. Dev's API is read from its Fly.io logs.
     #[clap(long)]
     pub api_log: Option<PathBuf>,
 }

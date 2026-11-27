@@ -345,9 +345,10 @@ async fn cross_site_posts_and_puts_are_refused() {
 
     let keys_path = format!("/v0/users/{}/keys", user.slug);
     let key = json!({"name": "cross-site-key"});
+    let keys = user_key_count(&server);
     let resp = send(&server, Method::POST, &keys_path, &token, &cross_site, &key).await;
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
-    assert_eq!(user_key_count(&server), 0);
+    assert_eq!(user_key_count(&server), keys);
     let resp = send(
         &server,
         Method::POST,
@@ -358,7 +359,7 @@ async fn cross_site_posts_and_puts_are_refused() {
     )
     .await;
     assert_eq!(resp.status(), StatusCode::CREATED);
-    assert_eq!(user_key_count(&server), 1);
+    assert_eq!(user_key_count(&server), keys + 1);
 
     let threshold_path = format!(
         "/v0/projects/{}/thresholds/{}",
@@ -599,7 +600,7 @@ async fn get_session_needs_a_session_cookie() {
         .get(server.api_url("/v0/auth/session"))
         .header(
             bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
+            bencher_json::bearer_header(server.session_jwt(&user)),
         )
         .send()
         .await

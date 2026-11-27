@@ -15,7 +15,7 @@
 //! leaked key cannot outlive its own revocation or tamper with the user's keys.
 
 use bencher_api_tests::{
-    TestServer, TestUser,
+    TEST_USER_KEY_NAME, TestServer, TestUser,
     helpers::{TestToken, seed_token},
     session_cookie,
 };
@@ -24,7 +24,7 @@ use bencher_json::{
     JsonUserKeys, UserKey, UserKeyUuid,
 };
 use bencher_schema::error::INVALID_CREDENTIAL;
-use http::StatusCode;
+use http::{HeaderMap, StatusCode};
 
 /// Mint a key for `user` in a session they signed in to now.
 async fn mint_key(server: &TestServer, user: &TestUser, name: &str) -> UserKey {
@@ -41,13 +41,50 @@ async fn mint_key(server: &TestServer, user: &TestUser, name: &str) -> UserKey {
     created.key
 }
 
-async fn setup() -> (TestServer, String, String, UserKey) {
+/// A server and a user with a key named `primary-key`, beside the key every test user is made with,
+/// and a session of theirs.
+async fn setup() -> (TestServer, String, HeaderMap, UserKey) {
     let server = TestServer::new().await;
     let user = server.signup("Key User", "userkey-setup@example.com").await;
     let user_slug_ref: &str = user.slug.as_ref();
     let user_slug: String = user_slug_ref.to_owned();
     let key = mint_key(&server, &user, "primary-key").await;
-    (server, user_slug, user.token, key)
+    let session = server.fresh_session(&user);
+    (server, user_slug, session, key)
+}
+
+/// The user's live keys, by UUID and name, as their session lists them.
+async fn keys(
+    server: &TestServer,
+    user_slug: &str,
+    session: &HeaderMap,
+) -> Vec<(UserKeyUuid, String)> {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
+        .headers(session.clone())
+        .send()
+        .await
+        .expect("list failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let keys: JsonUserKeys = resp.json().await.expect("list parse");
+    keys.0
+        .into_iter()
+        .map(|key| (key.uuid, key.name.to_string()))
+        .collect()
+}
+
+/// The UUID of the user's key named `primary-key`.
+async fn primary_key_uuid(
+    server: &TestServer,
+    user_slug: &str,
+    session: &HeaderMap,
+) -> UserKeyUuid {
+    keys(server, user_slug, session)
+        .await
+        .into_iter()
+        .find_map(|(uuid, name)| (name == "primary-key").then_some(uuid))
+        .expect("No primary key")
 }
 
 // --- Positive cases: a user key is a drop-in JWT replacement -----------------
@@ -154,7 +191,8 @@ async fn user_key_create_project_on_personal_org() {
 
 #[tokio::test]
 async fn user_key_cannot_mint_another_user_key() {
-    let (server, user_slug, token, key) = setup().await;
+    let (server, user_slug, session, key) = setup().await;
+    let before = keys(&server, &user_slug, &session).await;
 
     // A user key cannot mint another user key: a leaked key must not be able
     // to establish persistence that survives its own revocation.
@@ -172,24 +210,11 @@ async fn user_key_cannot_mint_another_user_key() {
 
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-    // No key was created: the JWT still sees only the original key.
-    let resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let keys: JsonUserKeys = resp.json().await.expect("Failed to parse keys");
-    assert_eq!(keys.0.len(), 1);
+    // No key was created: the session still sees only the keys there were.
+    assert_eq!(keys(&server, &user_slug, &session).await, before);
 }
 
-// A browser session passes the key gate, as a session JWT does.
+// A browser session passes the gate that stops a user key from minting another.
 #[tokio::test]
 async fn session_cookie_mints_a_user_key() {
     let server = TestServer::new().await;
@@ -316,30 +341,16 @@ async fn unknown_user_key_rejected() {
 
 #[tokio::test]
 async fn revoked_user_key_rejected() {
-    let (server, user_slug, token, key) = setup().await;
+    let (server, user_slug, session, key) = setup().await;
 
     // Discover the key's UUID via list.
-    let list_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
-        .send()
-        .await
-        .expect("list failed");
-    let keys: JsonUserKeys = list_resp.json().await.expect("list parse");
-    let key_uuid = keys.0[0].uuid;
+    let key_uuid = primary_key_uuid(&server, &user_slug, &session).await;
 
     // Revoke with the session.
     let del_resp = server
         .client
         .delete(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, key_uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
+        .headers(session)
         .send()
         .await
         .expect("delete failed");
@@ -361,28 +372,14 @@ async fn revoked_user_key_rejected() {
 
 #[tokio::test]
 async fn second_revoke_returns_conflict() {
-    let (server, user_slug, token, _key) = setup().await;
-    let list_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
-        .send()
-        .await
-        .expect("list failed");
-    let keys: JsonUserKeys = list_resp.json().await.expect("list parse");
-    let key_uuid = keys.0[0].uuid;
+    let (server, user_slug, session, _key) = setup().await;
+    let key_uuid = primary_key_uuid(&server, &user_slug, &session).await;
 
     for (i, expected) in [(0, StatusCode::NO_CONTENT), (1, StatusCode::CONFLICT)] {
         let resp = server
             .client
             .delete(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, key_uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(&token),
-            )
+            .headers(session.clone())
             .send()
             .await
             .expect("delete failed");
@@ -395,7 +392,8 @@ async fn second_revoke_returns_conflict() {
 // Fails if key POST accepts a deprecated user API token as a user session.
 #[tokio::test]
 async fn api_token_cannot_mint_user_key() {
-    let (server, user_slug, token, _key, api_token, _user) = setup_api_token().await;
+    let (server, user_slug, session, _key, api_token, _user) = setup_api_token().await;
+    let before = keys(&server, &user_slug, &session).await;
 
     let resp = server
         .client
@@ -410,35 +408,21 @@ async fn api_token_cannot_mint_user_key() {
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-    // No key was created: the session still sees only the original key.
-    let resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-    let keys: JsonUserKeys = resp.json().await.expect("Failed to parse keys");
-    assert_eq!(keys.0.len(), 1);
+    // No key was created: the session still sees only the keys there were.
+    assert_eq!(keys(&server, &user_slug, &session).await, before);
 }
 
 // Fails if key list accepts a user API key or a deprecated user API token.
 #[tokio::test]
 async fn list_user_keys_requires_session() {
-    let (server, user_slug, token, key, api_token, user) = setup_api_token().await;
+    let (server, user_slug, session, key, api_token, user) = setup_api_token().await;
     let _sibling = mint_key(&server, &user, "sibling-key").await;
 
+    // The key the user was made with, the primary key, and its sibling.
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
+        .headers(session)
         .send()
         .await
         .expect("Request failed");
@@ -447,10 +431,10 @@ async fn list_user_keys_requires_session() {
         resp.headers()
             .get("x-total-count")
             .and_then(|v| v.to_str().ok()),
-        Some("2")
+        Some("3")
     );
     let keys: JsonUserKeys = resp.json().await.expect("Failed to parse keys");
-    assert_eq!(keys.0.len(), 2);
+    assert_eq!(keys.0.len(), 3);
 
     for bearer in [key.as_ref(), api_token.token.as_ref()] {
         let resp = server
@@ -470,8 +454,8 @@ async fn list_user_keys_requires_session() {
 // Fails if key view accepts a user API key, even on itself, or a deprecated user API token.
 #[tokio::test]
 async fn view_user_key_requires_session() {
-    let (server, user_slug, token, key, api_token, _user) = setup_api_token().await;
-    let key_uuid = only_key_uuid(&server, &user_slug, &token).await;
+    let (server, user_slug, session, key, api_token, _user) = setup_api_token().await;
+    let key_uuid = primary_key_uuid(&server, &user_slug, &session).await;
 
     for bearer in [key.as_ref(), api_token.token.as_ref()] {
         let resp = server
@@ -491,8 +475,8 @@ async fn view_user_key_requires_session() {
 // Fails if key PATCH accepts a user API key, even on itself, or a deprecated user API token.
 #[tokio::test]
 async fn rename_user_key_requires_session() {
-    let (server, user_slug, token, key, api_token, _user) = setup_api_token().await;
-    let key_uuid = only_key_uuid(&server, &user_slug, &token).await;
+    let (server, user_slug, session, key, api_token, _user) = setup_api_token().await;
+    let key_uuid = primary_key_uuid(&server, &user_slug, &session).await;
 
     for bearer in [key.as_ref(), api_token.token.as_ref()] {
         let resp = server
@@ -513,10 +497,7 @@ async fn rename_user_key_requires_session() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, key_uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
+        .headers(session)
         .send()
         .await
         .expect("view failed");
@@ -529,8 +510,8 @@ async fn rename_user_key_requires_session() {
 // Fails if key DELETE accepts a user API key, even on itself, or a deprecated user API token.
 #[tokio::test]
 async fn revoke_user_key_requires_session() {
-    let (server, user_slug, token, key, api_token, _user) = setup_api_token().await;
-    let key_uuid = only_key_uuid(&server, &user_slug, &token).await;
+    let (server, user_slug, session, key, api_token, _user) = setup_api_token().await;
+    let key_uuid = primary_key_uuid(&server, &user_slug, &session).await;
 
     for bearer in [key.as_ref(), api_token.token.as_ref()] {
         let resp = server
@@ -560,7 +541,7 @@ async fn revoke_user_key_requires_session() {
     assert_eq!(resp.status(), StatusCode::OK);
 }
 
-async fn setup_api_token() -> (TestServer, String, String, UserKey, TestToken, TestUser) {
+async fn setup_api_token() -> (TestServer, String, HeaderMap, UserKey, TestToken, TestUser) {
     let server = TestServer::new().await;
     let user = server
         .signup("Token User", "apitoken-setup@example.com")
@@ -569,24 +550,8 @@ async fn setup_api_token() -> (TestServer, String, String, UserKey, TestToken, T
     let user_slug: String = user_slug_ref.to_owned();
     let key = mint_key(&server, &user, "primary-key").await;
     let api_token = seed_token(&server, &user, "legacy-token");
-    let token = user.token.clone();
-    (server, user_slug, token, key, api_token, user)
-}
-
-async fn only_key_uuid(server: &TestServer, user_slug: &str, token: &str) -> UserKeyUuid {
-    let resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(token),
-        )
-        .send()
-        .await
-        .expect("list failed");
-    let keys: JsonUserKeys = resp.json().await.expect("list parse");
-    assert_eq!(keys.0.len(), 1);
-    keys.0.first().expect("one key").uuid
+    let session = server.fresh_session(&user);
+    (server, user_slug, session, key, api_token, user)
 }
 
 // --- `same_user!` enforcement ------------------------------------------------
@@ -604,10 +569,7 @@ async fn user_a_cannot_list_user_b_keys() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/users/{}/keys", user_b_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user_a.token),
-        )
+        .headers(server.fresh_session(&user_a))
         .send()
         .await
         .expect("Request failed");
@@ -646,10 +608,7 @@ async fn admin_can_list_user_b_keys() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/users/{}/keys", user_b_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
+        .headers(server.fresh_session(&admin))
         .send()
         .await
         .expect("Request failed");
@@ -688,29 +647,14 @@ async fn distinct_keys_have_distinct_hashes() {
 
 #[tokio::test]
 async fn view_and_rename_user_key() {
-    let (server, user_slug, token, _key) = setup().await;
-
-    let list_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
-        .send()
-        .await
-        .expect("list failed");
-    let keys: JsonUserKeys = list_resp.json().await.expect("list parse");
-    let key_uuid = keys.0[0].uuid;
+    let (server, user_slug, session, _key) = setup().await;
+    let key_uuid = primary_key_uuid(&server, &user_slug, &session).await;
 
     // View
     let view_resp = server
         .client
         .get(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, key_uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
+        .headers(session.clone())
         .send()
         .await
         .expect("view failed");
@@ -723,10 +667,7 @@ async fn view_and_rename_user_key() {
     let patch_resp = server
         .client
         .patch(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, key_uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
+        .headers(session)
         .json(&serde_json::json!({"name": "renamed-key"}))
         .send()
         .await
@@ -889,15 +830,12 @@ async fn user_keys_sort_created() {
 
     let names = |query: &'static str| {
         let server = &server;
-        let token = &user.token;
+        let session = server.fresh_session(&user);
         async move {
             let resp = server
                 .client
                 .get(server.api_url(&format!("/v0/users/{}/keys?{}", user_slug, query)))
-                .header(
-                    bencher_json::AUTHORIZATION,
-                    bencher_json::bearer_header(token),
-                )
+                .headers(session)
                 .send()
                 .await
                 .expect("Request failed");
@@ -910,11 +848,19 @@ async fn user_keys_sort_created() {
         }
     };
 
-    assert_eq!(names("per_page=2").await, ["alpha", "bravo"]);
-    assert_eq!(names("sort=created&per_page=2").await, ["charlie", "alpha"]);
-    assert_eq!(names("sort=created&per_page=2&page=2").await, ["bravo"]);
+    // The key the user was made with sorts first both ways: by name, since an upper case letter
+    // sorts before a lower case one, and by when it was made.
+    assert_eq!(names("per_page=2").await, [TEST_USER_KEY_NAME, "alpha"]);
+    assert_eq!(
+        names("sort=created&per_page=2").await,
+        [TEST_USER_KEY_NAME, "charlie"]
+    );
+    assert_eq!(
+        names("sort=created&per_page=2&page=2").await,
+        ["alpha", "bravo"]
+    );
     assert_eq!(
         names("sort=created&direction=desc").await,
-        ["bravo", "alpha", "charlie"]
+        ["bravo", "alpha", "charlie", TEST_USER_KEY_NAME]
     );
 }

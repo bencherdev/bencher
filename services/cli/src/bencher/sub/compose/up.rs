@@ -358,6 +358,10 @@ mod tests {
             "BENCHER_API_URL=http://127.0.0.1:6610",
             "BENCHER_API_URL=http://127.5.6.7:6610",
             "BENCHER_API_URL=http://[::1]:6610",
+            "BENCHER_API_URL=http://[::ffff:127.0.0.1]:6610",
+            "BENCHER_API_URL=http://0.0.0.0:6610",
+            "BENCHER_API_URL=http://[::]:6610",
+            "BENCHER_API_URL=http://localhost.:6610",
         ] {
             assert_eq!(
                 env(Container::Console, &[local]),
@@ -407,14 +411,18 @@ mod tests {
 
     // Kills a console handed an empty API URL, which Docker passes over the image's default and
     // the console rejects as missing, one handed an empty relay, which the console ignores in
-    // place of the API container, one that keeps an earlier value Docker would not take, and one
-    // that changes the API's environment.
+    // place of the API container, one that keeps an earlier value Docker would not take, one that
+    // touches an empty value a later one overrides, and one that changes the API's environment.
     #[test]
     fn an_empty_api_url_is_left_out_for_the_default() {
         let remote = "BENCHER_API_URL=https://api.example.com";
         for (user, console) in [
             (vec!["BENCHER_API_URL="], vec![RELAY_TO_API]),
             (vec![remote, "BENCHER_API_URL="], vec![RELAY_TO_API]),
+            (
+                vec!["BENCHER_API_URL=", remote],
+                vec!["BENCHER_API_URL=", remote],
+            ),
             (vec!["INTERNAL_API_URL="], vec![RELAY_TO_API]),
             (vec![USER_RELAY, "INTERNAL_API_URL="], vec![RELAY_TO_API]),
             (vec![remote, "INTERNAL_API_URL="], vec![remote]),

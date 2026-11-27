@@ -1,29 +1,45 @@
 use bencher_json::{
-    DateTime, Email, EmailChangeSecret, InviteSecret, JsonConfirm, JsonNewOrganization,
-    JsonNewProject, JsonNewUserKey, JsonOrganization, JsonProject, JsonSignup, JsonUserKeyCreated,
-    OrganizationSlug, OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName, SessionMethod,
-    SessionToken, UserKey, UserName, UserSlug, UserUuid, organization::member::OrganizationRole,
-    system::auth::JsonAuthUser,
+    DateTime, Email, EmailChangeSecret, InviteSecret, JsonNewOrganization, JsonNewProject,
+    JsonNewUserKey, JsonOrganization, JsonProject, JsonUserKeyCreated, Jwt, OrganizationSlug,
+    OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName, SessionMethod, SessionToken, UserKey,
+    UserName, UserSlug, UserUuid, organization::member::OrganizationRole,
 };
 #[cfg(feature = "plus")]
 use bencher_json::{JsonProjectKeyCreated, ProjectKey};
-use bencher_schema::model::{
-    organization::{QueryOrganization, invite::InsertInvite},
-    user::{
-        QueryUser,
-        email_change::InsertEmailChange,
-        session::{InsertSession, QuerySession, cookie::SessionCookie},
+#[cfg(feature = "plus")]
+use bencher_schema::model::organization::sso::QuerySso;
+use bencher_schema::{
+    CLIENT_TOKEN_TTL,
+    context::DbConnection,
+    model::{
+        organization::{QueryOrganization, invite::InsertInvite},
+        user::{
+            InsertUser, QueryUser,
+            email_change::InsertEmailChange,
+            key::InsertUserKey,
+            session::{
+                InsertSession, QuerySession,
+                cookie::{PendingCookie, SessionCookie},
+            },
+        },
     },
+    schema,
 };
-use reqwest::header::{COOKIE, HeaderMap, HeaderValue};
+use diesel::RunQueryDsl as _;
+use reqwest::{
+    StatusCode,
+    header::{CONTENT_TYPE, COOKIE, HeaderMap, HeaderValue, SET_COOKIE},
+};
 
-use crate::TestServer;
+use crate::{LogCapture, TestServer};
 
 /// The `User-Agent` a test session signs in with.
 const SESSION_USER_AGENT: &str =
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.6; rv:131.0) Gecko/20100101 Firefox/131.0";
+/// The name of the user API key every test user is made with.
+pub const TEST_USER_KEY_NAME: &str = "Test User Key";
 
-/// A test user with their JWT token
+/// A test user, with the user API key their bearer requests send.
 pub struct TestUser {
     pub uuid: UserUuid,
     pub name: UserName,
@@ -52,13 +68,13 @@ pub struct TestProjectKey {
 }
 
 impl TestServer {
-    /// Sign up a new user and return their info with a valid token.
-    /// This creates the user via the signup endpoint and confirms them.
+    /// Sign up a new user, the server admin if they are the first, with a user API key.
     pub async fn signup(&self, name: &str, email: &str) -> TestUser {
         self.signup_with_claim(name, email, None).await
     }
 
-    /// Sign up a new user with an optional organization claim, then confirm them.
+    /// Sign up a new user who claims the organization, if it is unclaimed, with a user API key.
+    /// The account is made as a sign-in that proves the email makes one, on the API's own writer.
     #[expect(clippy::expect_used, reason = "test helper for user signup flow")]
     pub async fn signup_with_claim(
         &self,
@@ -68,78 +84,39 @@ impl TestServer {
     ) -> TestUser {
         let email: Email = email.parse().expect("Invalid email");
         let name: UserName = name.parse().expect("Invalid name");
-
-        #[cfg(feature = "plus")]
-        let body = JsonSignup {
-            name: name.clone(),
-            slug: None,
-            email: email.clone(),
-            plan: None,
-            invite: None,
-            claim,
-            i_agree: true,
-            recaptcha_token: None,
-            authorization: None,
-        };
-        #[cfg(not(feature = "plus"))]
-        let body = JsonSignup {
-            name: name.clone(),
-            slug: None,
-            email: email.clone(),
-            invite: None,
-            claim,
-            i_agree: true,
-        };
-
-        let resp = self
-            .client
-            .post(self.api_url("/v0/auth/signup"))
-            .json(&body)
-            .send()
-            .await
-            .expect("Failed to send signup request");
-
-        assert!(
-            resp.status().is_success(),
-            "Signup failed: {}",
-            resp.text().await.unwrap_or_default()
-        );
-
-        // Generate an auth token to confirm the user
-        let auth_token = self
-            .token_key()
-            .new_auth(email.clone(), u32::MAX)
-            .expect("Failed to generate auth token");
-
-        // Confirm the user to get their actual data and a client token
-        let confirm_body = JsonConfirm { token: auth_token };
-
-        let confirm_resp = self
-            .client
-            .post(self.api_url("/v0/auth/confirm"))
-            .json(&confirm_body)
-            .send()
-            .await
-            .expect("Failed to send confirm request");
-
-        assert!(
-            confirm_resp.status().is_success(),
-            "Confirm failed: {}",
-            confirm_resp.text().await.unwrap_or_default()
-        );
-
-        let auth_user: JsonAuthUser = confirm_resp
-            .json()
-            .await
-            .expect("Failed to parse confirm response");
+        let now = self.context().clock.now();
+        let mut conn = self.context().database.connection.lock().await;
+        let user = sign_up(&mut conn, name, &email, claim, now);
+        let (insert_key, key) = InsertUserKey::from_json(
+            user.id,
+            JsonNewUserKey {
+                name: TEST_USER_KEY_NAME.parse().expect("Invalid user key name"),
+                ttl: None,
+            },
+            now,
+        )
+        .expect("Failed to make a user key");
+        diesel::insert_into(schema::user_key::table)
+            .values(&insert_key)
+            .execute(&mut *conn)
+            .expect("Failed to insert the user key");
 
         TestUser {
-            uuid: auth_user.user.uuid,
-            name: auth_user.user.name,
-            slug: auth_user.user.slug,
-            email: auth_user.user.email,
-            token: auth_user.token.into(),
+            uuid: user.uuid,
+            name: user.name,
+            slug: user.slug,
+            email: user.email,
+            token: key.into(),
         }
+    }
+
+    /// A session JWT for the user, as the old sign-in's confirmation minted one, for the tests that
+    /// pin how the API treats one.
+    #[expect(clippy::expect_used, reason = "test helper minting a session JWT")]
+    pub fn session_jwt(&self, user: &TestUser) -> Jwt {
+        self.token_key()
+            .new_client(user.email.clone(), CLIENT_TOKEN_TTL)
+            .expect("Failed to mint a session JWT")
     }
 
     /// Sign the user in to a new browser session now, returning the session cookie's value.
@@ -175,6 +152,38 @@ impl TestServer {
             .insert(&mut conn, now)
             .expect("Failed to insert session");
         token
+    }
+
+    /// Sign `email` in from the console by the code in the sign-in email, which the server logs to
+    /// `log` in place of sending it, and return the session's cookie value.
+    #[expect(clippy::expect_used, reason = "test helper signing in")]
+    pub async fn sign_in_by_email(&self, email: &str, log: &LogCapture) -> String {
+        let resp = self
+            .client
+            .post(self.api_url("/v0/auth/email"))
+            .header("Sec-Fetch-Site", "same-origin")
+            .header(CONTENT_TYPE, "application/json")
+            .body(format!(r#"{{"email":"{email}"}}"#))
+            .send()
+            .await
+            .expect("Failed to start a sign-in");
+        assert_eq!(resp.status(), StatusCode::ACCEPTED, "Sign-in not started");
+        let pending = PendingCookie::new(&self.context().console_url);
+        let binding =
+            cookie_value(resp.headers(), pending.name()).expect("No pending sign-in cookie");
+        let (code, _link) = log.sign_in();
+        let resp = self
+            .client
+            .post(self.api_url("/v0/auth/code"))
+            .header(COOKIE, format!("{}={binding}", pending.name()))
+            .header("Sec-Fetch-Site", "same-origin")
+            .header(CONTENT_TYPE, "application/json")
+            .body(format!(r#"{{"code":"{}"}}"#, code.as_ref()))
+            .send()
+            .await
+            .expect("Failed to send the code");
+        assert_eq!(resp.status(), StatusCode::OK, "Code not taken");
+        cookie_value(resp.headers(), SessionCookie::Host.name()).expect("No session cookie")
     }
 
     /// Invite `email` to the organization from `inviter` now, as an invitation makes its row, and
@@ -392,17 +401,73 @@ impl TestServer {
         let key_created: JsonUserKeyCreated = resp.json().await.expect("Failed to parse user key");
         key_created.key
     }
+}
 
-    /// Create a user with a confirmed account (bypassing email confirmation).
-    /// This inserts directly into the database for testing authenticated endpoints.
-    pub async fn create_confirmed_user(&self, name: &str, email: &str) -> TestUser {
-        // For now, use signup flow
-        // In a full implementation, we'd insert directly into DB and skip email confirmation
-        self.signup(name, email).await
+/// Make the account a sign-in that proves `email` makes: the user, the server admin if the first,
+/// who claims the organization if it is unclaimed or else leads a personal one, with the email
+/// verified and every organization its SSO domain names joined.
+#[expect(clippy::expect_used, reason = "test helper making an account")]
+fn sign_up(
+    conn: &mut DbConnection,
+    name: UserName,
+    email: &Email,
+    claim: Option<OrganizationUuid>,
+    now: DateTime,
+) -> QueryUser {
+    let (_insert_user, user) =
+        InsertUser::sign_up(conn, name, None, email.clone()).expect("Failed to sign up");
+    let claimed = if let Some(claim) = claim
+        && let Some(organization) =
+            QueryOrganization::find(conn, claim).expect("Failed to find the organization")
+    {
+        organization
+            .claim_with(conn, user.id, now)
+            .expect("Failed to claim the organization")
+            .is_some()
+    } else {
+        false
+    };
+    if !claimed {
+        InsertUser::personal_organization(conn, &user)
+            .expect("Failed to make the personal organization");
     }
+    QueryUser::verify_email(conn, user.id, email, now).expect("Failed to verify the email");
+    #[cfg(feature = "plus")]
+    QuerySso::join_all_with(conn, &user, now).expect("Failed to join by SSO");
+    user
 }
 
 /// The `Cookie` header that presents a session, in the form the test server's console URL calls for.
 pub fn session_cookie(token: &SessionToken) -> String {
     format!("{}={}", SessionCookie::Host.name(), token.as_ref())
+}
+
+/// The value a `Set-Cookie` header in `headers` gives the cookie `name`.
+fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
+    headers
+        .get_all(SET_COOKIE)
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .find_map(|cookie| {
+            cookie
+                .split(';')
+                .next()?
+                .strip_prefix(name)?
+                .strip_prefix('=')
+                .map(ToOwned::to_owned)
+        })
+}
+
+/// The headers of a request that presents `token` as its bearer, as [`TestServer::fresh_session`]
+/// gives the headers of one that presents a session.
+#[expect(clippy::expect_used, reason = "test helper building headers")]
+pub fn bearer(token: &str) -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        bencher_json::AUTHORIZATION,
+        bencher_json::bearer_header(token)
+            .parse()
+            .expect("Invalid bearer header"),
+    );
+    headers
 }
