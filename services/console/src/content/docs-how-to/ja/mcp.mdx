@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "ホスト型 MCP サーバーで AI エージェントやアシスタントを Bencher に接続し、ベンチマークデータの照会と結果の送信を行います"
 heading: "Bencher MCP の使い方"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-28T19:00:00Z"
+modified: "2026-11-27T23:40:00Z"
 sortOrder: 11
 ---
 
@@ -112,7 +112,7 @@ Bencher MCP は Bencher API と同じ `Authorization: Bearer` 認証情報も受
 サーバーで OAuth が設定されている場合、匿名のツール呼び出しにサインインが必要なときは、Bencher MCP がクライアントにサインインを求めます:
 
 - プライベートプロジェクトの読み取り。存在しないプロジェクトにも同じ応答が返るため、プロジェクトや ID を打ち間違えた場合も、パブリックプロジェクト内であっても、サインインを求められます。
-- 書き込みを行うツールの呼び出し。ただし [`unclaimed` プロジェクト](/ja/docs/how-to/claim/#unclaimed-プロジェクト)への `submit_run` は除きます。
+- `submit_run` を含む、書き込みを行うツールの呼び出し。
 - `list_projects` による組織のプロジェクト一覧の取得。
 - 匿名のレート制限の超過。
 

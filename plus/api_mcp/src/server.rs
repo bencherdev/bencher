@@ -4,7 +4,10 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
-use bencher_schema::context::ApiContext;
+use bencher_schema::{
+    context::ApiContext,
+    error::{BEARER_AUTH_FORMAT, unauthorized_error},
+};
 use dropshot::{Body, ClientErrorStatusCode, HttpError};
 use futures::FutureExt as _;
 use http::Response;
@@ -24,7 +27,7 @@ use slog::Logger;
 
 use crate::{
     principal::{Caller, Challenge, ClientStyle, McpPrincipal, SignInReason, resource_metadata},
-    tools::{McpTool, error_result},
+    tools::{Anonymous, McpTool, error_result},
     ui,
 };
 
@@ -179,6 +182,17 @@ impl ServerHandler for BencherMcp {
         if !principal.permits(tool.access()) {
             return Ok(self
                 .challenge(Challenge::InsufficientScope, &context.meta)
+                .into());
+        }
+        // A tool that refuses an anonymous caller never runs for one,
+        // even where its REST endpoint would serve the call
+        if principal.is_anonymous() && matches!(tool.anonymous(), Anonymous::Refused) {
+            let error = unauthorized_error(format!(
+                "Authentication required to use {tool}. {BEARER_AUTH_FORMAT}",
+                tool = tool.name()
+            ));
+            return Ok(self
+                .tool_error(tool, principal, error, &context.meta)
                 .into());
         }
 

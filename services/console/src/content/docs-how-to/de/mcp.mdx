@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "Verbinden Sie KI-Agenten und Assistenten über den gehosteten MCP-Server mit Bencher, um Benchmark-Daten abzufragen und Ergebnisse zu übermitteln"
 heading: "So verwenden Sie Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-28T19:00:00Z"
+modified: "2026-11-27T23:40:00Z"
 sortOrder: 11
 ---
 
@@ -112,7 +112,7 @@ Anonyme Anfragen teilen sich ein Rate Limit pro IP-Adresse, während angemeldete
 Wenn auf dem Server OAuth konfiguriert ist, fordert Bencher MCP Ihren Client zur Anmeldung auf, wenn ein anonymer Tool-Aufruf dies erfordert:
 
 - Beim Lesen eines privaten Projekts. Ein Projekt, das nicht existiert, erhält dieselbe Antwort, daher führt auch ein falsch geschriebenes Projekt oder eine falsch geschriebene ID, selbst innerhalb eines öffentlichen Projekts, zu einer Aufforderung zur Anmeldung.
-- Beim Aufruf eines Tools, das schreibt, außer `submit_run` für ein [`unclaimed` Projekt](/de/docs/how-to/claim/#unclaimed-projekte).
+- Beim Aufruf eines Tools, das schreibt, einschließlich `submit_run`.
 - Beim Auflisten der Projekte einer Organisation mit `list_projects`.
 - Beim Überschreiten des anonymen Rate Limits.
 

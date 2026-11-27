@@ -44,7 +44,8 @@ There are three ways to call it:
 - **API key**: the same `Authorization: Bearer` credentials as the REST API, a
   project API key (`bencher_run_*`) or a user API key (`bencher_user_*`). Set the
   header in the client's own config; see https://bencher.dev/docs/how-to/mcp/.
-- **Anonymous**: public projects can be read without any credential.
+- **Anonymous**: public projects can be read without any credential. Every
+  tool that writes, `submit_run` included, needs OAuth sign-in or an API key.
 
 Claude Code without the connector, signing in with OAuth (run `/mcp` in
 Claude Code to sign in when a tool asks):
@@ -84,9 +85,9 @@ claude mcp add --transport http bencher https://mcp.bencher.dev/mcp
 - With OAuth configured, an anonymous tool call that needs a signed-in user
   gets a sign-in challenge instead of an error: reading a private project (a
   nonexistent project or ID answers identically, so a mistyped ID within a
-  public project also challenges), any tool that writes except `submit_run` to
-  an unclaimed project, `list_projects` for an organization's projects, and any
-  tool call over the per-IP limit.
+  public project also challenges), any tool that writes (`submit_run`
+  included), `list_projects` for an organization's projects, and any tool call
+  over the per-IP limit.
 - With OAuth configured, every tool declares `_meta.securitySchemes`: `noauth`
   when it works anonymously, and `oauth2` with the scope it needs.
 

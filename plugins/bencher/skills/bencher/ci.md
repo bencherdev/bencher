@@ -138,8 +138,8 @@ For repos that want benchmarks without pre-creating the Bencher project:
 bencher run --ci-on-the-fly "cargo bench"
 ```
 
-With a user API key, the new project goes under the user's personal organization.
-Without a key, it is a public `unclaimed` project that anyone can view and post results to.
+This needs `BENCHER_API_KEY` set to a user API key: the new project goes under the
+user's personal organization. A project API key cannot create a project.
 
 ## GitLab CI/CD
 

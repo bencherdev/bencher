@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "Conecte agentes e assistentes de IA ao Bencher com o servidor MCP hospedado para consultar dados de benchmark e enviar resultados"
 heading: "Como usar o Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-28T19:00:00Z"
+modified: "2026-11-27T23:40:00Z"
 sortOrder: 11
 ---
 
@@ -112,7 +112,7 @@ Requisições anônimas compartilham um limite de taxa por endereço IP, enquant
 Quando o servidor tem OAuth configurado, o Bencher MCP pede ao seu cliente que entre quando uma chamada anônima de ferramenta precisa disso:
 
 - Ao ler um projeto privado. Um projeto que não existe recebe a mesma resposta, então um projeto ou ID digitado errado, mesmo dentro de um projeto público, também pede que você entre.
-- Ao chamar uma ferramenta que grava, exceto `submit_run` para um [projeto `unclaimed`](/pt/docs/how-to/claim/#projetos-unclaimed).
+- Ao chamar uma ferramenta que grava, incluindo `submit_run`.
 - Ao listar os projetos de uma organização com `list_projects`.
 - Ao ultrapassar o limite de taxa anônimo.
 

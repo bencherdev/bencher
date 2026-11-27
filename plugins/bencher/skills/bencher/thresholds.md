@@ -6,6 +6,9 @@ signaling a potential performance regression.
 
 ## Inline Threshold Creation
 
+Every example here assumes the user has set `BENCHER_API_KEY` to an API key
+(see [Authentication](./SKILL.md#authentication)).
+
 The simplest way to configure thresholds is inline with `bencher run`:
 ```bash
 bencher run \

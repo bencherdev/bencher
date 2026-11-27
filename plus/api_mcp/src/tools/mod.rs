@@ -221,7 +221,7 @@ impl McpTool {
         self.kind().access()
     }
 
-    const fn anonymous(self) -> Anonymous {
+    pub const fn anonymous(self) -> Anonymous {
         if matches!(self, Self::ListProjects) {
             Anonymous::Refused
         } else {
@@ -400,11 +400,13 @@ impl ToolKind {
         }
     }
 
-    /// Anyone may read a public project, and run benchmarks on an unclaimed one.
+    /// Anyone may read a public project, but only a signed-in caller may write.
     const fn anonymous(self) -> Anonymous {
         match self {
-            Self::Read | Self::Run => Anonymous::Allowed,
-            Self::Create | Self::Update | Self::Report | Self::Reset => Anonymous::Refused,
+            Self::Read => Anonymous::Allowed,
+            Self::Create | Self::Update | Self::Report | Self::Reset | Self::Run => {
+                Anonymous::Refused
+            },
         }
     }
 
@@ -451,7 +453,7 @@ impl ToolAccess {
 
 /// Whether an anonymous caller can use a tool.
 #[derive(Debug, Clone, Copy)]
-enum Anonymous {
+pub enum Anonymous {
     Allowed,
     Refused,
 }

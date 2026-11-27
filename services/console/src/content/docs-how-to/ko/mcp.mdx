@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "호스팅된 MCP 서버로 AI 에이전트와 어시스턴트를 Bencher에 연결하여 벤치마크 데이터를 조회하고 결과를 제출하세요"
 heading: "Bencher MCP 사용 방법"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-28T19:00:00Z"
+modified: "2026-11-27T23:40:00Z"
 sortOrder: 11
 ---
 
@@ -112,7 +112,7 @@ Bencher MCP는 Bencher API와 동일한 `Authorization: Bearer` 자격 증명도
 서버에 OAuth가 구성되어 있으면, 익명 도구 호출에 로그인이 필요할 때 Bencher MCP가 클라이언트에 로그인을 요청합니다:
 
 - 비공개 프로젝트를 읽을 때. 존재하지 않는 프로젝트도 같은 응답을 받으므로, 공개 프로젝트 안에서라도 프로젝트나 ID를 잘못 입력하면 로그인을 요청받습니다.
-- 쓰기 도구를 호출할 때. 단, [`unclaimed` 프로젝트](/ko/docs/how-to/claim/#unclaimed-프로젝트)에 대한 `submit_run`은 제외됩니다.
+- `submit_run`을 포함하여 쓰기 도구를 호출할 때.
 - `list_projects`로 조직의 프로젝트를 나열할 때.
 - 익명 요청 제한을 초과할 때.
 

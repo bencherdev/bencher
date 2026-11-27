@@ -7,7 +7,7 @@
 | Flag | Env Var | Default | Purpose |
 |------|---------|---------|---------|
 | `--project <slug>` | `BENCHER_PROJECT` | | Project slug or UUID |
-| `--ci-on-the-fly` | | | Auto-create project in CI (without a key, a public `unclaimed` project) |
+| `--ci-on-the-fly` | | | Auto-create project in CI (use with a user API key) |
 | `--branch <name>` | `BENCHER_BRANCH` | | Branch name/slug/UUID (auto-created) |
 | `--hash <hash>` | | HEAD | Git commit hash |
 | `--start-point <branch>` | | | Base branch for new branch |

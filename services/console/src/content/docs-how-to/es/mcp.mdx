@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "Conecte agentes y asistentes de IA a Bencher con el servidor MCP alojado para consultar datos de benchmarks y enviar resultados"
 heading: "Cómo usar Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-28T19:00:00Z"
+modified: "2026-11-27T23:40:00Z"
 sortOrder: 11
 ---
 
@@ -112,7 +112,7 @@ Las solicitudes anónimas comparten un límite de tasa por dirección IP, mientr
 Cuando el servidor tiene OAuth configurado, Bencher MCP le pide a su cliente que inicie sesión cuando una llamada anónima a una herramienta lo necesita:
 
 - Al leer un proyecto privado. Un proyecto que no existe recibe la misma respuesta, por lo que un proyecto o un ID mal escrito, incluso dentro de un proyecto público, también le pide que inicie sesión.
-- Al llamar a una herramienta que escribe, salvo `submit_run` a un [proyecto `unclaimed`](/es/docs/how-to/claim/#proyectos-unclaimed).
+- Al llamar a una herramienta que escribe, incluida `submit_run`.
 - Al listar los proyectos de una organización con `list_projects`.
 - Al superar el límite de tasa anónimo.
 

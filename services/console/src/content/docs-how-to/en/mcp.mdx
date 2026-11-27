@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "Connect AI agents and assistants to Bencher with the hosted MCP server to query benchmark data and submit results"
 heading: "How to Use Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-28T19:00:00Z"
+modified: "2026-11-27T23:40:00Z"
 sortOrder: 11
 ---
 
@@ -112,7 +112,7 @@ Anonymous requests share a rate limit per IP address, while signed-in requests c
 When the server has OAuth configured, Bencher MCP asks your client to sign in when an anonymous tool call needs it:
 
 - Reading a private project. A project that does not exist gets the same answer, so a mistyped project or ID, even within a public project, also asks you to sign in.
-- Calling a tool that writes, other than `submit_run` to an [`unclaimed` project](/docs/how-to/claim/#unclaimed-projects).
+- Calling a tool that writes, including `submit_run`.
 - Listing an organization's projects with `list_projects`.
 - Going over the anonymous rate limit.
 
