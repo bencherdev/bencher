@@ -24,7 +24,13 @@ use crate::model::spec::SpecId;
 #[cfg(feature = "plus")]
 use crate::model::{
     organization::OrganizationId,
-    project::series::{SeriesKey, upsert_series_last_seen},
+    project::{
+        series::{SeriesKey, upsert_series_last_seen},
+        threshold::{
+            changepoint::ChangepointLine,
+            changepoint_scan::{ChangepointWatch, WatchedLine},
+        },
+    },
 };
 use crate::{
     auth_conn,
@@ -68,6 +74,13 @@ pub struct ReportResults {
     pub variant_cache: HashMap<(BenchmarkId, ParameterSet), Option<VariantId>>,
     pub measure_cache: HashMap<MeasureNameId, Option<MeasureId>>,
     pub threshold_cache: HashMap<MeasureId, Vec<Threshold>>,
+    /// The thresholds with a changepoint model, by the measure each watches.
+    #[cfg(feature = "plus")]
+    pub changepoint_cache: HashMap<MeasureId, Vec<ChangepointWatch>>,
+    /// The lines a changepoint model watches that the report wrote a metric to, once its write
+    /// committed.
+    #[cfg(feature = "plus")]
+    pub watched: HashSet<WatchedLine>,
     /// How the results parsed, once [`Self::process`] has parsed them.
     pub parse: Option<ParseRecord>,
 }
@@ -92,6 +105,10 @@ impl ReportResults {
             variant_cache: HashMap::new(),
             measure_cache: HashMap::new(),
             threshold_cache: HashMap::new(),
+            #[cfg(feature = "plus")]
+            changepoint_cache: HashMap::new(),
+            #[cfg(feature = "plus")]
+            watched: HashSet::new(),
             parse: None,
         }
     }
@@ -122,14 +139,7 @@ impl ReportResults {
         #[cfg(feature = "otel")]
         let process_start = context.clock.now();
 
-        self.threshold_cache =
-            Threshold::load(auth_conn!(context), self.branch_id, self.testbed_id).map_err(|e| {
-                issue_error(
-                    "Failed to load report thresholds",
-                    "Failed to load the thresholds for a report:",
-                    e,
-                )
-            })?;
+        self.load_thresholds(context).await?;
 
         let adapter_settings = adapter_settings_at(settings.average, bmf_version, warnings);
         let mut results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)
@@ -223,6 +233,32 @@ impl ReportResults {
         Ok(())
     }
 
+    /// The report's thresholds, by the measure each checks, and those with a changepoint model,
+    /// by the measure each watches.
+    async fn load_thresholds(&mut self, context: &ApiContext) -> Result<(), HttpError> {
+        self.threshold_cache =
+            Threshold::load(auth_conn!(context), self.branch_id, self.testbed_id).map_err(|e| {
+                issue_error(
+                    "Failed to load report thresholds",
+                    "Failed to load the thresholds for a report:",
+                    e,
+                )
+            })?;
+        #[cfg(feature = "plus")]
+        {
+            self.changepoint_cache =
+                ChangepointWatch::load(auth_conn!(context), self.branch_id, self.testbed_id)
+                    .map_err(|e| {
+                        issue_error(
+                            "Failed to load report changepoint thresholds",
+                            "Failed to load the thresholds with a changepoint model for a report:",
+                            e,
+                        )
+                    })?;
+        }
+        Ok(())
+    }
+
     async fn results(
         &mut self,
         log: &Logger,
@@ -301,6 +337,9 @@ impl ReportResults {
             })
             .fold(0i32, i32::saturating_add);
 
+        #[cfg(feature = "plus")]
+        let watched = take_watched(&mut prepared_variants);
+
         // Phase 2: Write all data in a single transaction.
         #[cfg(feature = "otel")]
         let write_start = context.clock.now();
@@ -360,6 +399,7 @@ impl ReportResults {
         {
             *usage =
                 usage.saturating_add(u32::try_from(iteration_metric_count).unwrap_or(u32::MAX));
+            self.watched.extend(watched);
         }
 
         Ok(())
@@ -397,6 +437,8 @@ impl ReportResults {
             InsertReportBenchmark::from_json(self.report_id, iteration, benchmark_id, variant_id);
 
         let mut prepared_measures = Vec::with_capacity(metrics.inner.len());
+        #[cfg(feature = "plus")]
+        let mut watched = Vec::new();
         for (measure_key, metric) in metrics.inner {
             let units = units.get(&measure_key);
             let Some(measure_id) = self.measure_id(log, context, measure_key, units).await? else {
@@ -433,6 +475,30 @@ impl ReportResults {
                 detections.entry(name).or_default().push(detection);
             }
 
+            #[cfg(feature = "plus")]
+            watched.extend(
+                ChangepointWatch::watching(
+                    self.changepoint_cache
+                        .get(&measure_id)
+                        .map_or(&[][..], Vec::as_slice),
+                    &parameters,
+                    &named,
+                )
+                .map(|watch| WatchedLine {
+                    line: ChangepointLine {
+                        project_id: self.project_id,
+                        head_id: self.head_id,
+                        testbed_id: self.testbed_id,
+                        spec_id: self.spec_id,
+                        benchmark_id,
+                        variant_id,
+                        measure_id,
+                        metric: watch.metric.clone(),
+                    },
+                    threshold_id: watch.threshold_id,
+                }),
+            );
+
             prepared_measures.push(PreparedMeasure {
                 measure_id,
                 named,
@@ -443,6 +509,8 @@ impl ReportResults {
         Ok(Some(PreparedVariant {
             insert_report_benchmark,
             measures: prepared_measures,
+            #[cfg(feature = "plus")]
+            watched,
         }))
     }
 
@@ -717,10 +785,23 @@ pub enum BmfVersionSource {
     Job,
 }
 
+/// The lines the variants watch, which the report hands to the changepoint task only once their
+/// write commits.
+#[cfg(feature = "plus")]
+fn take_watched(prepared_variants: &mut [PreparedVariant]) -> Vec<WatchedLine> {
+    prepared_variants
+        .iter_mut()
+        .flat_map(|prepared| std::mem::take(&mut prepared.watched))
+        .collect()
+}
+
 /// Pre-computed data for a single variant within a report iteration.
 struct PreparedVariant {
     insert_report_benchmark: InsertReportBenchmark,
     measures: Vec<PreparedMeasure>,
+    /// The lines of this variant that a changepoint model watches.
+    #[cfg(feature = "plus")]
+    watched: Vec<WatchedLine>,
 }
 
 impl PreparedVariant {
@@ -752,6 +833,8 @@ fn write_variant(
     let PreparedVariant {
         insert_report_benchmark,
         measures,
+        #[cfg(feature = "plus")]
+            watched: _,
     } = prepared;
     let report_id = insert_report_benchmark.report_id;
 

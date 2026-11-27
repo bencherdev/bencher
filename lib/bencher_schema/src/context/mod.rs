@@ -24,6 +24,8 @@ use crate::model::project::github_link::GitHubLinking;
 #[cfg(feature = "plus")]
 mod callbacks;
 #[cfg(feature = "plus")]
+mod changepoints;
+#[cfg(feature = "plus")]
 mod commit_titles;
 mod database;
 #[cfg(feature = "plus")]
@@ -45,6 +47,8 @@ mod stats;
 use bencher_recaptcha::RecaptchaClient;
 #[cfg(feature = "plus")]
 pub use callbacks::Callbacks;
+#[cfg(feature = "plus")]
+pub use changepoints::Changepoints;
 #[cfg(feature = "plus")]
 pub use commit_titles::CommitTitles;
 pub use database::{Database, DbConnection};
@@ -118,6 +122,9 @@ pub struct ApiContext {
     /// Fetches each commit's title from GitHub, for a server with the GitHub App.
     #[cfg(feature = "plus")]
     pub commit_titles: CommitTitles,
+    /// Scans each line a changepoint model watches after a report touches it.
+    #[cfg(feature = "plus")]
+    pub changepoints: Changepoints,
     /// Runner self-update URL construction and cloud channel checksum cache.
     #[cfg(feature = "plus")]
     pub runner_update: RunnerUpdate,

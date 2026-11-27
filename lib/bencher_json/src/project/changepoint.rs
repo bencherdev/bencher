@@ -50,7 +50,7 @@ pub struct JsonChangepoint {
     pub degrees_of_freedom: u32,
     /// The change from the mean before to the mean after, as a percent of the mean before.
     /// It is 0 when the mean before is 0.
-    /// Absent when it is not finite, which it is when the mean before is too close to 0.
+    /// Absent when it is not finite.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub percent_change: Option<f64>,
     /// The scans that found the changepoint, oldest first, up to the one that confirmed it.

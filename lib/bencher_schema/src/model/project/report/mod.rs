@@ -665,6 +665,12 @@ impl QueryReport {
                 &mut usage,
             )
             .await;
+        // Every line whose metrics committed, even if a later iteration failed, and never waiting
+        // on the scan.
+        #[cfg(feature = "plus")]
+        context
+            .changepoints
+            .queue(report_results.watched.drain().collect());
         // The parse is recorded whether or not the rest of processing succeeded,
         // so a report whose results failed to parse says so.
         let parse = report_results.parse;
