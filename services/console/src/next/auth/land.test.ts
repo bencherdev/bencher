@@ -35,10 +35,11 @@ const memory = (entries: Record<string, string> = {}) => ({
 	},
 });
 
-// Kills a sign-in that keeps more of the reader than the hint, keeps this
-// tab's pending sign-in, or lands anywhere but where a sign-in goes.
+// Kills a sign-in that keeps more of the reader than the hint, keeps the
+// earlier console's user, keeps this tab's pending sign-in, or lands anywhere
+// but where a sign-in goes.
 test("a finished sign-in keeps the hint alone and lands", () => {
-	const local = memory();
+	const local = memory({ BENCHER_USER: "{}" });
 	const session = memory({ BENCHER_PENDING_SIGN_IN: "{}" });
 	const went: string[] = [];
 	finish(

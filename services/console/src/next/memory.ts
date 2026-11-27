@@ -76,6 +76,9 @@ export const rememberShell = (
 /** The classic console's memory of the organization the reader last chose. */
 export const CLASSIC_ORGANIZATION = "BENCHER_ORGANIZATION";
 
+/** The earlier console kept the signed-in user and its token under this key. */
+export const CLASSIC_USER = "BENCHER_USER";
+
 /** Forget the reader and all this browser remembers for them, for whoever signs in next. */
 export const forgetReader = (storage: Pick<Storage, "removeItem">) => {
 	// The hint (`READER_KEY`) by value: an import of its key would load the reader's module with
@@ -83,6 +86,7 @@ export const forgetReader = (storage: Pick<Storage, "removeItem">) => {
 	for (const key of [
 		"BENCHER_READER",
 		CLASSIC_ORGANIZATION,
+		CLASSIC_USER,
 		SHELL_KEY,
 		VERSION_KEY,
 	]) {
