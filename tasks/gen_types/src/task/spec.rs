@@ -64,6 +64,7 @@ impl Spec {
                 "thresholds" => TagDetails { description: Some("Thresholds".into()), external_docs: None},
                 "models" => TagDetails { description: Some("Models".into()), external_docs: None},
                 "alerts" => TagDetails { description: Some("Alerts".into()), external_docs: None},
+                "changepoints" => TagDetails { description: Some("Changepoints".into()), external_docs: None},
                 "users" => TagDetails { description: Some("Users".into()), external_docs: None},
                 "tokens" => TagDetails { description: Some("API Tokens".into()), external_docs: None},
                 "server" => TagDetails { description: Some("Server".into()), external_docs: None},

@@ -1323,6 +1323,7 @@ dependencies = [
  "bencher_bing_index",
  "bencher_boundary",
  "bencher_callback",
+ "bencher_changepoint",
  "bencher_cimd",
  "bencher_egress",
  "bencher_github_client",

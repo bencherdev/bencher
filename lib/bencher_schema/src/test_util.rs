@@ -24,6 +24,10 @@ use diesel::{
 };
 
 #[cfg(feature = "plus")]
+use crate::model::project::threshold::changepoint::{
+    ChangepointId, ChangepointLine, ChangepointState, InsertChangepoint, QueryChangepoint,
+};
+#[cfg(feature = "plus")]
 use crate::model::runner::JobId;
 use crate::{
     macros::sql::last_insert_rowid,
@@ -996,4 +1000,131 @@ pub fn create_job(conn: &mut SqliteConnection, fixture: JobFixture, status: JobS
     diesel::select(last_insert_rowid())
         .get_result(conn)
         .expect("Failed to get job id")
+}
+
+/// The line, version, threshold, and changepoint model a changepoint needs, on a branch's head.
+#[cfg(feature = "plus")]
+#[derive(Debug, Clone)]
+pub struct ChangepointFixture {
+    pub line: ChangepointLine,
+    pub version_id: VersionId,
+    pub threshold_id: ThresholdId,
+    pub model_id: ModelId,
+}
+
+/// Create a testbed, measure, benchmark, version on the head, and a threshold whose changepoint
+/// slot holds a changepoint model, all named apart from the other helpers' defaults by `label`.
+#[cfg(feature = "plus")]
+pub fn create_changepoint_fixture(
+    conn: &mut SqliteConnection,
+    project_id: ProjectId,
+    branch: BranchIds,
+    label: u8,
+) -> ChangepointFixture {
+    let uuid = |kind: u8| format!("00000000-0000-0000-00c{kind:x}-0000000000{label:02x}");
+    let name = format!("changepoint-{label}");
+    let testbed_id = create_testbed(conn, project_id, &uuid(1), &name, &name);
+    let measure_id = create_measure(conn, project_id, &uuid(2), &name, &name);
+    let benchmark_id = create_benchmark(conn, project_id, &uuid(3), &name, &name);
+    let variant_id = get_empty_variant(conn, benchmark_id);
+    let version_id = create_version(conn, project_id, &uuid(4), i32::from(label), None);
+    create_head_version(conn, branch.head_id, version_id);
+    let threshold_id = create_threshold(
+        conn,
+        project_id,
+        branch.branch_id,
+        testbed_id,
+        measure_id,
+        &uuid(5),
+    );
+    diesel::insert_into(schema::model::table)
+        .values((
+            schema::model::uuid.eq(uuid(6)),
+            schema::model::threshold_id.eq(threshold_id),
+            schema::model::test.eq(bencher_json::ModelTest::Changepoint),
+            schema::model::max_sample_size.eq(50),
+            schema::model::upper_boundary.eq(0.05),
+            schema::model::significance.eq(0.001),
+            schema::model::confirmations.eq(5),
+            schema::model::created.eq(DateTime::TEST),
+        ))
+        .execute(conn)
+        .expect("Failed to insert changepoint model");
+    let model_id: ModelId = diesel::select(last_insert_rowid())
+        .get_result(conn)
+        .expect("Failed to get changepoint model id");
+    diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
+        .set(schema::threshold::changepoint_model_id.eq(model_id))
+        .execute(conn)
+        .expect("Failed to fill the changepoint slot");
+    ChangepointFixture {
+        line: ChangepointLine {
+            project_id,
+            head_id: branch.head_id,
+            testbed_id,
+            spec_id: None,
+            benchmark_id,
+            variant_id,
+            measure_id,
+            metric: MetricName::value(),
+        },
+        version_id,
+        threshold_id,
+        model_id,
+    }
+}
+
+/// A step from 100 to 110, as the port measures one.
+#[cfg(feature = "plus")]
+pub const MEASURED_STEP: bencher_changepoint::Changepoint = bencher_changepoint::Changepoint {
+    index: 50,
+    mean_before: 100.0,
+    mean_after: 110.0,
+    stddev_before: 2.0,
+    stddev_after: 2.5,
+    pvalue: 0.000_1,
+    tstatistic: -21.5,
+    degrees_of_freedom: 98,
+};
+
+/// Create a changepoint on the fixture's line, inserted as a candidate at `created` and then
+/// set to `state` as it stands.
+#[cfg(feature = "plus")]
+pub fn create_changepoint(
+    conn: &mut SqliteConnection,
+    fixture: &ChangepointFixture,
+    state: ChangepointState,
+    created: DateTime,
+) -> ChangepointId {
+    let changepoint_id = InsertChangepoint::candidate(
+        conn,
+        fixture.line.clone(),
+        fixture.version_id,
+        fixture.threshold_id,
+        fixture.model_id,
+        &MEASURED_STEP,
+        created,
+    )
+    .expect("Failed to insert changepoint");
+    diesel::update(schema::changepoint::table.filter(schema::changepoint::id.eq(changepoint_id)))
+        .set(schema::changepoint::status.eq(state))
+        .execute(conn)
+        .expect("Failed to set changepoint status");
+    changepoint_id
+}
+
+/// Get a changepoint row by id, if it is still there.
+#[cfg(feature = "plus")]
+pub fn find_changepoint(
+    conn: &mut SqliteConnection,
+    changepoint_id: ChangepointId,
+) -> Option<QueryChangepoint> {
+    use diesel::{OptionalExtension as _, SelectableHelper as _};
+
+    schema::changepoint::table
+        .filter(schema::changepoint::id.eq(changepoint_id))
+        .select(QueryChangepoint::as_select())
+        .first(conn)
+        .optional()
+        .expect("Failed to get changepoint")
 }

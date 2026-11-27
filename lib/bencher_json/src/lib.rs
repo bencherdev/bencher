@@ -74,6 +74,8 @@ pub use organization::{
 pub use pagination::{JsonDirection, JsonPagination};
 #[cfg(feature = "plus")]
 pub use priority::Priority;
+#[cfg(feature = "plus")]
+pub use project::changepoint::{ChangepointUuid, JsonChangepoint, JsonChangepoints};
 pub use project::{
     JsonNewProject, JsonProject, JsonProjects, ProjectResourceId, ProjectSlug, ProjectUuid,
     alert::{AlertUuid, JsonAlert, JsonAlerts},

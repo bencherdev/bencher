@@ -16,6 +16,8 @@ use super::{
     start_point::StartPoint,
     version::QueryVersion,
 };
+#[cfg(feature = "plus")]
+use crate::model::project::threshold::changepoint::QueryChangepoint;
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
@@ -357,6 +359,8 @@ impl InsertHead {
                 .set(&update_head)
                 .execute(conn)?;
 
+            #[cfg(feature = "plus")]
+            QueryChangepoint::silence_all(conn, old_head_id, now)?;
             QueryAlert::silence_all(conn, old_head_id, now)?
         } else {
             0
@@ -615,6 +619,73 @@ mod tests {
             .expect("Failed to enable foreign keys");
         assert_eq!(head_schema(&mut conn), schema, "up");
         assert_eq!(head_rows(&mut conn), heads, "up");
+    }
+
+    /// A head replacement silences only the old head's active changepoints, deletes its candidates,
+    /// and keeps every settled changepoint and every changepoint on another head as it stands.
+    #[cfg(feature = "plus")]
+    #[test]
+    fn a_reset_silences_only_the_active_changepoints_of_the_old_head() {
+        use crate::{
+            model::project::threshold::changepoint::ChangepointState,
+            test_util::{create_changepoint, create_changepoint_fixture, find_changepoint},
+        };
+
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let feature = feature_branch(&mut conn, base.project_id);
+        let other = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000012",
+            "other",
+            "other",
+            "00000000-0000-0000-0000-000000000013",
+        );
+        let on_feature = create_changepoint_fixture(&mut conn, base.project_id, feature, 1);
+        let on_other = create_changepoint_fixture(&mut conn, base.project_id, other, 2);
+        let earlier = DateTime::try_from(DateTime::TEST.timestamp() - 1_000).expect("a time");
+        let [active, dismissed, silenced, withdrawn, candidate] = [
+            ChangepointState::Active,
+            ChangepointState::Dismissed,
+            ChangepointState::Silenced,
+            ChangepointState::Withdrawn,
+            ChangepointState::Candidate,
+        ]
+        .map(|state| create_changepoint(&mut conn, &on_feature, state, earlier));
+        let other_active =
+            create_changepoint(&mut conn, &on_other, ChangepointState::Active, earlier);
+        let other_candidate =
+            create_changepoint(&mut conn, &on_other, ChangepointState::Candidate, earlier);
+
+        created(reset(&mut conn, feature.branch_id, None, None));
+
+        let state = |conn: &mut SqliteConnection, id| {
+            find_changepoint(conn, id).map(|changepoint| (changepoint.status, changepoint.modified))
+        };
+        assert_eq!(
+            state(&mut conn, active),
+            Some((ChangepointState::Silenced, DateTime::TEST)),
+            "the active changepoint is silenced"
+        );
+        assert_eq!(
+            state(&mut conn, candidate),
+            None,
+            "the candidate is deleted"
+        );
+        for (id, kept) in [
+            (dismissed, ChangepointState::Dismissed),
+            (silenced, ChangepointState::Silenced),
+            (withdrawn, ChangepointState::Withdrawn),
+            (other_active, ChangepointState::Active),
+            (other_candidate, ChangepointState::Candidate),
+        ] {
+            assert_eq!(
+                state(&mut conn, id),
+                Some((kept, earlier)),
+                "{kept:?} is kept"
+            );
+        }
     }
 
     fn key(key: &str) -> HeadIdempotencyKey {

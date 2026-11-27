@@ -52,6 +52,8 @@ pub enum BencherResource {
     Server,
     #[cfg(feature = "plus")]
     LinkedRepository,
+    #[cfg(feature = "plus")]
+    Changepoint,
 }
 
 impl fmt::Display for BencherResource {
@@ -103,6 +105,8 @@ impl fmt::Display for BencherResource {
                 Self::Server => "Server",
                 #[cfg(feature = "plus")]
                 Self::LinkedRepository => "Linked Repository",
+                #[cfg(feature = "plus")]
+                Self::Changepoint => "Changepoint",
             }
         )
     }

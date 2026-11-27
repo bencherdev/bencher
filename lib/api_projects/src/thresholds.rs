@@ -34,7 +34,7 @@ use bencher_schema::{
             auth::{AuthUser, BearerToken},
         },
     },
-    schema, write_conn,
+    schema, write_transaction,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
@@ -44,6 +44,9 @@ use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use futures::{StreamExt as _, stream::FuturesOrdered};
 use schemars::JsonSchema;
 use serde::Deserialize;
+
+#[cfg(feature = "plus")]
+use bencher_schema::model::project::threshold::changepoint::QueryChangepoint;
 
 use crate::macros::{filter_branch_name_id, filter_measure_name_id, filter_testbed_name_id};
 
@@ -590,9 +593,17 @@ async fn delete_inner(
     let query_threshold =
         QueryThreshold::get_with_uuid(auth_conn!(context), &query_project, path_params.threshold)?;
 
-    diesel::delete(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(Threshold, query_threshold))?;
+    // A candidate, which no user saw, never holds the threshold back. Any other changepoint refuses
+    // the delete, and the refusal keeps the candidates.
+    write_transaction!(context, |conn| {
+        #[cfg(feature = "plus")]
+        QueryChangepoint::delete_candidates_of_threshold(conn, query_threshold.id)?;
+        diesel::delete(
+            schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)),
+        )
+        .execute(conn)
+    })
+    .map_err(resource_conflict_err!(Threshold, query_threshold))?;
 
     Ok(())
 }

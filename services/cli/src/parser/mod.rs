@@ -17,6 +17,8 @@ use mock::CliMock;
 use noise::CliNoise;
 use organization::{CliOrganization, member::CliMember};
 #[cfg(feature = "plus")]
+use project::changepoint::CliChangepoint;
+#[cfg(feature = "plus")]
 use project::job::CliJob;
 use project::{
     CliProject, alert::CliAlert, archive::CliArchive, benchmark::CliBenchmark, branch::CliBranch,
@@ -115,6 +117,10 @@ pub enum CliSub {
     /// Manage alerts
     #[clap(subcommand)]
     Alert(CliAlert),
+    #[cfg(feature = "plus")]
+    /// Manage changepoints
+    #[clap(subcommand)]
+    Changepoint(CliChangepoint),
 
     /// Manage user
     #[clap(subcommand)]

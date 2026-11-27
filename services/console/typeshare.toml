@@ -16,6 +16,7 @@
 "ThresholdUuid" = "Uuid"
 "ModelUuid" = "Uuid"
 "AlertUuid" = "Uuid"
+"ChangepointUuid" = "Uuid"
 "UserUuid" = "Uuid"
 "TokenUuid" = "Uuid"
 "SpecUuid" = "Uuid"

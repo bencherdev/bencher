@@ -17,6 +17,8 @@ pub mod alert;
 pub mod benchmark;
 pub mod boundary;
 pub mod branch;
+#[cfg(feature = "plus")]
+pub mod changepoint;
 pub mod console;
 pub mod console_project;
 pub mod dimension;

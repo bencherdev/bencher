@@ -74,6 +74,7 @@ from_client!(
 
 #[cfg(feature = "plus")]
 from_client!(
+    ChangepointUuid,
     SsoUuid,
     RunnerUuid,
     SpecUuid,
@@ -219,6 +220,8 @@ try_from_client!(
 
 #[cfg(feature = "plus")]
 try_from_client!(
+    JsonChangepoints,
+    JsonChangepoint,
     JsonOAuth,
     JsonPlan,
     JsonSsos,
