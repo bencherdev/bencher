@@ -2936,19 +2936,19 @@ async fn reprocess_completed_job_no_output_arms_deadline() {
 /// Complete a job whose config declares `bmf_version` with BMF v1 stdout, then
 /// reprocess it, returning the job's status and how many metrics it wrote.
 async fn reprocess_v1_output_at(bmf_version: Option<u8>, label: &str) -> (JobStatus, i64) {
-    let (status, metrics, _) = reprocess_v1_output_with(None, bmf_version, label).await;
+    let (status, metrics, _, _) = reprocess_v1_output_with(None, bmf_version, label).await;
     (status, metrics)
 }
 
 /// Complete a job whose report records `report_version`, as a report created before reports
 /// recorded their version does not, and whose config declares `bmf_version`, with BMF v1 stdout,
-/// then reprocess it, returning the job's status, how many metrics it wrote, and the parse its
-/// report recorded.
+/// then reprocess it, returning the job's status, how many metrics it wrote, the parse its
+/// report recorded, and the error its stored output records.
 async fn reprocess_v1_output_with(
     report_version: Option<BmfVersion>,
     bmf_version: Option<u8>,
     label: &str,
-) -> (JobStatus, i64, ReportParse) {
+) -> (JobStatus, i64, ReportParse, Option<String>) {
     let v1_results = serde_json::json!({
         "bench_a": [{
             "parameters": { "size_mb": 16 },
@@ -2966,7 +2966,7 @@ async fn reprocess_output_with(
     results: &serde_json::Value,
     log: &slog::Logger,
     label: &str,
-) -> (JobStatus, i64, ReportParse) {
+) -> (JobStatus, i64, ReportParse, Option<String>) {
     reprocess_stdout_with(
         Adapter::Magic,
         report_version,
@@ -2987,7 +2987,7 @@ async fn reprocess_stdout_with(
     stdout: &str,
     log: &slog::Logger,
     label: &str,
-) -> (JobStatus, i64, ReportParse) {
+) -> (JobStatus, i64, ReportParse, Option<String>) {
     let server = TestServer::new().await;
     let admin = server
         .signup("Admin", &format!("reprocess-bmf-{label}@example.com"))
@@ -3042,7 +3042,15 @@ async fn reprocess_stdout_with(
         .count()
         .get_result(&mut conn)
         .expect("Failed to count metrics");
-    (status, metrics, report_parse(&server, job_uuid))
+    let error = server
+        .context()
+        .oci_storage()
+        .job_output()
+        .get(project.uuid, job_uuid)
+        .await
+        .expect("Failed to read job output")
+        .and_then(|output| output.error);
+    (status, metrics, report_parse(&server, job_uuid), error)
 }
 
 /// A job's results are processed after its run returns, and what they skip is stored on its report.
@@ -3263,7 +3271,8 @@ async fn reprocess_completed_job_parses_at_its_reports_version() {
         (None, Some(1), "config1", (JobStatus::Processed, parsed)),
         (None, None, "default", (JobStatus::Failed, failed)),
     ] {
-        let (status, _, parse) = reprocess_v1_output_with(report_version, bmf_version, label).await;
+        let (status, _, parse, _) =
+            reprocess_v1_output_with(report_version, bmf_version, label).await;
         assert_eq!((status, parse), expected, "{label}");
     }
 }
@@ -3286,7 +3295,7 @@ async fn reprocess_completed_job_refusal_names_the_remote_job() {
         (0, v1, 1, editor, admin, "job0"),
     ] {
         let capture = LogCapture::default();
-        let (status, _, _) =
+        let (status, _, _, _) =
             reprocess_output_with(None, Some(expected), &results, &capture.logger(), label).await;
         assert_eq!(status, JobStatus::Failed, "{label}");
         let refusal = refusal_logged(&capture);
@@ -3316,7 +3325,7 @@ async fn reprocess_completed_job_refusal_names_the_remote_job() {
 async fn reprocess_completed_job_version_1_only_adapter_refuses_version_0() {
     let stdout = include_str!("../../../../lib/bencher_adapter/tool_output/rust/bench/json.txt");
     let capture = LogCapture::default();
-    let (status, metrics, _) = reprocess_stdout_with(
+    let (status, metrics, _, _) = reprocess_stdout_with(
         Adapter::RustBenchJson,
         None,
         None,
@@ -3339,6 +3348,32 @@ async fn reprocess_completed_job_version_1_only_adapter_refuses_version_0() {
         );
     }
     assert!(!refusal.contains("right adapter"), "{refusal}");
+}
+
+/// A reprocessed job whose results are refused records the 400's text as its error, and a job whose
+/// results land records none.
+///
+/// Kills: a startup reprocess that marks a job `Failed` for its results without recording why,
+/// which a remote run reports as an unknown error.
+#[tokio::test]
+async fn reprocess_completed_job_records_its_refusal_as_its_error() {
+    let v1 = serde_json::json!({ "bench_a": [{ "measures": { "latency": { "value": 42.0 } } }] });
+    let capture = LogCapture::default();
+    let (status, _, _, error) =
+        reprocess_output_with(None, None, &v1, &capture.logger(), "refused").await;
+    assert_eq!(status, JobStatus::Failed);
+    let error = error.expect("expected the refusal recorded as the job's error");
+    assert!(
+        error.starts_with(
+            "Results parsed as BMF version 1, but the remote job was accepted at BMF version 0."
+        ),
+        "{error}"
+    );
+    let refusal = refusal_logged(&capture);
+    assert!(refusal.contains(&error), "{refusal}");
+
+    let (status, _, _, error) = reprocess_v1_output_with(None, Some(1), "landed").await;
+    assert_eq!((status, error), (JobStatus::Processed, None));
 }
 
 /// The logged refusal of a reprocessed job.

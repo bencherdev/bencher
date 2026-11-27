@@ -25,7 +25,7 @@ use bencher_schema::{
         organization::OrganizationId,
         runner::{
             JobId, JobTimeout, QueryJob, QueryRunner, QueryRunnerStatus, RunnerId, RunnerReport,
-            StatusChange, UpdateJob,
+            StatusChange, UpdateJob, record_results_error,
         },
         spec::QuerySpec,
     },
@@ -706,11 +706,13 @@ async fn handle_completed(
         slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);
     }
 
-    let bencher_json::runner::JsonJobOutput { results, error: _ } = job_output;
-
     // Process benchmark results into the report
-    if let Err(e) = job.process_results(log, context, results, now).await {
+    if let Err(e) = job
+        .process_results(log, context, &job_output.results, now)
+        .await
+    {
         slog::error!(log, "Failed to process job results"; "job_id" => ?job.id, "error" => %e);
+        record_results_error(log, context, &job, job_output, &e).await;
         // Transition to Failed so startup recovery doesn't retry forever
         let failed_update = UpdateJob::set_status(JobStatus::Failed, now);
         if failed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed)? > 0
