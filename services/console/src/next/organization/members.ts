@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/solid-query";
-import type { JsonMember } from "../../types/bencher";
+import type { JsonInvite, JsonMember } from "../../types/bencher";
 import type { Api } from "../api";
 import { createPaged } from "../list/paged";
 import { dropRow, totalOf } from "../list/pages";
@@ -62,6 +62,38 @@ export const rolesQuery = (api: Api, organization: string) => ({
 export const invite = (api: Api, organization: string, email: string) =>
 	api.send("POST", path(organization), { email, role: "leader" });
 
+const invitesPath = (organization: string) =>
+	`/v0/organizations/${encodeURIComponent(organization)}/invites`;
+
+/** The most invitations the API answers at once, as many as a Leader sends. */
+const INVITES_PER_PAGE = 255;
+
+/** The organization's pending invitations, newest first, and how many there are. */
+export const invitesQuery = (api: Api, organization: string) => ({
+	queryKey: ["organization", organization, "invites"],
+	queryFn: async ({ signal }: { signal: AbortSignal }) => {
+		const { data, headers } = await api.get<JsonInvite[]>(
+			`${invitesPath(organization)}?per_page=${INVITES_PER_PAGE}`,
+			signal,
+		);
+		return { invites: data, total: totalOf(headers, data) };
+	},
+});
+
+/** Email the invitation again with a new link, which lives 7 more days. */
+export const resendInvite = (api: Api, organization: string, uuid: string) =>
+	api.send<JsonInvite>(
+		"POST",
+		`${invitesPath(organization)}/${encodeURIComponent(uuid)}/resend`,
+	);
+
+/** End the invitation, so its link no longer works. */
+export const revokeInvite = (api: Api, organization: string, uuid: string) =>
+	api.send(
+		"DELETE",
+		`${invitesPath(organization)}/${encodeURIComponent(uuid)}`,
+	);
+
 /** Remove the member, then drop their row from the cached list. */
 export const removeMember = async (
 	api: Api,
@@ -88,3 +120,12 @@ const addedFormat = new Intl.DateTimeFormat("en-US", {
 /** "Added Mar 2, 2026". */
 export const added = (created: string) =>
 	`Added ${addedFormat.format(Date.parse(created))}`;
+
+/** When an invitation stops working, "Nov 5, 2026", or when it stopped, "Expired Oct 27, 2026". */
+export const expires = (expiration: string, now: number) => {
+	const at = Date.parse(expiration);
+	const date = addedFormat.format(at);
+	return at > now
+		? { text: date, expired: false }
+		: { text: `Expired ${date}`, expired: true };
+};

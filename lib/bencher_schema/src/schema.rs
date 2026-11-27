@@ -86,6 +86,20 @@ diesel::table! {
 }
 
 diesel::table! {
+    invite (id) {
+        id -> Integer,
+        uuid -> Text,
+        organization_id -> Integer,
+        email -> Text,
+        role -> Text,
+        inviter_id -> Integer,
+        secret_hash -> Text,
+        created -> BigInt,
+        expiration -> BigInt,
+    }
+}
+
+diesel::table! {
     job (id) {
         id -> Integer,
         uuid -> Text,
@@ -276,7 +290,7 @@ diesel::table! {
         code_hash -> Text,
         link_hash -> Text,
         tries -> Integer,
-        invite -> Nullable<Text>,
+        invite_id -> Nullable<Integer>,
         claim -> Nullable<Text>,
         plan -> Nullable<Text>,
         authorization -> Nullable<Text>,
@@ -417,7 +431,7 @@ diesel::table! {
         binding_hash -> Text,
         verifier -> Text,
         nonce -> Nullable<Text>,
-        invite -> Nullable<Text>,
+        invite_id -> Nullable<Integer>,
         claim -> Nullable<Text>,
         plan -> Nullable<Text>,
         authorization -> Nullable<Text>,
@@ -679,6 +693,8 @@ diesel::joinable!(boundary -> threshold (threshold_id));
 diesel::joinable!(branch -> project (project_id));
 diesel::joinable!(commit -> project (project_id));
 diesel::joinable!(head_version -> version (version_id));
+diesel::joinable!(invite -> organization (organization_id));
+diesel::joinable!(invite -> user (inviter_id));
 diesel::joinable!(job -> organization (organization_id));
 diesel::joinable!(job -> project (project_id));
 diesel::joinable!(job -> report (report_id));
@@ -700,6 +716,7 @@ diesel::joinable!(oauth_grant -> user_key (user_key_id));
 diesel::joinable!(oauth_token -> oauth_grant (grant_id));
 diesel::joinable!(organization_role -> organization (organization_id));
 diesel::joinable!(organization_role -> user (user_id));
+diesel::joinable!(pending_sign_in -> invite (invite_id));
 diesel::joinable!(pending_sign_in -> session (session_id));
 diesel::joinable!(plot -> project (project_id));
 diesel::joinable!(plot_benchmark -> benchmark (benchmark_id));
@@ -716,6 +733,7 @@ diesel::joinable!(project_key -> user (creator_id));
 diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
 diesel::joinable!(provider_pin -> user (user_id));
+diesel::joinable!(provider_state -> invite (invite_id));
 diesel::joinable!(provider_state -> session (session_id));
 diesel::joinable!(report -> head (head_id));
 diesel::joinable!(report -> project (project_id));
@@ -758,6 +776,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     commit,
     head,
     head_version,
+    invite,
     job,
     job_callback,
     job_duration_by_report,

@@ -1,15 +1,15 @@
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Post, ResponseAccepted, ResponseDeleted};
 use bencher_json::{
-    DateTime, Email, JsonEmailResend, JsonEmailSignIn, JsonSignInEmail, Jwt, OrganizationUuid,
-    SignInRefusal,
+    DateTime, Email, InviteSecret, JsonEmailResend, JsonEmailSignIn, JsonSignInEmail,
+    OrganizationUuid, SignInRefusal,
 };
 #[cfg(feature = "plus")]
 use bencher_json::{OAuthAuthorizationUuid, PlanLevel};
 use bencher_schema::{
     context::ApiContext,
-    error::{bad_request_error, issue_error, too_many_requests},
+    error::{issue_error, too_many_requests},
     model::{
-        organization::QueryOrganization,
+        organization::{QueryOrganization, invite::QueryInvite},
         user::{
             session::cookie::PendingCookie,
             sign_in::{QueryPendingSignIn, SignInContext},
@@ -25,6 +25,7 @@ use super::{
     Emailed, Start, admit, admit_email, at_cap, binding, capped, email_sign_in, end_replaced,
     ended, refused,
 };
+use crate::invite::{invalid_invite, invite_for_another_email};
 
 #[endpoint {
     method = OPTIONS,
@@ -91,35 +92,37 @@ pub async fn auth_email_post(
     }
 }
 
-/// What a sign-in carries to where it lands, each part checked as it starts: an invite must be
-/// valid, and, for a sign-in by `email`, for that address.
+/// What a sign-in carries to where it lands, each part checked as it starts: an invitation must
+/// not have ended or expired, and, for a sign-in by `email`, must be for that address.
 pub(crate) async fn sign_in_context(
     context: &ApiContext,
     email: Option<&Email>,
-    invite: Option<Jwt>,
+    invite: Option<InviteSecret>,
     claim: Option<OrganizationUuid>,
     #[cfg(feature = "plus")] plan: Option<PlanLevel>,
     #[cfg(feature = "plus")] authorization: Option<OAuthAuthorizationUuid>,
 ) -> Result<SignInContext, HttpError> {
-    let unknown_organization = |e| refused(e, SignInRefusal::UnknownOrganization);
-    if let Some(invite) = &invite {
-        let claims = context.token_key.validate_invite(invite).map_err(|e| {
-            refused(
-                bad_request_error(format!("Invalid invitation: {e}")),
-                SignInRefusal::InvalidInvite,
-            )
-        })?;
-        if email.is_some_and(|email| claims.email() != email) {
-            return Err(refused(
-                bad_request_error("The invitation is for another email"),
-                SignInRefusal::InviteForAnotherEmail,
-            ));
+    let invite = if let Some(secret) = &invite {
+        let (query_invite, _query_organization) =
+            QueryInvite::from_secret(public_conn!(context), secret, context.clock.now())
+                .map_err(|e| {
+                    issue_error(
+                        "Failed to find an invitation",
+                        "Failed to find the invitation a sign-in carries:",
+                        e,
+                    )
+                })?
+                .ok_or_else(invalid_invite)?;
+        if email.is_some_and(|email| query_invite.email != *email) {
+            return Err(invite_for_another_email());
         }
-        QueryOrganization::from_uuid(public_conn!(context), claims.org.uuid)
-            .map_err(unknown_organization)?;
-    }
+        Some(query_invite.id)
+    } else {
+        None
+    };
     if let Some(claim) = claim {
-        QueryOrganization::from_uuid(public_conn!(context), claim).map_err(unknown_organization)?;
+        QueryOrganization::from_uuid(public_conn!(context), claim)
+            .map_err(|e| refused(e, SignInRefusal::UnknownOrganization))?;
     }
     Ok(SignInContext {
         invite,

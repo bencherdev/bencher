@@ -15,6 +15,7 @@ use bencher_api_tests::{
         github_signature,
     },
     helpers::{create_test_report, get_project_id, grant_project_role},
+    session_cookie,
 };
 use std::sync::Arc;
 
@@ -342,6 +343,53 @@ async fn a_caller_without_the_role_is_refused_at_each_endpoint() {
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
     assert!(stored(&server, &project).is_some());
+}
+
+// A link opens a lasting channel out of the project, so a browser session links only within 10
+// minutes of signing in; an unlink only closes it, so a stale session unlinks.
+// Kills a link a stolen stale cookie can make, and an unlink that asks for a fresh sign-in.
+#[tokio::test]
+async fn a_link_needs_a_fresh_sign_in_and_an_unlink_does_not() {
+    let Setup {
+        server,
+        leader,
+        project,
+        ..
+    } = setup(Vec::new()).await;
+    let stale = server.session_at(&leader, at(NOW - TTL - 1));
+    let from_stale = |method| {
+        server
+            .client
+            .request(method, server.api_url(&github_path(&project, "")))
+            .header("Cookie", session_cookie(&stale))
+            .header("Sec-Fetch-Site", "same-origin")
+    };
+    let grant = grant(
+        &server,
+        &leader,
+        &project,
+        at(NOW),
+        INSTALLATION,
+        REPOSITORY,
+    );
+
+    let response = from_stale(Method::PUT)
+        .json(&serde_json::json!({ "grant": grant }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    let refusal: serde_json::Value = response.json().await.expect("Invalid body");
+    assert_eq!(refusal["error_code"], "fresh_sign_in");
+    assert!(stored(&server, &project).is_none());
+
+    link(&server, &project, &leader, &grant).await;
+    let response = from_stale(Method::DELETE)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    assert!(stored(&server, &project).is_none());
 }
 
 // Kills a `PUT` that adds a link beside the old one or keeps the old one, and a `DELETE` that
@@ -1363,13 +1411,17 @@ fn request(
     )
 }
 
+/// A link from the console, in a session `user` signed in to now, as a link needs.
 fn link_request(
     server: &TestServer,
     project: &TestProject,
     user: &TestUser,
     grant: &Jwt,
 ) -> reqwest::RequestBuilder {
-    request(server, Method::PUT, &github_path(project, ""), user)
+    server
+        .client
+        .request(Method::PUT, server.api_url(&github_path(project, "")))
+        .headers(server.fresh_session(user))
         .json(&serde_json::json!({ "grant": grant }))
 }
 

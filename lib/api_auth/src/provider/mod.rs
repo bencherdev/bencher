@@ -88,7 +88,7 @@ pub async fn auth_provider_start_post(
     start(
         context,
         &client,
-        InsertProviderState::new(provider, carried, now)?,
+        InsertProviderState::new(provider, &carried, now)?,
         now,
     )
     .await

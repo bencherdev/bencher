@@ -1,4 +1,4 @@
-import { createHmac, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { APIRequestContext } from "@playwright/test";
 import type {
 	JsonOrganization,
@@ -9,7 +9,8 @@ import type {
 	JsonUser,
 	JsonUserKeyCreated,
 } from "../src/types/bencher";
-import { type Reader, seed } from "./fixtures";
+import { type Reader, expect, seed } from "./fixtures";
+import { mailedLink } from "./mail";
 import { inSession, signUpAs } from "./session";
 
 // Tests that change what they read make their own, since files run in
@@ -132,46 +133,48 @@ export const createReader = (): Promise<Reader> =>
 		"Courage Bagge",
 	);
 
-// The harness API's debug issuer and secret, which sign every token it trusts.
-const ISSUER = "http://localhost:3000/";
-const SECRET = "DO_NOT_USE_THIS_IN_PRODUCTION";
-
-const base64url = (value: string | Buffer) =>
-	Buffer.from(value).toString("base64url");
-
-/** An invitation to `organization` for `email`, as the API would email it. */
-const inviteToken = (email: string, organization: string) => {
-	const now = Math.floor(Date.now() / 1_000);
-	const head = base64url(JSON.stringify({ typ: "JWT", alg: "HS256" }));
-	const claims = base64url(
-		JSON.stringify({
-			aud: "invite",
-			exp: now + 60 * 60,
-			iat: now,
-			iss: ISSUER,
-			sub: email,
-			org: { uuid: organization, role: "leader" },
-		}),
+/**
+ * Invite `email` to `organization` from the session of `inviter`, who leads
+ * it, and the link the email carries, with the invitation's secret in its
+ * fragment.
+ */
+export const invite = async (
+	inviter: Pick<Reader, "session">,
+	organization: Pick<JsonOrganization, "slug" | "name">,
+	email: string,
+) => {
+	const sent = await inSession(
+		inviter,
+		"POST",
+		`/v0/organizations/${organization.slug}/members`,
+		{ email, role: "leader" },
 	);
-	const signature = base64url(
-		createHmac("sha256", SECRET).update(`${head}.${claims}`).digest(),
+	expect(sent.status, JSON.stringify(sent.data)).toBe(202);
+	const link = await mailedLink(
+		email,
+		`Invitation to join ${organization.name}`,
 	);
-	return `${head}.${claims}.${signature}`;
+	return {
+		link,
+		secret: new URLSearchParams(link.hash.slice(1)).get("invite") ?? "",
+	};
 };
 
 /**
- * A new reader who has accepted an invitation to `organization`, which the
- * harness cannot read out of an email.
+ * A new reader, or `reader`, who has accepted an invitation to
+ * `organization` from `inviter`, in a session of their own.
  */
 export const createMember = async (
-	request: APIRequestContext,
-	organization: Pick<JsonOrganization, "uuid">,
+	organization: Pick<JsonOrganization, "slug" | "name">,
+	inviter: Pick<Reader, "session">,
 	reader?: Reader,
 ) => {
 	const member = reader ?? (await createReader());
-	await send(request, "POST", "/v0/auth/accept", member.key, {
-		invite: inviteToken(member.user.email, organization.uuid),
+	const { secret } = await invite(inviter, organization, member.user.email);
+	const joined = await inSession(member, "POST", "/v0/auth/invite/accept", {
+		secret,
 	});
+	expect(joined.status, JSON.stringify(joined.data)).toBe(200);
 	return member;
 };
 

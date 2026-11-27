@@ -10,9 +10,7 @@ use bencher_api_tests::{TestOrg, TestServer, TestUser, helpers::user_organizatio
 use bencher_json::{
     JsonMembers, OrganizationUuid, UserUuid,
     organization::member::{JsonNewMember, OrganizationRole},
-    system::auth::JsonAccept,
 };
-use bencher_schema::INVITE_TOKEN_TTL;
 use http::StatusCode;
 
 // GET /v0/organizations/{organization}/members - list members
@@ -86,10 +84,7 @@ async fn members_invite() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/organizations/{}/members", org_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&body)
         .send()
         .await
@@ -107,27 +102,16 @@ async fn members_remove() {
     let leader = server.signup("Test User", "remover@example.com").await;
     let org = server.create_org(&leader, "Remove Org").await;
     let member = server.signup("Test Member", "removed@example.com").await;
-    let invite = server
-        .token_key()
-        .new_invite(
-            member.email.clone(),
-            INVITE_TOKEN_TTL,
-            org.uuid,
-            OrganizationRole::Leader,
-        )
-        .expect("Failed to mint invite");
+    let invite = server.invite(&leader, &org, member.email.as_ref());
     let resp = server
         .client
-        .post(server.api_url("/v0/auth/accept"))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&member.token),
-        )
-        .json(&JsonAccept { invite })
+        .post(server.api_url("/v0/auth/invite/accept"))
+        .headers(server.fresh_session(&member))
+        .json(&serde_json::json!({"secret": invite.as_ref()}))
         .send()
         .await
         .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::ACCEPTED);
+    assert_eq!(resp.status(), StatusCode::OK);
     assert!(
         member_uuids(&server, &leader, &org)
             .await
@@ -174,10 +158,7 @@ async fn members_invite_no_name() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/organizations/{}/members", org_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&body)
         .send()
         .await
