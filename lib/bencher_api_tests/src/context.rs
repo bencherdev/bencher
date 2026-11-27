@@ -9,7 +9,7 @@ use bencher_schema::{
     ApiContext,
     context::{Database, DbConnection, Messenger, Relay},
     model::user::sign_in::CodeKey,
-    run_migrations,
+    run_migrations_with_token_key,
 };
 use bencher_token::{DEFAULT_SECRET_KEY, TokenKey};
 use diesel::{
@@ -453,10 +453,48 @@ impl TestServer {
     }
 
     /// Get a database connection for test setup.
-    /// Use this to insert test data directly into the database.
+    /// Use this to insert test data directly into the database, or to run its migrations.
     #[expect(clippy::expect_used, reason = "test helper establishing DB connection")]
     pub fn db_conn(&self) -> DbConnection {
-        DbConnection::establish(&self.db_path).expect("Failed to establish database connection")
+        let mut conn = DbConnection::establish(&self.db_path)
+            .expect("Failed to establish database connection");
+        bencher_schema::register_migration_functions(&mut conn, Some(&self.token_key))
+            .expect("Failed to register the migration functions");
+        conn
+    }
+
+    /// Revert the migrations, newest first, through the one of `version`, so the database is in
+    /// the shape that migration found it in, and a [`Self::restart`] runs them again.
+    #[expect(clippy::expect_used, reason = "test helper reverting migrations")]
+    pub fn revert_migrations_through(&self, version: &str) {
+        let mut conn = self.db_conn();
+        let mut migrations =
+            diesel::migration::MigrationSource::<diesel::sqlite::Sqlite>::migrations(
+                &bencher_schema::MIGRATIONS,
+            )
+            .expect("Failed to read the migrations");
+        migrations.sort_by_cached_key(|migration| migration.name().version().to_string());
+        // Off as in `run_migrations`, so a down migration that rebuilds a table does not cascade.
+        conn.batch_execute("PRAGMA foreign_keys = OFF")
+            .expect("Failed to turn foreign keys off");
+        for migration in migrations.iter().rev() {
+            let reverted = migration.name().version().to_string();
+            conn.transaction::<_, Box<dyn std::error::Error + Send + Sync>, _>(|conn| {
+                migration.revert(conn)?;
+                diesel::RunQueryDsl::execute(
+                    diesel::sql_query("DELETE FROM __diesel_schema_migrations WHERE version = ?")
+                        .bind::<diesel::sql_types::Text, _>(&reverted),
+                    conn,
+                )?;
+                Ok(())
+            })
+            .expect("Failed to revert a migration");
+            if reverted == version {
+                break;
+            }
+        }
+        conn.batch_execute("PRAGMA foreign_keys = ON")
+            .expect("Failed to turn foreign keys on");
     }
 
     /// Make every organization claimed in the eyes of the API's writer connection alone.
@@ -602,7 +640,9 @@ fn database_at(db_path: &str) -> Database {
     let mut conn =
         DbConnection::establish(db_path).expect("Failed to establish database connection");
     set_busy_timeout(&mut conn).expect("Failed to set the busy timeout");
-    run_migrations(&mut conn).expect("Failed to run migrations");
+    // With the server's key, as the API's startup runs them.
+    let token_key = TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+    run_migrations_with_token_key(&mut conn, Some(&token_key)).expect("Failed to run migrations");
 
     Database {
         path: PathBuf::from(db_path),

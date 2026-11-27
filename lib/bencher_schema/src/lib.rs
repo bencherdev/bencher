@@ -1,3 +1,5 @@
+use bencher_json::Jwt;
+use bencher_token::TokenKey;
 #[cfg(test)]
 use criterion as _;
 use diesel::{RunQueryDsl as _, connection::SimpleConnection as _};
@@ -6,6 +8,7 @@ use diesel_migrations::{
 };
 // Linked for the bundled SQLite amalgamation, which the migrations need for `jsonb()`.
 use libsqlite3_sys as _;
+use sha2::{Digest as _, Sha256};
 
 pub mod context;
 pub mod error;
@@ -50,6 +53,8 @@ const MIGRATION_CACHE_SIZE: i64 = -256 * 1024;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MigrationError {
+    #[error("Failed to give the database the functions its migrations call: {0}")]
+    Functions(diesel::result::Error),
     #[error("Failed to run database migrations: {0}")]
     Migrations(Box<dyn std::error::Error + Send + Sync>),
     #[error("Failed to run database pragma off: {0}")]
@@ -85,7 +90,19 @@ fn set_cache_size(
         .map_err(MigrationError::SetCacheSize)
 }
 
+/// Run the migrations with no server key, so the one that hashes legacy tokens revokes each one
+/// that is still live.
 pub fn run_migrations(database: &mut context::DbConnection) -> Result<(), MigrationError> {
+    run_migrations_with_token_key(database, None)
+}
+
+/// Run the migrations, with the server's `token_key` to judge the legacy tokens they hash.
+pub fn run_migrations_with_token_key(
+    database: &mut context::DbConnection,
+    token_key: Option<&TokenKey>,
+) -> Result<(), MigrationError> {
+    register_migration_functions(database, token_key).map_err(MigrationError::Functions)?;
+
     // It is not possible to enable or disable foreign key constraints in the middle of a multi-statement transaction
     // (when SQLite is not in autocommit mode).
     // Attempting to do so does not return an error; it simply has no effect.
@@ -120,6 +137,37 @@ pub fn run_migrations(database: &mut context::DbConnection) -> Result<(), Migrat
         .map_err(MigrationError::PragmaOn)?;
 
     Ok(())
+}
+
+/// Give `database` the SQL functions the migrations call, which a connection needs before it
+/// runs them. With no `token_key`, every legacy token is refused.
+pub fn register_migration_functions(
+    database: &mut context::DbConnection,
+    token_key: Option<&TokenKey>,
+) -> diesel::QueryResult<()> {
+    macros::sql::jwt_hash_utils::register_impl(database, |jwt: String| {
+        hex::encode(Sha256::digest(jwt.as_bytes()))
+    })?;
+    let token_key = token_key.cloned();
+    macros::sql::jwt_refused_utils::register_impl(
+        database,
+        move |jwt: String, email: Option<String>| {
+            !token_key
+                .as_ref()
+                .zip(email)
+                .is_some_and(|(token_key, email)| accepted_legacy_token(token_key, &jwt, &email))
+        },
+    )
+}
+
+/// Whether the server accepted `jwt` as a legacy token of the user with `email` before it found
+/// these tokens by their hash: its user is the one its JWT names.
+fn accepted_legacy_token(token_key: &TokenKey, jwt: &str, email: &str) -> bool {
+    jwt.parse::<Jwt>().is_ok_and(|jwt| {
+        token_key
+            .validate_legacy_api_key(&jwt)
+            .is_ok_and(|claims| claims.sub.as_ref() == email)
+    })
 }
 
 #[cfg(test)]

@@ -457,7 +457,7 @@ fn build_config_from_job(
 
     let mut runner_config = crate::Config::new(oci_image)
         .with_registry_scheme(registry_scheme)
-        .with_token(job.oci_token.to_string())?
+        .with_token(job.oci_token.as_ref())?
         .with_vcpus(spec.cpu)
         .with_memory(spec.memory)
         .with_disk(spec.disk)

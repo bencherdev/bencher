@@ -257,8 +257,14 @@ async fn into_context(
         run_litestream(&mut database_connection)?;
     }
 
+    info!(log, "Loading secret key");
+    let token_key = TokenKey::new(
+        security.issuer.unwrap_or_else(|| console_url.to_string()),
+        &security.secret_key,
+    );
+
     info!(log, "Running database migrations");
-    bencher_schema::run_migrations(&mut database_connection)?;
+    bencher_schema::run_migrations_with_token_key(&mut database_connection, Some(&token_key))?;
 
     let public_pool = connection_pool(log, &database_path, busy_timeout)?;
     let auth_pool = connection_pool(log, &database_path, busy_timeout)?;
@@ -273,11 +279,6 @@ async fn into_context(
 
     let relay = bencher_schema::context::Relay::new(security.relay_secret.as_ref());
 
-    info!(log, "Loading secret key");
-    let token_key = TokenKey::new(
-        security.issuer.unwrap_or_else(|| console_url.to_string()),
-        &security.secret_key,
-    );
     #[cfg(feature = "plus")]
     let callback_key =
         CallbackKey::new(&security.secret_key).map_err(ConfigTxError::CallbackKey)?;

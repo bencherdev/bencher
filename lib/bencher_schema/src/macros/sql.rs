@@ -46,3 +46,18 @@ diesel::define_sql_function! {
     #[sql_name = "lower"]
     fn lower_nullable(x: diesel::sql_types::Nullable<diesel::sql_types::Text>) -> diesel::sql_types::Nullable<diesel::sql_types::Text>;
 }
+
+diesel::define_sql_function! {
+    /// The SHA-256 of text in hex, which for a JWT is its [`bencher_json::JwtHash`].
+    /// The migrations call it, on a connection [`crate::register_migration_functions`] gave it to.
+    fn jwt_hash(jwt: diesel::sql_types::Text) -> diesel::sql_types::Text;
+}
+
+diesel::define_sql_function! {
+    /// Whether the server refuses a legacy token's JWT for the user with this email, if any.
+    /// The migrations call it, on a connection [`crate::register_migration_functions`] gave it to.
+    fn jwt_refused(
+        jwt: diesel::sql_types::Text,
+        email: diesel::sql_types::Nullable<diesel::sql_types::Text>,
+    ) -> diesel::sql_types::Bool;
+}

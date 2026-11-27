@@ -32,6 +32,7 @@ use crate::{GitHubGrantClaims, GitHubStateClaims, ProjectOciClaims, RunnerOciCla
 static HEADER: LazyLock<Header> = LazyLock::new(Header::default);
 const ALGORITHM: Algorithm = Algorithm::HS256;
 
+#[derive(Clone)]
 pub struct TokenKey {
     pub issuer: String,
     pub encoding: EncodingKey,
@@ -73,6 +74,21 @@ impl TokenKey {
 
     pub fn new_api_key(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
         self.new_jwt(Audience::ApiKey, email, ttl, None, None)
+    }
+
+    /// A legacy API key for `email` issued at `now`, as one that has since expired was.
+    #[cfg(feature = "plus")]
+    pub fn new_api_key_at(&self, now: DateTime, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
+        let (iat, exp) = issued_and_expires(now, ttl);
+        self.encode_claims(&Claims {
+            aud: Audience::ApiKey.into(),
+            exp,
+            iat,
+            iss: self.issuer.clone(),
+            sub: email,
+            org: None,
+            oci: None,
+        })
     }
 
     pub fn new_invite(
@@ -278,13 +294,7 @@ impl TokenKey {
     }
 
     pub fn validate_client(&self, token: &Jwt) -> Result<Claims, TokenError> {
-        Ok(self
-            .validate(token, &[Audience::Client, Audience::ApiKey])?
-            .claims)
-    }
-
-    pub fn validate_api_key(&self, token: &Jwt) -> Result<Claims, TokenError> {
-        Ok(self.validate(token, &[Audience::ApiKey])?.claims)
+        Ok(self.validate(token, &[Audience::Client])?.claims)
     }
 
     pub fn validate_invite(&self, token: &Jwt) -> Result<InviteClaims, TokenError> {
@@ -359,6 +369,20 @@ impl TokenKey {
         self.validate(token, &[Audience::OciAuth])?
             .claims
             .try_into()
+    }
+
+    /// The claims of a legacy API key this key issued, as the server checked one before it found
+    /// them by their hash, with its expiry left to the token's row.
+    pub fn validate_legacy_api_key(&self, token: &Jwt) -> Result<Claims, TokenError> {
+        let mut validation = Validation::new(ALGORITHM);
+        validation.set_audience(&[Audience::ApiKey]);
+        validation.set_issuer(&[self.issuer.as_str()]);
+        validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
+        validation.validate_exp = false;
+
+        decode::<Claims>(token.as_ref(), &self.decoding, &validation)
+            .map(|token_data| token_data.claims)
+            .map_err(|error| TokenError::Decode { error })
     }
 
     #[cfg(feature = "plus")]
@@ -547,25 +571,12 @@ mod tests {
         secret_key.validate_client(&token).unwrap_err();
     }
 
+    // A deprecated user API token is checked by its row alone, never by its signature.
     #[test]
-    fn jwt_api_key() {
+    fn jwt_api_key_is_no_session() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
         let token = secret_key.new_api_key(EMAIL.clone(), TTL).unwrap();
-
-        let claims = secret_key.validate_api_key(&token).unwrap();
-
-        assert_eq!(claims.aud, Audience::ApiKey.to_string());
-        assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
-        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
-        assert_eq!(claims.sub, *EMAIL);
-    }
-
-    #[test]
-    fn jwt_api_key_expired() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let token = make_expired_token(&secret_key, Audience::ApiKey, None, None);
-        secret_key.validate_api_key(&token).unwrap_err();
+        secret_key.validate_client(&token).unwrap_err();
     }
 
     #[test]
@@ -1131,5 +1142,45 @@ mod tests {
             .new_oci_project(project_uuid, TTL, None, vec![OciAction::Push])
             .unwrap();
         secret_key.validate_oci_runner(&token).unwrap_err();
+    }
+
+    // --- Legacy API keys ---
+
+    // Kills a legacy API key check that refuses a token for its expiry, which the token's row
+    // decides, or that takes a token for another audience.
+    #[test]
+    fn jwt_legacy_api_key_whatever_its_expiry() {
+        #[derive(serde::Serialize)]
+        struct ExpiredClaims {
+            aud: String,
+            exp: i64,
+            iat: i64,
+            iss: &'static str,
+            sub: &'static str,
+        }
+
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let now = chrono::Utc::now().timestamp();
+        let expired = |audience: Audience| {
+            let claims = ExpiredClaims {
+                aud: audience.to_string(),
+                exp: now - 100,
+                iat: now - 200,
+                iss: BENCHER_DOT_DEV_ISSUER,
+                sub: "info@bencher.dev",
+            };
+            Jwt::from_str(
+                &jsonwebtoken::encode(&super::HEADER, &claims, &secret_key.encoding).unwrap(),
+            )
+            .unwrap()
+        };
+
+        let claims = secret_key
+            .validate_legacy_api_key(&expired(Audience::ApiKey))
+            .unwrap();
+        assert_eq!(claims.sub, *EMAIL);
+        secret_key
+            .validate_legacy_api_key(&expired(Audience::OciAuth))
+            .unwrap_err();
     }
 }

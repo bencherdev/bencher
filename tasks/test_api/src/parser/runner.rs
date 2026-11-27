@@ -18,7 +18,7 @@ pub struct TaskRunner {
     #[clap(long)]
     pub username: Option<String>,
 
-    /// User token and password for OCI authentication
+    /// User session token, which creates the user API keys the test logs in to the registry with
     #[clap(long)]
     pub token: Option<Jwt>,
 

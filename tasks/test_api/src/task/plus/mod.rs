@@ -1,34 +1,51 @@
-use bencher_json::Jwt;
+use std::{path::Path, process::Command};
+
+use assert_cmd::cargo::CommandCargoExt as _;
+use bencher_json::{JsonUserKeyCreated, Jwt, Url, UserKey};
+
+use crate::task::{
+    session::BrowserSession,
+    test::seed_test::{BENCHER_CMD, CLI_DIR, HOST_ARG, TOKEN_ARG},
+};
 
 pub mod oci;
 pub mod runner;
 
-// `docker login` takes a deprecated user API token as its password, but not a user session.
-const TEST_ADMIN_LEGACY_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQzNjA5LCJpYXQiOjE2OTg2NzYzMTQsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJldXN0YWNlLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.xumYID-R4waqhyjhcbSlwartbiRJ2AwngVkevLUBVCA";
-const TEST_LEGACY_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
-const DEV_ADMIN_LEGACY_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo2MDYwMDI5NDE0LCJpYXQiOjE3NjUwNjIxMTksImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoiZXVzdGFjZS5iYWdnZUBub3doZXJlLmNvbSIsIm9yZyI6bnVsbCwic3RhdGUiOm51bGx9.jY6749lVWe3pJ53LBXoNSl19b59xifOLdwMwQUNMZ5g";
-const DEV_LEGACY_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQyMTU2LCJpYXQiOjE2OTg2NzQ4NjEsImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.9z7jmM53TcVzc1inDxTeX9_OR0PQPpZAsKsCE7lWHfo";
-
-fn unwrap_admin_legacy_token(admin_token: Option<Jwt>, is_dev: bool) -> Jwt {
-    admin_token.unwrap_or_else(|| {
-        if is_dev {
-            DEV_ADMIN_LEGACY_API_TOKEN
-        } else {
-            TEST_ADMIN_LEGACY_API_TOKEN
-        }
-        .parse()
-        .expect("Invalid legacy test JWT")
-    })
-}
-
-fn unwrap_user_legacy_token(user_token: Option<Jwt>, is_dev: bool) -> Jwt {
-    user_token.unwrap_or_else(|| {
-        if is_dev {
-            DEV_LEGACY_API_TOKEN
-        } else {
-            TEST_LEGACY_API_TOKEN
-        }
-        .parse()
-        .expect("Invalid legacy test JWT")
-    })
+/// Create a user API key named `name` for `user`, who signs in as `email`: from a browser session
+/// signed in by the code the API writes to `api_log`, or else with `token`.
+fn create_user_key(
+    url: &Url,
+    email: &str,
+    token: &Jwt,
+    api_log: Option<&Path>,
+    user: &str,
+    name: &str,
+) -> anyhow::Result<UserKey> {
+    if let Some(api_log) = api_log {
+        let created = BrowserSession::sign_in(url, email, api_log)?.create_user_key(user, name)?;
+        return Ok(created.key);
+    }
+    let output = Command::cargo_bin(BENCHER_CMD)?
+        .args([
+            "user",
+            "key",
+            "create",
+            HOST_ARG,
+            url.as_ref(),
+            TOKEN_ARG,
+            token.as_ref(),
+            "--name",
+            name,
+            user,
+        ])
+        .current_dir(CLI_DIR)
+        .output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "Failed to create user key:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let created: JsonUserKeyCreated = serde_json::from_slice(&output.stdout)?;
+    Ok(created.key)
 }

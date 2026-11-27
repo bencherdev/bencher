@@ -2,14 +2,14 @@ use std::process::Command;
 
 use assert_cmd::cargo::CommandCargoExt as _;
 use bencher_json::{
-    JobStatus, JobUuid, JsonJob, JsonProjectKeyCreated, JsonUserKeyCreated, Jwt, Url,
+    JobStatus, JobUuid, JsonJob, JsonProjectKeyCreated, Jwt, Url,
     runner::{JobCallbackState, JsonJobCallback},
 };
 use pretty_assertions::assert_eq;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt as _;
 
-use super::unwrap_user_legacy_token;
+use super::create_user_key;
 use crate::parser::TaskRunner;
 use crate::task::test::seed_test::{
     ADMIN_EMAIL, BENCHER_CMD, CLI_DIR, HOST_ARG, PROJECT_SLUG, TOKEN_ARG, USER_EMAIL, USER_SLUG,
@@ -45,7 +45,6 @@ pub struct RunnerTest {
     admin_token: Jwt,
     username: String,
     token: Jwt,
-    legacy_token: Jwt,
     with_daemon: bool,
     api_log: Option<std::path::PathBuf>,
 }
@@ -68,7 +67,6 @@ impl TryFrom<TaskRunner> for RunnerTest {
         let admin_token = unwrap_admin_token(admin_token, is_dev);
         // Run tests as a normal user
         let username = username.unwrap_or_else(|| USER_EMAIL.to_owned());
-        let legacy_token = unwrap_user_legacy_token(token.clone(), is_dev);
         let token = unwrap_user_token(token, is_dev);
 
         Ok(Self {
@@ -76,7 +74,6 @@ impl TryFrom<TaskRunner> for RunnerTest {
             admin_token,
             username,
             token,
-            legacy_token,
             with_daemon,
             api_log,
         })
@@ -102,13 +99,7 @@ impl RunnerTest {
             } else {
                 "no-sandbox-spec"
             };
-            run_runner_test(
-                &self.url,
-                &self.username,
-                &self.token,
-                &self.legacy_token,
-                spec,
-            )?;
+            run_runner_test(&self.url, &self.username, &self.token, self.api_log(), spec)?;
             run_image_project_runner_test(&self.url, &self.token, spec)?;
             run_user_key_runner_test(&self.url, &self.username, &self.token, self.api_log(), spec)?;
             run_project_key_runner_test(&self.url, &self.admin_token, self.api_log(), spec)
@@ -257,13 +248,7 @@ impl RunnerTest {
             "no-sandbox-spec"
         };
         let result = if unclaimed_result.is_ok() {
-            run_runner_test(
-                &self.url,
-                &self.username,
-                &self.token,
-                &self.legacy_token,
-                spec,
-            )
+            run_runner_test(&self.url, &self.username, &self.token, self.api_log(), spec)
         } else {
             Ok(())
         };
@@ -312,13 +297,7 @@ impl RunnerTest {
 
         // Run the image-only runner test (no --exec, ENTRYPOINT baked into image)
         let image_only_result = if project_key_result.is_ok() {
-            run_image_only_runner_test(
-                &self.url,
-                &self.username,
-                &self.token,
-                &self.legacy_token,
-                spec,
-            )
+            run_image_only_runner_test(&self.url, &self.username, &self.token, self.api_log(), spec)
         } else {
             Ok(())
         };
@@ -647,7 +626,7 @@ pub fn run_runner_test(
     url: &Url,
     username: &str,
     token: &Jwt,
-    legacy_token: &Jwt,
+    api_log: Option<&std::path::Path>,
     spec: &str,
 ) -> anyhow::Result<()> {
     let host = url.as_ref();
@@ -689,7 +668,15 @@ pub fn run_runner_test(
 
     // Step 3: Log in to the local OCI registry
     println!("Step 3: Logging in to {registry}...");
-    docker_login(&registry, username, legacy_token.as_ref())?;
+    let docker_key = create_user_key(
+        url,
+        username,
+        token,
+        api_log,
+        USER_SLUG,
+        "runner-test-login",
+    )?;
+    docker_login(&registry, username, docker_key.as_ref())?;
 
     // Step 4: Push the image to the local registry
     println!("Step 4: Pushing image to {registry}...");
@@ -1217,34 +1204,14 @@ fn run_user_key_runner_test(
 
     // Step 1: Create a user key
     println!("Step 1: Creating user key...");
-    let user_key_created: JsonUserKeyCreated = if let Some(api_log) = api_log {
-        BrowserSession::sign_in(url, email, api_log)?
-            .create_user_key(USER_SLUG, "runner-test-user-key")?
-    } else {
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "user",
-            "key",
-            "create",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token.as_ref(),
-            "--name",
-            "runner-test-user-key",
-            USER_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let output = cmd.output()?;
-        anyhow::ensure!(
-            output.status.success(),
-            "Failed to create user key:\nstdout: {}\nstderr: {}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-        serde_json::from_slice(&output.stdout)?
-    };
-    let user_key = user_key_created.key;
+    let user_key = create_user_key(
+        url,
+        email,
+        token,
+        api_log,
+        USER_SLUG,
+        "runner-test-user-key",
+    )?;
 
     // Step 2: Docker login with the user's email as username and the user key as password
     let registry = if cfg!(target_os = "macos") {
@@ -1502,7 +1469,7 @@ fn run_image_only_runner_test(
     url: &Url,
     username: &str,
     token: &Jwt,
-    legacy_token: &Jwt,
+    api_log: Option<&std::path::Path>,
     spec: &str,
 ) -> anyhow::Result<()> {
     let host = url.as_ref();
@@ -1529,7 +1496,8 @@ fn run_image_only_runner_test(
     docker_build_mock_image(&local_ref)?;
 
     println!("Logging in to {registry}...");
-    docker_login(&registry, username, legacy_token.as_ref())?;
+    let docker_key = create_user_key(url, username, token, api_log, USER_SLUG, "image-only-login")?;
+    docker_login(&registry, username, docker_key.as_ref())?;
 
     println!("Pushing mock image to {registry}...");
     docker_push(&local_ref)?;
@@ -1712,6 +1680,16 @@ fn docker_tag(src: &str, dst: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn docker_logout(registry: &str) -> anyhow::Result<()> {
+    let output = Command::new("docker").args(["logout", registry]).output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "docker logout from {registry} failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    Ok(())
+}
+
 fn docker_login(registry: &str, username: &str, password: &str) -> anyhow::Result<()> {
     let output = Command::new("docker")
         .args(["login", registry, "-u", username, "--password-stdin"])
@@ -1760,6 +1738,9 @@ fn prepare_unclaimed_image(url: &Url, slug: &str) -> anyhow::Result<(String, Str
     } else {
         registry_for_api(&host)?
     };
+    // A login an earlier run left behind would sign the push, with a key the database may no
+    // longer have.
+    docker_logout(&registry)?;
 
     let local_ref = format!("{registry}/{slug}:latest");
 

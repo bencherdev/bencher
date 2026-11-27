@@ -12,7 +12,7 @@ use dropshot::HttpError;
 
 use crate::{
     context::{ApiContext, DbConnection, OAuthServer},
-    error::{issue_error, resource_not_found_err, unauthorized_error},
+    error::{INVALID_CREDENTIAL, invalid_credential, issue_error, resource_not_found_err},
     schema,
 };
 
@@ -20,8 +20,6 @@ use super::{
     QueryUser, UserId,
     key::{QueryUserKey, UserKeyId},
 };
-
-const INVALID_OAUTH_TOKEN: &str = "Invalid OAuth access token";
 
 /// How long an access token lasts.
 const ACCESS_LIFETIME: TimeDelta = TimeDelta::hours(1);
@@ -320,7 +318,7 @@ pub fn authenticate(
                 err,
             );
         })
-        .map_err(|_err| unauthorized_error(INVALID_OAUTH_TOKEN))?;
+        .map_err(|_err| invalid_credential())?;
     let Some((query_token, query_grant, query_user, query_key)) = lookup else {
         return Err(oauth_token_failure(OAuthTokenFailure::NotFound));
     };
@@ -434,8 +432,8 @@ fn oauth_token_failure(failure: OAuthTokenFailure) -> HttpError {
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthTokenAuthFailed(
         failure.into(),
     ));
-    let mut error = unauthorized_error(INVALID_OAUTH_TOKEN);
-    error.internal_message = format!("{INVALID_OAUTH_TOKEN} ({failure:?})");
+    let mut error = invalid_credential();
+    error.internal_message = format!("{INVALID_CREDENTIAL} ({failure:?})");
     error
 }
 
