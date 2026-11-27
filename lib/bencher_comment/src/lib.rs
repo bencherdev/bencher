@@ -1118,6 +1118,7 @@ fn model_test_name(test: ModelTest) -> &'static str {
         ModelTest::LogNormal => "log_normal",
         ModelTest::Iqr => "iqr",
         ModelTest::DeltaIqr => "delta_iqr",
+        ModelTest::Changepoint => "changepoint",
     }
 }
 
@@ -1130,6 +1131,9 @@ fn resource_noun(resource: ReportWarningResource) -> &'static str {
         ReportWarningResource::Threshold => "threshold",
         ReportWarningResource::Adapter => "adapter",
         ReportWarningResource::Average => "average",
+        ReportWarningResource::ChangepointModel => "changepoint model",
+        ReportWarningResource::Significance => "significance",
+        ReportWarningResource::Confirmations => "confirmations",
     }
 }
 

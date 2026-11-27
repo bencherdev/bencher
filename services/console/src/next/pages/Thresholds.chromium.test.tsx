@@ -167,6 +167,72 @@ test("a row reads its threshold from the batch's tables", async () => {
 		);
 });
 
+// Kills a row whose threshold holds only a changepoint model called one with
+// no model, wide or on a phone, where the model's test joins the link.
+test("a row with only a changepoint model names it, on a phone too", async () => {
+	const { api } = fakeApi(() => ({
+		data: thresholdsFixture([
+			{
+				model: undefined,
+				changepoint_model: {
+					test: "changepoint" as ModelTest,
+					max_sample_size: 50,
+					upper_boundary: 0.05,
+					significance: 0.001,
+					confirmations: 5,
+				},
+			},
+		]),
+	}));
+	mount(api, client());
+	const row = () => table().getByRole("row").nth(1);
+	await expect
+		.element(row().getByRole("cell").nth(5))
+		.toHaveTextContent(
+			"changepoint · upper_boundary 0.05 · max_sample_size 50 · significance 0.001 · confirmations 5",
+		);
+	dispose?.();
+	document.body.replaceChildren();
+
+	await page.viewport(390, 844);
+	mount(api, client());
+	await expect
+		.poll(() => document.querySelector("a.th-link")?.getAttribute("aria-label"))
+		.toMatch(/^main · ubuntu-latest · every variant · changepoint, /);
+	expect(document.querySelector("tbody")?.textContent).not.toContain(
+		"no model",
+	);
+});
+
+// Kills a row whose threshold holds both models showing the changepoint model,
+// wide or on a phone.
+test("a row with both models shows the model", async () => {
+	const { api } = fakeApi(() => ({
+		data: thresholdsFixture([
+			{
+				changepoint_model: {
+					test: "changepoint" as ModelTest,
+					max_sample_size: 50,
+					upper_boundary: 0.05,
+					significance: 0.001,
+				},
+			},
+		]),
+	}));
+	mount(api, client());
+	const cell = () => table().getByRole("row").nth(1).getByRole("cell").nth(5);
+	await expect.element(cell()).toHaveTextContent(/^t_test · /);
+	expect(cell().element().textContent).not.toContain("changepoint");
+	dispose?.();
+	document.body.replaceChildren();
+
+	await page.viewport(390, 844);
+	mount(api, client());
+	await expect
+		.poll(() => document.querySelector("a.th-link")?.getAttribute("aria-label"))
+		.toMatch(/^main · ubuntu-latest · every variant · t_test, /);
+});
+
 // Kills a refine that drops the rows on screen for a skeleton, or leaves them
 // unmarked while the new rows load, and an archived list named as the active one.
 test("a new search keeps the rows on screen, marked busy, until it answers", async () => {

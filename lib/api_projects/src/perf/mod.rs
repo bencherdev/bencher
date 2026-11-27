@@ -750,6 +750,8 @@ fn perf_query(
                     schema::model::window,
                     schema::model::lower_boundary,
                     schema::model::upper_boundary,
+                    schema::model::significance,
+                    schema::model::confirmations,
                     schema::model::created,
                     schema::model::replaced,
                 ),

@@ -55,8 +55,10 @@ pub use metric_name::MetricName;
 pub use model::{
     Model,
     boundary::{Boundary, CdfBoundary, IqrBoundary, PercentageBoundary},
+    confirmations::Confirmations,
     model_test::{ModelSlot, ModelTest},
     sample_size::SampleSize,
+    significance::Significance,
     window::Window,
 };
 pub use name_id::NameId;

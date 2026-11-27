@@ -61,6 +61,14 @@ pub enum ValidError {
     SampleSize(u32),
     #[error("Failed to parse model sample size: {0}")]
     SampleSizeStr(std::num::ParseIntError),
+    #[error("Invalid model `significance`: {0}. It must be above 0 and below 1.")]
+    Significance(f64),
+    #[error("Failed to parse model `significance`: {0}")]
+    SignificanceStr(std::num::ParseFloatError),
+    #[error("Invalid model `confirmations`: {0}. It must be from 1 to 20.")]
+    Confirmations(u32),
+    #[error("Failed to parse model `confirmations`: {0}")]
+    ConfirmationsStr(std::num::ParseIntError),
     #[error("Invalid model window: {0}")]
     Window(u32),
     #[error("Failed to parse model window: {0}")]
@@ -263,6 +271,25 @@ pub enum ValidError {
         belongs = test.slot()
     )]
     ModelSlot { test: ModelTest, slot: ModelSlot },
+    #[error("Invalid model, the {test} test requires `{field}`")]
+    ModelFieldRequired {
+        test: ModelTest,
+        field: &'static str,
+    },
+    #[error("Invalid model, the {test} test does not take `{field}`")]
+    ModelFieldRefused {
+        test: ModelTest,
+        field: &'static str,
+    },
+    #[error("Invalid model, the {test} test requires `lower_boundary`, `upper_boundary`, or both")]
+    ModelBoundaryRequired { test: ModelTest },
+    #[error("Invalid model, `{field}` of the {test} test is {value}, and it must be {expected}")]
+    ModelFieldRange {
+        test: ModelTest,
+        field: &'static str,
+        value: f64,
+        expected: &'static str,
+    },
     #[error("Invalid static model, includes a minimum sample size: {0}")]
     StaticMinSampleSize(SampleSize),
     #[error("Invalid static model, includes a maximum sample size: {0}")]

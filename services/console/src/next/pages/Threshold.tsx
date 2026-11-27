@@ -413,12 +413,12 @@ const Title = (props: { threshold: JsonConsoleThreshold | undefined }) => (
 					<span
 						class="th-pill"
 						classList={{
-							"th-pill-ok": !archivedBy(threshold()) && !!threshold().model,
+							"th-pill-ok": !archivedBy(threshold()) && hasModel(threshold()),
 						}}
 					>
 						{archivedBy(threshold())
 							? "archived"
-							: threshold().model
+							: hasModel(threshold())
 								? "active"
 								: "no model"}
 					</span>
@@ -427,6 +427,9 @@ const Title = (props: { threshold: JsonConsoleThreshold | undefined }) => (
 		</Show>
 	</div>
 );
+
+const hasModel = (threshold: JsonConsoleThreshold) =>
+	!!threshold.model || !!threshold.changepoint_model;
 
 const Alerts = (props: {
 	slug: string;

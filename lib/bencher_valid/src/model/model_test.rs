@@ -12,6 +12,7 @@ const T_TEST_INT: i32 = 0;
 const LOG_NORMAL_INT: i32 = 10;
 const IQR_INT: i32 = 40;
 const DELTA_IQR_INT: i32 = 41;
+const CHANGEPOINT_INT: i32 = 50;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display, Serialize, Deserialize)]
@@ -30,6 +31,7 @@ pub enum ModelTest {
     LogNormal = LOG_NORMAL_INT,
     Iqr = IQR_INT,
     DeltaIqr = DELTA_IQR_INT,
+    Changepoint = CHANGEPOINT_INT,
 }
 
 impl ModelTest {
@@ -44,6 +46,37 @@ impl ModelTest {
             | Self::LogNormal
             | Self::Iqr
             | Self::DeltaIqr => ModelSlot::Model,
+            Self::Changepoint => ModelSlot::ChangepointModel,
+        }
+    }
+
+    /// Whether a model with this test takes a significance, which it then requires.
+    #[must_use]
+    pub const fn takes_significance(self) -> bool {
+        match self {
+            Self::Changepoint => true,
+            Self::Static
+            | Self::Percentage
+            | Self::ZScore
+            | Self::TTest
+            | Self::LogNormal
+            | Self::Iqr
+            | Self::DeltaIqr => false,
+        }
+    }
+
+    /// Whether a model with this test takes a count of confirming scans.
+    #[must_use]
+    pub const fn takes_confirmations(self) -> bool {
+        match self {
+            Self::Changepoint => true,
+            Self::Static
+            | Self::Percentage
+            | Self::ZScore
+            | Self::TTest
+            | Self::LogNormal
+            | Self::Iqr
+            | Self::DeltaIqr => false,
         }
     }
 }
@@ -86,8 +119,8 @@ impl ModelSlot {
 #[cfg(feature = "db")]
 mod db {
     use super::{
-        DELTA_IQR_INT, IQR_INT, LOG_NORMAL_INT, ModelTest, PERCENTAGE_INT, STATIC_INT, T_TEST_INT,
-        Z_SCORE_INT,
+        CHANGEPOINT_INT, DELTA_IQR_INT, IQR_INT, LOG_NORMAL_INT, ModelTest, PERCENTAGE_INT,
+        STATIC_INT, T_TEST_INT, Z_SCORE_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -113,6 +146,7 @@ mod db {
                 Self::LogNormal => LOG_NORMAL_INT.to_sql(out),
                 Self::Iqr => IQR_INT.to_sql(out),
                 Self::DeltaIqr => DELTA_IQR_INT.to_sql(out),
+                Self::Changepoint => CHANGEPOINT_INT.to_sql(out),
             }
         }
     }
@@ -131,6 +165,7 @@ mod db {
                 LOG_NORMAL_INT => Ok(Self::LogNormal),
                 IQR_INT => Ok(Self::Iqr),
                 DELTA_IQR_INT => Ok(Self::DeltaIqr),
+                CHANGEPOINT_INT => Ok(Self::Changepoint),
                 value => Err(Box::new(ModelTestError::Invalid(value))),
             }
         }

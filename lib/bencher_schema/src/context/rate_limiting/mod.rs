@@ -362,10 +362,22 @@ impl RateLimiting {
     where
         F: FnOnce(u32) -> RateLimitingError,
     {
+        self.check_claimed_limit_with_count(window_usage, NonZeroU32::MIN, error_fn)
+    }
+
+    pub fn check_claimed_limit_with_count<F>(
+        &self,
+        window_usage: u32,
+        count: NonZeroU32,
+        error_fn: F,
+    ) -> Result<(), HttpError>
+    where
+        F: FnOnce(u32) -> RateLimitingError,
+    {
         Self::check_inner(
             self.claimed_limit,
             window_usage,
-            NonZeroU32::MIN,
+            count,
             error_fn,
             #[cfg(feature = "otel")]
             AuthorizationKind::User,

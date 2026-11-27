@@ -337,6 +337,8 @@ pub struct CliRunJob {
             "threshold_window",
             "threshold_lower_boundary",
             "threshold_upper_boundary",
+            "threshold_significance",
+            "threshold_confirmations",
             "thresholds_reset",
             "build_time",
             "file",
@@ -493,6 +495,14 @@ mod tests {
         (
             "threshold_upper_boundary",
             &["--threshold-upper-boundary", "0.99"],
+        ),
+        (
+            "threshold_significance",
+            &["--threshold-significance", "0.001"],
+        ),
+        (
+            "threshold_confirmations",
+            &["--threshold-confirmations", "5"],
         ),
         ("thresholds_reset", &["--thresholds-reset"]),
         ("build_time", &["--build-time"]),

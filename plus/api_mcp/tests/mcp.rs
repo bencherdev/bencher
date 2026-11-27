@@ -758,6 +758,91 @@ async fn mcp_project_key_create_and_update_plot() {
     assert_eq!(updated["window"], 604_800, "{updated}");
 }
 
+// The threshold tools take and show a changepoint model and its significance, and the update tool
+// removes it with null.
+#[tokio::test]
+async fn mcp_threshold_changepoint_model() {
+    let server = TestServer::new().await;
+    let user = server.signup("MCP Lines", "mcp-lines@bencher.dev").await;
+    let org = server.create_org(&user, "MCP Lines Org").await;
+    let project = server
+        .create_project(&user, &org, "MCP Lines Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let call = async |name: &str, mut arguments: Value| {
+        arguments["project"] = json!(project_slug);
+        let request = call_tool_request(name, &arguments);
+        mcp_result(&server, Some(user.token.as_ref()), &request).await
+    };
+    let changepoint = json!({
+        "test": "changepoint",
+        "max_sample_size": 50,
+        "upper_boundary": 0.05,
+        "significance": 0.001
+    });
+
+    let branch = tool_content(&call("create_branch", json!({"name": "main"})).await);
+    let testbed = tool_content(&call("create_testbed", json!({"name": "localhost"})).await);
+    let measure =
+        tool_content(&call("create_measure", json!({"name": "latency", "units": "ns"})).await);
+    let threshold = tool_content(
+        &call(
+            "create_threshold",
+            json!({
+                "branch": branch["uuid"],
+                "testbed": testbed["uuid"],
+                "measure": measure["uuid"],
+                "test": "t_test",
+                "upper_boundary": 0.99,
+                "changepoint_model": changepoint
+            }),
+        )
+        .await,
+    );
+    assert_eq!(
+        threshold["changepoint_model"]["test"], "changepoint",
+        "{threshold}"
+    );
+    assert_eq!(
+        threshold["changepoint_model"]["significance"], 0.001,
+        "{threshold}"
+    );
+
+    let viewed =
+        tool_content(&call("view_threshold", json!({"threshold": threshold["uuid"]})).await);
+    assert_eq!(
+        viewed["changepoint_model"]["uuid"], threshold["changepoint_model"]["uuid"],
+        "{viewed}"
+    );
+
+    let error = tool_error(
+        &call(
+            "update_threshold",
+            json!({"threshold": threshold["uuid"], "test": "t_test", "upper_boundary": 0.99, "significance": 0.001}),
+        )
+        .await,
+    );
+    assert!(error.contains("`significance`"), "{error}");
+
+    let updated = tool_content(
+        &call(
+            "update_threshold",
+            json!({
+                "threshold": threshold["uuid"],
+                "test": "t_test",
+                "upper_boundary": 0.99,
+                "changepoint_model": null
+            }),
+        )
+        .await,
+    );
+    assert_eq!(updated["changepoint_model"], Value::Null, "{updated}");
+    assert_eq!(
+        updated["model"]["uuid"], threshold["model"]["uuid"],
+        "{updated}"
+    );
+}
+
 // Anonymous requests can read a public project, mirroring the REST API
 #[tokio::test]
 async fn mcp_anonymous_public_project() {

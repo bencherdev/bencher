@@ -1,6 +1,6 @@
 use bencher_json::{
-    Boundary, BranchNameId, DateTime, GitHash, MeasureNameId, MetricName, ParameterSet,
-    ProjectResourceId, ReportUuid, SampleSize, TestbedNameId, Window,
+    Boundary, BranchNameId, Confirmations, DateTime, GitHash, MeasureNameId, MetricName,
+    ParameterSet, ProjectResourceId, ReportUuid, SampleSize, Significance, TestbedNameId, Window,
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
@@ -168,6 +168,16 @@ pub struct CliReportThresholds {
     /// To ignore this option when specifying multiple Thresholds, use an underscore (`_`).
     #[clap(long, requires = "threshold_test")]
     pub threshold_upper_boundary: Vec<ElidedOption<Boundary>>,
+
+    /// Significance, the chance of a false alarm (the `changepoint` test only)
+    /// To ignore this option when specifying multiple Thresholds, use an underscore (`_`).
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_significance: Vec<ElidedOption<Significance>>,
+
+    /// Count of consecutive scans that confirm a changepoint (the `changepoint` test only, default 5)
+    /// To ignore this option when specifying multiple Thresholds, use an underscore (`_`).
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_confirmations: Vec<ElidedOption<Confirmations>>,
 
     /// Reset the unspecified Thresholds of the `branch` and `testbed`
     /// If a Threshold already exists and is not specified, its current Model will be removed.

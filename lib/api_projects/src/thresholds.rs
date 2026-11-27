@@ -6,8 +6,8 @@ use bencher_json::{
     JsonDirection, JsonPagination, JsonThresholds, Model, ModelSlot, ModelUuid, ProjectResourceId,
     ThresholdUuid,
     project::threshold::{
-        JsonNewThreshold, JsonRemoveModel, JsonThreshold, JsonThresholdQuery,
-        JsonThresholdQueryParams, JsonUpdateModel, JsonUpdateThreshold,
+        JsonNewThreshold, JsonThreshold, JsonThresholdQuery, JsonThresholdQueryParams,
+        JsonUpdateThreshold,
     },
 };
 use bencher_rbac::project::Permission;
@@ -256,7 +256,7 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
 /// A threshold with no parameters filter checks every variant,
 /// and a threshold that names no metric checks the conventional `value` name.
 /// Every threshold that matches a metric row runs: there is no winner among them.
-/// A branch, testbed, and measure can have at most 64 thresholds with a model.
+/// A branch, testbed, and measure can have at most 64 thresholds with a model in either slot.
 /// The model's test must check a metric, and the changepoint model's test must check a line.
 #[endpoint {
     method = POST,
@@ -469,8 +469,9 @@ pub async fn get_one_inner(
 /// or provide a valid project key for the project.
 /// The new model will be added to the threshold and used going forward.
 /// The old model will be replaced but still show up in the report history and alerts created when it was active.
-/// A threshold with no model can only be given one while its branch, testbed, and measure have fewer than 64 thresholds with a model.
+/// A threshold with neither model can only be given one while its branch, testbed, and measure have fewer than 64 thresholds with a model in either slot.
 /// The changepoint model changes only when the update names it, and its test must check a line.
+/// An update changes every slot it names, or none of them.
 #[endpoint {
     method = PUT,
     path =  "/v0/projects/{project}/thresholds/{threshold}",
@@ -508,16 +509,7 @@ pub async fn put_inner(
     api_actor: &ApiActor,
 ) -> Result<JsonThreshold, HttpError> {
     // Validate the new models
-    let (model, changepoint_model) = match json_threshold {
-        JsonUpdateThreshold::Model(JsonUpdateModel {
-            model,
-            changepoint_model,
-        }) => (Some(model), changepoint_model),
-        JsonUpdateThreshold::Remove(JsonRemoveModel {
-            test: (),
-            changepoint_model,
-        }) => (None, changepoint_model),
-    };
+    let (model, changepoint_model) = json_threshold.into_models();
     if let Some(model) = model {
         validate_slot_model(ModelSlot::Model, model)?;
     }
@@ -542,13 +534,14 @@ pub async fn put_inner(
 
     // Update the current threshold with the new models, if changed
     query_threshold
-        .update_model_if_changed(context, model)
+        .update_slots_if_changed(
+            context,
+            ThresholdSlots {
+                model: Some(model),
+                changepoint_model,
+            },
+        )
         .await?;
-    if let Some(changepoint_model) = changepoint_model {
-        query_threshold
-            .update_slot_if_changed(context, ModelSlot::ChangepointModel, changepoint_model)
-            .await?;
-    }
 
     // Get the updated threshold with the new model
     auth_conn!(context, |conn| {

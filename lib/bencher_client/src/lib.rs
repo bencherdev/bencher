@@ -35,6 +35,7 @@ from_client!(
     BmfVersion,
     Boundary,
     BranchName,
+    Confirmations,
     Email,
     GitHash,
     Index,
@@ -44,6 +45,7 @@ from_client!(
     NonEmpty,
     ResourceName,
     SampleSize,
+    Significance,
     Slug,
     Url,
     UserName,
@@ -82,6 +84,21 @@ from_client!(
     JobUuid,
     Timeout
 );
+
+impl From<bencher_json::ModelTest> for types::ModelTest {
+    fn from(test: bencher_json::ModelTest) -> Self {
+        match test {
+            bencher_json::ModelTest::Static => Self::Static,
+            bencher_json::ModelTest::Percentage => Self::Percentage,
+            bencher_json::ModelTest::ZScore => Self::ZScore,
+            bencher_json::ModelTest::TTest => Self::TTest,
+            bencher_json::ModelTest::LogNormal => Self::LogNormal,
+            bencher_json::ModelTest::Iqr => Self::Iqr,
+            bencher_json::ModelTest::DeltaIqr => Self::DeltaIqr,
+            bencher_json::ModelTest::Changepoint => Self::Changepoint,
+        }
+    }
+}
 
 #[cfg(feature = "plus")]
 impl From<bencher_json::OperatingSystem> for types::OperatingSystem {

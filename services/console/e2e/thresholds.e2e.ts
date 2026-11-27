@@ -1,6 +1,14 @@
+import { execFile } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
 import type { APIRequestContext, Page } from "@playwright/test";
-import type { JsonConsoleThresholds } from "../src/types/bencher";
-import { createManyAlerts, createProject } from "./api";
+import type {
+	JsonConsoleThresholds,
+	JsonThreshold,
+} from "../src/types/bencher";
+import { createKey, createManyAlerts, createProject } from "./api";
 import { axeInBothThemes } from "./axe";
 import {
 	approach,
@@ -377,6 +385,167 @@ test("a threshold whose model changed lists both, and its snippet declares the c
 	expect(copied).toMatch(
 		/^export BENCHER_API_KEY=bencher_run_\.\.\.\nbencher run \\\n/,
 	);
+});
+
+// Kills a changepoint model left off its threshold's page, a changed one that
+// keeps no history, and a changepoint model drawn in the model's history.
+test("a threshold's changepoint model and its history sit beside its model", async ({
+	page,
+	request,
+}) => {
+	const project = await createProject(request);
+	const model = { test: "t_test", upper_boundary: 0.99 };
+	const changepoint = {
+		test: "changepoint",
+		max_sample_size: 50,
+		upper_boundary: 0.05,
+		significance: 0.001,
+	};
+	await run(request, project.slug, "main", 3, [
+		{ measure: "latency", model },
+		{ measure: "latency", model: changepoint },
+	]);
+	await run(request, project.slug, "main", 2, [
+		{ measure: "latency", model },
+		{ measure: "latency", model: { ...changepoint, max_sample_size: 25 } },
+	]);
+
+	await page.goto(thresholds(project.slug));
+	await page.getByRole("link", { name: LATENCY }).click();
+	const card = page.getByRole("region", {
+		name: "Changepoint model",
+		exact: true,
+	});
+	await expect(card).toContainText("testchangepoint");
+	await expect(card).toContainText("max_sample_size25");
+	await expect(card).toContainText("significance0.001");
+	await expect(card).toContainText("confirmations5");
+	await expect(
+		page
+			.getByRole("region", { name: "Changepoint model history" })
+			.getByRole("listitem"),
+	).toHaveText([
+		/^current changepoint · upper_boundary 0\.05 · max_sample_size 25 · significance 0\.001 · confirmations 5 since /,
+		new RegExp(
+			String.raw`^replaced changepoint · upper_boundary 0\.05 · max_sample_size 50 · significance 0\.001 · confirmations 5 ${stampedDay} to `,
+		),
+	]);
+	await expect(
+		page
+			.getByRole("region", { name: "Model history", exact: true })
+			.getByRole("listitem"),
+	).toHaveText([/^current t_test · upper_boundary 0\.99 since /]);
+	const change = page.getByRole("region", { name: "Change this threshold" });
+	await expect(change).toContainText(
+		"--threshold-test t_test \\ --threshold-max-sample-size _ \\ --threshold-upper-boundary 0.99 \\ --threshold-significance _ \\ --threshold-confirmations _ \\",
+	);
+	await expect(change).toContainText(
+		"--threshold-test changepoint \\ --threshold-max-sample-size 25 \\ --threshold-upper-boundary 0.05 \\ --threshold-significance 0.001 \\ --threshold-confirmations 5 \\",
+	);
+});
+
+// Kills a threshold with only a changepoint model called one with no model on
+// the list, and its page teaching no run that declares it.
+test("a threshold with only a changepoint model names it and declares it", async ({
+	page,
+	request,
+}) => {
+	const project = await createProject(request);
+	await run(request, project.slug, "main", 1, [
+		{
+			measure: "latency",
+			model: {
+				test: "changepoint",
+				max_sample_size: 50,
+				upper_boundary: 0.05,
+				significance: 0.001,
+				confirmations: 3,
+			},
+		},
+	]);
+
+	await page.goto(thresholds(project.slug));
+	await expect(rows(page)).toHaveCount(1);
+	await expect(rows(page).first()).toContainText(
+		"changepoint · upper_boundary 0.05 · max_sample_size 50 · significance 0.001 · confirmations 3",
+	);
+	await expect(table(page)).not.toContainText("no model");
+	await page.getByRole("link", { name: LATENCY }).click();
+	await expect(
+		page.getByRole("region", { name: "Changepoint model", exact: true }),
+	).toContainText("significance0.001");
+	await expect(
+		page.getByRole("region", { name: "Change this threshold" }),
+	).toContainText(
+		"--threshold-test changepoint \\ --threshold-max-sample-size 50 \\ --threshold-upper-boundary 0.05 \\ --threshold-significance 0.001 \\ --threshold-confirmations 3 \\ --file results.json",
+	);
+});
+
+// Kills a significance or confirmations that a report sent on a model that checks a metric kept
+// on the model, so the page's command sends it and the CLI refuses it: the
+// page's own command runs, and the threshold keeps its model.
+test("a report's significance and confirmations on a metric model leave a command that runs", async ({
+	page,
+	request,
+}) => {
+	const project = await createProject(request);
+	const model = { test: "t_test", upper_boundary: 0.99 };
+	await run(request, project.slug, "main", 1, [
+		{
+			measure: "latency",
+			model: { ...model, significance: 0.5, confirmations: 5 },
+		},
+	]);
+	const { key } = await createKey(request, project.slug, "cli");
+
+	await page.goto(thresholds(project.slug));
+	await page.getByRole("link", { name: LATENCY }).click();
+	const change = page.getByRole("region", { name: "Change this threshold" });
+	await expect(change).toContainText("--threshold-test t_test");
+	const snippet = await change.locator(".rp-snip").allTextContents();
+	const start = snippet.findIndex((row) => row.startsWith("bencher run"));
+	expect(start).toBeGreaterThan(-1);
+	const [bencher, ...args] = snippet
+		.slice(start)
+		.join(" ")
+		.replaceAll("\\", " ")
+		.trim()
+		.split(/\s+/);
+	expect(bencher).toBe("bencher");
+	expect(args).not.toContain("--threshold-significance");
+	expect(args).not.toContain("--threshold-confirmations");
+
+	const cli = process.env.BENCHER_E2E_CLI;
+	if (!cli) {
+		throw new Error("Run the end-to-end suite with `cargo test-console e2e`");
+	}
+	const dir = await mkdtemp(join(tmpdir(), "bencher-threshold-"));
+	try {
+		await writeFile(
+			join(dir, "results.json"),
+			JSON.stringify({
+				blake3: [
+					{ parameters: { n: 1 }, measures: { latency: { value: 101 } } },
+				],
+			}),
+		);
+		await promisify(execFile)(cli, args, {
+			cwd: dir,
+			env: { ...process.env, BENCHER_API_KEY: key },
+		});
+	} finally {
+		await rm(dir, { recursive: true, force: true });
+	}
+
+	const response = await request.get(
+		`${seed.api_url}/v0/projects/${project.slug}/thresholds`,
+		{ headers: headers() },
+	);
+	const [threshold, ...others] = (await response.json()) as JsonThreshold[];
+	expect(others).toHaveLength(0);
+	expect(threshold?.model).toMatchObject(model);
+	expect(threshold?.model?.significance).toBeUndefined();
+	expect(threshold?.model?.confirmations).toBeUndefined();
 });
 
 // Kills an Explore link built from anything but the threshold's own branch,

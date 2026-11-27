@@ -213,14 +213,16 @@ const Row = (props: {
 	narrow: boolean;
 	index: number;
 }) => {
-	const model = () => modelText(props.row.model);
+	// A threshold with only a changepoint model shows it.
+	const current = () => props.row.model ?? props.row.changepoint_model;
+	const model = () => modelText(current());
 	const shown = () =>
 		props.narrow
 			? [
 					props.row.branch.name,
 					props.row.testbed.name,
 					filterSummary(props.row.parameters),
-					props.row.model?.test ?? "no model",
+					current()?.test ?? "no model",
 				].join(" · ")
 			: props.row.branch.name;
 	return (
@@ -246,7 +248,7 @@ const Row = (props: {
 					<Dot />
 					<span data-fixed>{filterSummary(props.row.parameters)}</span>
 					<Dot />
-					<span data-fixed>{props.row.model?.test ?? "no model"}</span>
+					<span data-fixed>{current()?.test ?? "no model"}</span>
 				</a>
 				<Show when={!props.narrow && props.row.branch.start_point}>
 					{(from) => <span class="th-from"> from {from()}</span>}

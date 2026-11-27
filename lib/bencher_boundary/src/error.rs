@@ -2,6 +2,8 @@
 pub enum BoundaryError {
     #[error("Invalid Boundary: {0}")]
     Valid(bencher_json::ValidError),
+    #[error("The {0} test checks a line, so it has no boundary for a metric")]
+    LineTest(bencher_json::ModelTest),
     #[error("Invalid Normal Distribution (mean: {mean} | std dev: {std_dev}): {error}")]
     Normal {
         mean: f64,

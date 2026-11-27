@@ -109,6 +109,7 @@ impl MetricsBoundary {
             ModelTest::DeltaIqr => {
                 Self::new_iqr(log, datum, data, true, lower_boundary, upper_boundary)
             },
+            ModelTest::Changepoint => Err(BoundaryError::LineTest(model_test)),
         }
     }
 

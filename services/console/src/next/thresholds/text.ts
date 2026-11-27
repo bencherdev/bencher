@@ -9,6 +9,8 @@ export interface ModelLike {
 	window?: number | null | undefined;
 	lower_boundary?: number | null | undefined;
 	upper_boundary?: number | null | undefined;
+	significance?: number | null | undefined;
+	confirmations?: number | null | undefined;
 }
 
 type Field = Exclude<keyof ModelLike, "test">;
@@ -22,9 +24,19 @@ const FIELDS: readonly Field[] = [
 	"window",
 ];
 
-/** Every field of the model by its API name, with its value as text or undefined when absent, as some endpoints send null. */
+// A changepoint model counts its window in points, so it has no time window.
+const CHANGEPOINT_FIELDS: readonly Field[] = [
+	"upper_boundary",
+	"lower_boundary",
+	"max_sample_size",
+	"min_sample_size",
+	"significance",
+	"confirmations",
+];
+
+/** Every field the model's test takes by its API name, with its value as text or undefined when absent, as some endpoints send null. */
 export const modelRows = (model: ModelLike): [Field, string | undefined][] =>
-	FIELDS.map((field) => {
+	(model.test === "changepoint" ? CHANGEPOINT_FIELDS : FIELDS).map((field) => {
 		const value = model[field];
 		return [
 			field,
@@ -32,7 +44,7 @@ export const modelRows = (model: ModelLike): [Field, string | undefined][] =>
 				? undefined
 				: field === "window"
 					? durationText(value)
-					: field.endsWith("_boundary")
+					: field.endsWith("_boundary") || field === "significance"
 						? boundaryText(value)
 						: formatCount(value),
 		];

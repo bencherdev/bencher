@@ -33,6 +33,9 @@ export type CardNumber = string;
 /** The first line of a commit's message. */
 export type CommitTitle = string;
 
+/** The number of consecutive scans that must find a changepoint before it is confirmed. */
+export type Confirmations = number;
+
 export type Cpu = number;
 
 export type DateTime = string;
@@ -327,11 +330,15 @@ export enum ModelTest {
 	LogNormal = "log_normal",
 	Iqr = "iqr",
 	DeltaIqr = "delta_iqr",
+	Changepoint = "changepoint",
 }
 
 export type SampleSize = number;
 
 export type Window = number;
+
+/** The chance of a false alarm a test may take, for example `0.001`. */
+export type Significance = number;
 
 export interface JsonModel {
 	uuid: Uuid;
@@ -341,6 +348,8 @@ export interface JsonModel {
 	window?: Window;
 	lower_boundary?: Boundary;
 	upper_boundary?: Boundary;
+	significance?: Significance;
+	confirmations?: Confirmations;
 	created: string;
 	replaced?: string;
 }
@@ -1429,6 +1438,9 @@ export enum ReportWarningResource {
 	Threshold = "threshold",
 	Adapter = "adapter",
 	Average = "average",
+	ChangepointModel = "changepoint_model",
+	Significance = "significance",
+	Confirmations = "confirmations",
 }
 
 /** What a report did with the resources a warning counts. */
@@ -1715,6 +1727,8 @@ export interface JsonConsoleThresholdModel {
 	window?: Window;
 	lower_boundary?: Boundary;
 	upper_boundary?: Boundary;
+	significance?: Significance;
+	confirmations?: Confirmations;
 	created: DateTimeMillis;
 	/**
 	 * When a newer model, or the removal of the threshold's model, replaced it.
@@ -1763,6 +1777,8 @@ export interface JsonConsoleThresholdRowModel {
 	window?: Window;
 	lower_boundary?: Boundary;
 	upper_boundary?: Boundary;
+	significance?: Significance;
+	confirmations?: Confirmations;
 }
 
 export interface JsonConsoleThresholdRow {

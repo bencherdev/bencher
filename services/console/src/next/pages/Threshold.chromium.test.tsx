@@ -17,6 +17,8 @@ import { page, userEvent } from "vitest/browser";
 import type {
 	JsonConsoleAlerts,
 	JsonConsoleProject,
+	JsonConsoleThreshold,
+	JsonConsoleThresholdModel,
 } from "../../types/bencher";
 import { perfHolding, perfStatusOf } from "../alert/testing";
 import { type Api, ApiError } from "../api";
@@ -97,6 +99,7 @@ const client = (version = 1) => {
 /** The API: the threshold, its alerts, and the bootstrap, each answered when `open` says so. */
 const api = (
 	open: { threshold?: Promise<void>; alerts?: Promise<void> } = {},
+	fields: Partial<JsonConsoleThreshold> = {},
 ) =>
 	fakeApi(async (url) => {
 		if (
@@ -105,7 +108,7 @@ const api = (
 			)
 		) {
 			await open.threshold;
-			return { data: thresholdFixture() };
+			return { data: thresholdFixture(fields) };
 		}
 		if (url.pathname.endsWith("/v0/console/projects/hashbrown/alerts")) {
 			await open.alerts;
@@ -1380,6 +1383,103 @@ test("the model history lists every model, newest first, with when each held", a
 		);
 });
 
+const CHANGEPOINT = {
+	uuid: "changepoint-2",
+	test: "changepoint",
+	max_sample_size: 50,
+	upper_boundary: 0.05,
+	significance: 0.001,
+	confirmations: 5,
+	created: Date.parse("2026-08-30T10:00:00Z"),
+} as JsonConsoleThresholdModel;
+const REPLACED_CHANGEPOINT = {
+	uuid: "changepoint-1",
+	test: "changepoint",
+	max_sample_size: 25,
+	lower_boundary: 0.1,
+	significance: 0.01,
+	confirmations: 3,
+	created: Date.parse("2026-08-02T10:00:00Z"),
+	replaced: Date.parse("2026-08-30T10:00:00Z"),
+} as JsonConsoleThresholdModel;
+
+// Kills a changepoint model left off the page, its fields drawn as a metric model's, or its
+// history mixed into the model's.
+test("the changepoint model and its history sit beside the model's", async () => {
+	const { api: answered } = api(
+		{},
+		{
+			changepoint_model: CHANGEPOINT,
+			changepoint_models: [CHANGEPOINT, REPLACED_CHANGEPOINT],
+		},
+	);
+	mount(answered, client());
+
+	const card = page.getByRole("region", {
+		name: "Changepoint model",
+		exact: true,
+	});
+	await expect
+		.element(card)
+		.toHaveTextContent(
+			/^Changepoint modeltestchangepointupper_boundary0\.05lower_boundarynonemax_sample_size50min_sample_sizenonesignificance0\.001confirmations5Set Aug 30$/,
+		);
+	const history = page.getByRole("region", {
+		name: "Changepoint model history",
+	});
+	await expect
+		.element(history.getByRole("listitem").nth(0))
+		.toHaveTextContent(
+			/^current changepoint · upper_boundary 0\.05 · max_sample_size 50 · significance 0\.001 · confirmations 5 since Aug 30$/,
+		);
+	await expect
+		.element(history.getByRole("listitem").nth(1))
+		.toHaveTextContent(
+			/^replaced changepoint · lower_boundary 0\.1 · max_sample_size 25 · significance 0\.01 · confirmations 3 Aug 2 to Aug 30$/,
+		);
+	expect(history.getByRole("listitem").all()).toHaveLength(2);
+	expect(
+		page
+			.getByRole("region", { name: "Model history", exact: true })
+			.getByRole("listitem")
+			.all(),
+	).toHaveLength(2);
+});
+
+// Kills changepoint cards drawn empty for a threshold that never had a changepoint model.
+test("a threshold without a changepoint model draws no changepoint card", async () => {
+	const { api: answered } = api();
+	mount(answered, client());
+
+	await expect
+		.element(page.getByRole("region", { name: "Model history", exact: true }))
+		.toBeVisible();
+	expect(document.body.textContent).not.toContain("Changepoint model");
+});
+
+// Kills a threshold with only a changepoint model called one with no model.
+test("a threshold with only a changepoint model is active", async () => {
+	const { api: answered } = api(
+		{},
+		{
+			model: undefined,
+			models: [],
+			changepoint_model: CHANGEPOINT,
+			changepoint_models: [CHANGEPOINT],
+		},
+	);
+	mount(answered, client());
+
+	await expect
+		.element(
+			page.getByRole("region", { name: "Changepoint model", exact: true }),
+		)
+		.toBeVisible();
+	const title = document.querySelector(".th-titlerow");
+	expect(title?.textContent).toContain("active");
+	expect(title?.textContent).not.toContain("no model");
+});
+
 // Kills one line alerting twice drawn as one row, a row that does not name
 // its report or its status, and a dismissed alert drawn as alerting.
 test("each alert is its own row, naming its report and its status", async () => {
@@ -1705,6 +1805,83 @@ test("the run snippet teaches the project's version", async () => {
 	await expect
 		.element(page.getByRole("region", { name: "Change this threshold" }))
 		.toHaveTextContent("--threshold-metric value");
+});
+
+// Kills a changepoint model left out of the run that declares the threshold,
+// and a threshold with only a changepoint model given no run at all.
+test("the run snippet declares the changepoint model too", async () => {
+	const { api: both } = api(
+		{},
+		{ changepoint_model: CHANGEPOINT, changepoint_models: [CHANGEPOINT] },
+	);
+	mount(both, client(1));
+	const change = page.getByRole("region", { name: "Change this threshold" });
+	await expect
+		.element(change)
+		.toHaveTextContent("--threshold-test changepoint");
+	expect(change.element().textContent).toContain("--threshold-test t_test");
+	expect(change.element().textContent).toContain(
+		"--threshold-significance 0.001",
+	);
+	expect(change.element().textContent).toContain("--threshold-confirmations 5");
+	dispose?.();
+	document.body.replaceChildren();
+
+	const { api: only } = api(
+		{},
+		{
+			model: undefined,
+			models: [],
+			changepoint_model: CHANGEPOINT,
+			changepoint_models: [CHANGEPOINT],
+		},
+	);
+	mount(only, client(1));
+	await expect
+		.element(page.getByRole("region", { name: "Change this threshold" }))
+		.toHaveTextContent("--threshold-test changepoint");
+	expect(
+		page.getByRole("region", { name: "Change this threshold" }).element()
+			.textContent,
+	).not.toContain("--threshold-significance _");
+});
+
+// Kills a version 0 run taught a changepoint group, which a version 0 report
+// refuses.
+test("a version 0 run snippet declares only the model", async () => {
+	const { api: answered } = api(
+		{},
+		{ changepoint_model: CHANGEPOINT, changepoint_models: [CHANGEPOINT] },
+	);
+	mount(answered, client(0));
+	const change = page.getByRole("region", { name: "Change this threshold" });
+	await expect.element(change).toHaveTextContent("--threshold-test t_test");
+	expect(change.element().textContent).not.toContain("changepoint");
+});
+
+// Kills a version 0 run taught for a threshold with only a changepoint model,
+// which a version 0 report refuses.
+test("a version 0 threshold with only a changepoint model teaches no run", async () => {
+	const { api: answered } = api(
+		{},
+		{
+			model: undefined,
+			models: [],
+			changepoint_model: CHANGEPOINT,
+			changepoint_models: [CHANGEPOINT],
+		},
+	);
+	mount(answered, client(0));
+	await expect
+		.element(
+			page.getByRole("region", { name: "Changepoint model", exact: true }),
+		)
+		.toBeVisible();
+	const change = page.getByRole("region", { name: "Change this threshold" });
+	await expect
+		.element(change.getByRole("link", { name: "How thresholds work" }))
+		.toBeVisible();
+	expect(change.element().textContent).not.toContain("bencher run");
 });
 
 // Kills alerts that never load past their first batch, or ask again for a

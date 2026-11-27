@@ -992,6 +992,247 @@ async fn active_cap_refuses_to_give_a_model_past_it() {
     assert_eq!(status, StatusCode::OK, "{body}");
 }
 
+/// A model whose test checks a line, for a threshold's changepoint slot.
+fn changepoint_model() -> serde_json::Value {
+    serde_json::json!({
+        "test": "changepoint",
+        "max_sample_size": 50,
+        "upper_boundary": 0.05,
+        "significance": 0.001,
+    })
+}
+
+fn project_threshold_count(server: &TestServer, project_slug: &str) -> i64 {
+    schema::threshold::table
+        .filter(schema::threshold::project_id.eq(project_id(server, project_slug)))
+        .count()
+        .get_result(&mut server.db_conn())
+        .expect("Failed to count the thresholds")
+}
+
+// A threshold with only a changepoint model counts toward the cap, a threshold with both slots
+// counts once, and a threshold counts until both of its slots are empty, on the API and in a
+// report.
+#[tokio::test]
+async fn active_cap_counts_a_threshold_with_either_slot_once() {
+    let server = TestServer::new().await;
+    let (user, project_slug) =
+        project_with_thresholds(&server, "capslots", MAX_ACTIVE_THRESHOLDS).await;
+    let path = format!("/v0/projects/{project_slug}/thresholds");
+    let mut uuids = threshold_uuids(&server, &user, &project_slug)
+        .await
+        .into_iter();
+    let only = format!("{path}/{}", uuids.next().expect("a seed threshold"));
+    let both = format!("{path}/{}", uuids.next().expect("another seed threshold"));
+
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::PUT,
+        &only,
+        &serde_json::json!({ "test": null, "changepoint_model": changepoint_model() }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) =
+        send_json(&server, &user, Method::POST, &path, &new_threshold("past")).await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "only a changepoint model counts: {body}"
+    );
+
+    let with_changepoint = serde_json::json!({
+        "test": "percentage",
+        "upper_boundary": 0.05,
+        "changepoint_model": changepoint_model(),
+    });
+    let (status, body) = send_json(&server, &user, Method::PUT, &both, &with_changepoint).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "a second slot does not count again: {body}"
+    );
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::PUT,
+        &both,
+        &serde_json::json!({ "test": null }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) =
+        send_json(&server, &user, Method::POST, &path, &new_threshold("past")).await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "the changepoint model still counts: {body}"
+    );
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::PUT,
+        &both,
+        &serde_json::json!({ "test": null, "changepoint_model": null }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let mut past = new_threshold("past");
+    past["changepoint_model"] = changepoint_model();
+    let (status, body) = send_json(&server, &user, Method::POST, &path, &past).await;
+    assert_eq!(status, StatusCode::CREATED, "both slots count once: {body}");
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::POST,
+        &path,
+        &new_threshold("further"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+
+    let count = project_threshold_count(&server, &project_slug);
+    let report = serde_json::json!({
+        "branch": "ssize-branch",
+        "testbed": "ssize-testbed",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [serde_json::json!({
+            "bench": [{ "parameters": {}, "measures": { "latency": { "value": 1.0 } } }]
+        })
+        .to_string()],
+        "bmf_version": 1,
+        "thresholds": { "models": [
+            { "measure": "latency", "metric": "report", "model": changepoint_model() },
+        ] },
+    });
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::POST,
+        &format!("/v0/projects/{project_slug}/reports"),
+        &report,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    assert_eq!(
+        project_threshold_count(&server, &project_slug),
+        count,
+        "the report skipped a threshold with only a changepoint model"
+    );
+}
+
+// A threshold with only a changepoint model already counts toward the cap, so giving it a model
+// at the cap does not count it again.
+#[tokio::test]
+async fn active_cap_admits_a_model_for_a_threshold_with_only_a_changepoint_model() {
+    let server = TestServer::new().await;
+    let (user, project_slug) =
+        project_with_thresholds(&server, "capmodel", MAX_ACTIVE_THRESHOLDS).await;
+    let path = format!("/v0/projects/{project_slug}/thresholds");
+    let only = format!(
+        "{path}/{}",
+        threshold_uuids(&server, &user, &project_slug)
+            .await
+            .into_iter()
+            .next()
+            .expect("a seed threshold")
+    );
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::PUT,
+        &only,
+        &serde_json::json!({ "test": null, "changepoint_model": changepoint_model() }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let model = serde_json::json!({ "test": "t_test", "upper_boundary": 0.99 });
+    let (status, body) = send_json(&server, &user, Method::PUT, &only, &model).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+}
+
+// A report that would fill both slots of a threshold past the cap skips the threshold once, so
+// its warning counts the thresholds it skipped, whether they exist or are new.
+#[tokio::test]
+async fn active_cap_skips_a_threshold_with_both_slots_once() {
+    let server = TestServer::new().await;
+    let (user, project_slug) =
+        project_with_thresholds(&server, "capskip", MAX_ACTIVE_THRESHOLDS).await;
+    let path = format!("/v0/projects/{project_slug}/thresholds");
+    let (bare, _, _) = branch_thresholds(&server, &project_slug, "ssize-branch")
+        .into_iter()
+        .find(|(_, metric, _)| metric == "value")
+        .expect("the bare threshold");
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::PUT,
+        &format!("{path}/{bare}"),
+        &serde_json::json!({ "test": null }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) =
+        send_json(&server, &user, Method::POST, &path, &new_threshold("past")).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let count = project_threshold_count(&server, &project_slug);
+
+    let model = serde_json::json!({ "test": "percentage", "upper_boundary": 0.05 });
+    let entries = ["value", "new"]
+        .into_iter()
+        .flat_map(|metric| {
+            [model.clone(), changepoint_model()].map(|slot_model| {
+                serde_json::json!({ "measure": "latency", "metric": metric, "model": slot_model })
+            })
+        })
+        .collect::<Vec<_>>();
+    // Results on another measure, so no threshold on latency is skipped for a metric they lack.
+    let report = serde_json::json!({
+        "branch": "ssize-branch",
+        "testbed": "ssize-testbed",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [serde_json::json!({
+            "bench": [{ "parameters": {}, "measures": { "throughput": { "value": 1.0 } } }]
+        })
+        .to_string()],
+        "bmf_version": 1,
+        "thresholds": { "models": entries },
+    });
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::POST,
+        &format!("/v0/projects/{project_slug}/reports"),
+        &report,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let report: JsonReport = serde_json::from_str(&body).expect("Failed to parse the report");
+    assert_eq!(
+        report.warnings,
+        Some(vec![JsonReportWarning {
+            resource: ReportWarningResource::Threshold,
+            action: ReportWarningAction::Skip,
+            count: 2,
+        }])
+    );
+    assert_eq!(project_threshold_count(&server, &project_slug), count);
+    let slots = schema::threshold::table
+        .filter(schema::threshold::uuid.eq(bare))
+        .select((
+            schema::threshold::model_id,
+            schema::threshold::changepoint_model_id,
+        ))
+        .first::<(Option<ModelId>, Option<ModelId>)>(&mut server.db_conn())
+        .expect("Failed to load the bare threshold");
+    assert_eq!(slots, (None, None), "the report skipped the bare threshold");
+}
+
 // A start point clone copies what fits under the cap, in the UUID order of the thresholds it
 // copies, and skips the rest.
 #[tokio::test]
@@ -1454,6 +1695,155 @@ async fn model_ceiling_skips_a_report_update_past_it() {
     );
 }
 
+// A report that names both slots of a threshold at the per threshold model ceiling, or 1 below it
+// so that only one more model fits, skips the threshold once, and the threshold keeps both slots.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn model_ceiling_skips_a_threshold_with_both_slots_once() {
+    let server = TestServer::new_with_creation_limits(3, 3).await;
+    for (label, more, models) in [("modelslots", 2, 3), ("modelslotsone", 1, 2)] {
+        model_ceiling_skips_both_slots(&server, label, more, models).await;
+    }
+}
+
+#[cfg(feature = "plus")]
+async fn model_ceiling_skips_both_slots(
+    server: &TestServer,
+    label: &str,
+    more: usize,
+    models: i64,
+) {
+    let (user, project_slug) = project_with_thresholds(server, label, 1).await;
+    let (bare, _, _) = branch_thresholds(server, &project_slug, "ssize-branch")
+        .into_iter()
+        .next()
+        .expect("the seed threshold");
+    let bare = threshold_id(server, bare);
+    insert_models(server, bare, more);
+    let before = threshold_models(server, bare);
+    assert_eq!(before.1, models, "{label}: the seed model and {more} more");
+
+    let report = serde_json::json!({
+        "branch": "ssize-branch",
+        "testbed": "ssize-testbed",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [serde_json::json!({
+            "bench": [{ "parameters": {}, "measures": { "latency": { "value": 1.0 } } }]
+        })
+        .to_string()],
+        "bmf_version": 1,
+        "thresholds": { "models": [
+            {
+                "measure": "latency",
+                "metric": "value",
+                "model": { "test": "percentage", "upper_boundary": 0.30 },
+            },
+            { "measure": "latency", "metric": "value", "model": changepoint_model() },
+        ] },
+    });
+    let (status, body) = send_json(
+        server,
+        &user,
+        Method::POST,
+        &format!("/v0/projects/{project_slug}/reports"),
+        &report,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{label}: {body}");
+    let report: JsonReport = serde_json::from_str(&body).expect("Failed to parse the report");
+    assert_eq!(report.warnings, Some(skipped_threshold()), "{label}");
+    assert_eq!(
+        threshold_models(server, bare),
+        before,
+        "{label}: the threshold keeps its models"
+    );
+}
+
+// A reset report whose update does not fit the per threshold model ceiling skips the update once,
+// and still empties the slot it does not name.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn model_ceiling_skip_still_resets_an_unnamed_slot() {
+    let server = TestServer::new_with_creation_limits(3, 3).await;
+    let (user, project_slug) = project_with_thresholds(&server, "modelreset", 1).await;
+    let (bare, _, _) = branch_thresholds(&server, &project_slug, "ssize-branch")
+        .into_iter()
+        .next()
+        .expect("the seed threshold");
+    let bare = threshold_id(&server, bare);
+    let report = |models: serde_json::Value, reset: bool| {
+        serde_json::json!({
+            "branch": "ssize-branch",
+            "testbed": "ssize-testbed",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": [serde_json::json!({
+                "bench": [{ "parameters": {}, "measures": { "latency": { "value": 1.0 } } }]
+            })
+            .to_string()],
+            "bmf_version": 1,
+            "thresholds": { "models": models, "reset": reset },
+        })
+    };
+    let metric = |upper_boundary: f64| {
+        serde_json::json!({
+            "measure": "latency",
+            "metric": "value",
+            "model": { "test": "percentage", "upper_boundary": upper_boundary },
+        })
+    };
+    let path = format!("/v0/projects/{project_slug}/reports");
+
+    let both = serde_json::json!([
+        metric(0.20),
+        { "measure": "latency", "metric": "value", "model": changepoint_model() },
+    ]);
+    let (status, body) = send_json(&server, &user, Method::POST, &path, &report(both, false)).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let before = threshold_models(&server, bare);
+    assert_eq!(
+        before.1, 3,
+        "the seed model and both slots fill the ceiling"
+    );
+    assert!(
+        changepoint_model_id(&server, bare).is_some(),
+        "the report filled the changepoint slot"
+    );
+
+    let only_metric = serde_json::json!([metric(0.30)]);
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::POST,
+        &path,
+        &report(only_metric, true),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let report: JsonReport = serde_json::from_str(&body).expect("Failed to parse the report");
+    assert_eq!(report.warnings, Some(skipped_threshold()));
+    assert_eq!(
+        threshold_models(&server, bare),
+        before,
+        "the threshold keeps its metric model and gains no model"
+    );
+    assert_eq!(
+        changepoint_model_id(&server, bare),
+        None,
+        "the reset empties the unnamed changepoint slot"
+    );
+}
+
+#[cfg(feature = "plus")]
+fn changepoint_model_id(server: &TestServer, threshold_id: ThresholdId) -> Option<ModelId> {
+    schema::threshold::table
+        .filter(schema::threshold::id.eq(threshold_id))
+        .select(schema::threshold::changepoint_model_id)
+        .first(&mut server.db_conn())
+        .expect("Failed to load the threshold")
+}
+
 // Past the per threshold model ceiling a report's start point clone skips that threshold's update
 // and warns of it on the report, and the copy keeps its model.
 #[cfg(feature = "plus")]
@@ -1514,5 +1904,84 @@ async fn model_ceiling_skips_a_start_point_clone_update_past_it() {
         threshold_models(&server, copy),
         before,
         "the copy keeps its model"
+    );
+}
+
+// Past the per threshold model ceiling a reset start point clone skips the copy's update once,
+// and still empties the slot its start point leaves empty.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn model_ceiling_skip_still_empties_a_clone_slot() {
+    let server = TestServer::new_with_creation_limits(4, 4).await;
+    let (user, project_slug) = project_with_thresholds(&server, "modelcloneslot", 1).await;
+    // A start point is a version, so the branch needs a report to be cloned from.
+    let (status, body) = post_report(&server, &user, &project_slug, None).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let (seed, _, _) = branch_thresholds(&server, &project_slug, "ssize-branch")
+        .into_iter()
+        .next()
+        .expect("the seed threshold");
+    let seed_path = format!("/v0/projects/{project_slug}/thresholds/{seed}");
+    let both = serde_json::json!({
+        "test": "percentage",
+        "upper_boundary": 0.05,
+        "changepoint_model": changepoint_model(),
+    });
+    let (status, body) = send_json(&server, &user, Method::PUT, &seed_path, &both).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let path = format!("/v0/projects/{project_slug}/reports");
+    let onto_feature = |reset: bool| {
+        serde_json::json!({
+            "branch": "feature",
+            "start_point": { "branch": "ssize-branch", "clone_thresholds": true, "reset": reset },
+            "testbed": "ssize-testbed",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": ["{\"bench\": {\"latency\": {\"value\": 1.0}}}"],
+        })
+    };
+    let (status, body) = send_json(&server, &user, Method::POST, &path, &onto_feature(false)).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let (copy, _, _) = branch_thresholds(&server, &project_slug, "feature")
+        .into_iter()
+        .next()
+        .expect("the clone copied the seed threshold");
+    let copy = threshold_id(&server, copy);
+    assert!(
+        changepoint_model_id(&server, copy).is_some(),
+        "the clone copied the changepoint slot"
+    );
+    assert_eq!(
+        threshold_models(&server, copy).1,
+        2,
+        "the clone copied both slots"
+    );
+    insert_models(&server, copy, 2);
+    let before = threshold_models(&server, copy);
+    assert_eq!(before.1, 4, "the copy is at the ceiling");
+
+    // The start point's threshold takes a new metric model and empties its changepoint slot.
+    let only_metric = serde_json::json!({
+        "test": "t_test",
+        "upper_boundary": 0.99,
+        "changepoint_model": null,
+    });
+    let (status, body) = send_json(&server, &user, Method::PUT, &seed_path, &only_metric).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let (status, body) = send_json(&server, &user, Method::POST, &path, &onto_feature(true)).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let report: JsonReport = serde_json::from_str(&body).expect("Failed to parse the report");
+    assert_eq!(report.warnings, Some(skipped_threshold()));
+    assert_eq!(
+        threshold_models(&server, copy),
+        before,
+        "the copy keeps its metric model and gains no model"
+    );
+    assert_eq!(
+        changepoint_model_id(&server, copy),
+        None,
+        "the clone empties the slot its start point leaves empty"
     );
 }

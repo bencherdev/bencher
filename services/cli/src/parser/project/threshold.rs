@@ -1,8 +1,8 @@
 use bencher_json::{
-    Boundary, BranchNameId, MeasureNameId, ModelUuid, ProjectResourceId, SampleSize, TestbedNameId,
-    ThresholdUuid, Window,
+    Boundary, BranchNameId, Confirmations, MeasureNameId, ModelUuid, ProjectResourceId, SampleSize,
+    Significance, TestbedNameId, ThresholdUuid, Window,
 };
-use clap::{ArgGroup, Parser, Subcommand, ValueEnum};
+use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
 
@@ -83,6 +83,9 @@ pub struct CliThresholdCreate {
     pub model: CliModel,
 
     #[clap(flatten)]
+    pub changepoint_model: CliChangepointModel,
+
+    #[clap(flatten)]
     pub backend: CliBackend,
 }
 
@@ -133,6 +136,77 @@ pub enum CliModelTest {
     Iqr,
     /// Delta interquartile range (ΔIQR)
     DeltaIqr,
+    /// Changepoint detection on a line
+    Changepoint,
+}
+
+#[derive(Args, Debug)]
+pub struct CliChangepointModel {
+    /// Changepoint model test
+    #[clap(value_enum, id = "changepoint_test", long = "changepoint-test")]
+    pub test: Option<CliChangepointTest>,
+
+    /// Changepoint model min points on a line
+    #[clap(
+        id = "changepoint_min_sample_size",
+        long = "changepoint-min-sample-size",
+        requires = "changepoint_test",
+        value_name = "SAMPLE_SIZE"
+    )]
+    pub min_sample_size: Option<SampleSize>,
+
+    /// Changepoint model window of points
+    #[clap(
+        id = "changepoint_max_sample_size",
+        long = "changepoint-max-sample-size",
+        requires = "changepoint_test",
+        value_name = "SAMPLE_SIZE"
+    )]
+    pub max_sample_size: Option<SampleSize>,
+
+    /// Changepoint model lower boundary, as a relative change
+    #[clap(
+        id = "changepoint_lower_boundary",
+        long = "changepoint-lower-boundary",
+        requires = "changepoint_test",
+        value_name = "BOUNDARY"
+    )]
+    pub lower_boundary: Option<Boundary>,
+
+    /// Changepoint model upper boundary, as a relative change
+    #[clap(
+        id = "changepoint_upper_boundary",
+        long = "changepoint-upper-boundary",
+        requires = "changepoint_test",
+        value_name = "BOUNDARY"
+    )]
+    pub upper_boundary: Option<Boundary>,
+
+    /// Changepoint model significance, the chance of a false alarm
+    #[clap(
+        id = "changepoint_significance",
+        long = "changepoint-significance",
+        requires = "changepoint_test",
+        value_name = "SIGNIFICANCE"
+    )]
+    pub significance: Option<Significance>,
+
+    /// Changepoint model count of consecutive scans that confirm a changepoint (default 5)
+    #[clap(
+        id = "changepoint_confirmations",
+        long = "changepoint-confirmations",
+        requires = "changepoint_test",
+        value_name = "CONFIRMATIONS"
+    )]
+    pub confirmations: Option<Confirmations>,
+}
+
+/// Supported changepoint model tests
+#[derive(ValueEnum, Debug, Clone, Copy)]
+#[clap(rename_all = "snake_case")]
+pub enum CliChangepointTest {
+    /// Changepoint detection on a line
+    Changepoint,
 }
 
 #[derive(Parser, Debug)]
@@ -161,6 +235,13 @@ pub struct CliThresholdUpdate {
 
     #[clap(flatten)]
     pub model: CliUpdateModel,
+
+    #[clap(flatten)]
+    pub changepoint_model: CliChangepointModel,
+
+    /// Remove the threshold changepoint model
+    #[clap(long, conflicts_with = "changepoint_test")]
+    pub changepoint_remove: bool,
 
     #[clap(flatten)]
     pub backend: CliBackend,

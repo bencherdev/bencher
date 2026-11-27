@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt};
 
-use bencher_valid::{BmfVersion, DateTime, DateTimeMillis, GitHash, MetricName, Model};
+use bencher_valid::{BmfVersion, DateTime, DateTimeMillis, GitHash, MetricName, Model, ModelTest};
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -69,6 +69,8 @@ pub struct JsonReportThresholds {
     /// At BMF version 0 this is a map of measure UUID, slug, or name to the threshold model to use.
     /// At BMF version 1 this is a list of threshold entries.
     /// If a measure name or slug is provided, the measure will be created if it does not exist.
+    /// A `significance` or `confirmations` on a model whose test does not take it is set aside
+    /// with a warning.
     pub models: Option<JsonReportThresholdModels>,
     /// Reset the unspecified thresholds of the branch and testbed.
     /// Any thresholds present in the `models` field will still be updated accordingly.
@@ -87,7 +89,7 @@ pub enum JsonReportThresholdModels {
     ///
     /// A map key names a measure and nothing else, so the threshold it addresses is
     /// the bare one: the conventional `value` name of every variant.
-    Map(HashMap<MeasureNameId, Model>),
+    Map(HashMap<MeasureNameId, JsonReportModel>),
     /// BMF version 1: a list of entries.
     ///
     /// An entry names everything a threshold checks, so one measure may carry several
@@ -164,7 +166,254 @@ pub struct JsonReportThresholdEntry {
     /// `value` names the conventional metric.
     pub metric: MetricName,
     /// The threshold model to use.
+    /// A model with the `changepoint` test that its types or its rules refuse is skipped with a
+    /// warning.
+    #[cfg_attr(feature = "schema", schemars(with = "Model"))]
+    pub model: JsonReportThresholdEntryModel,
+}
+
+/// A model a report declares, read strictly once a `significance` or `confirmations` its test
+/// does not take is set aside, whatever its value, so that the report goes on without it.
+#[derive(Debug, Clone, Copy)]
+pub struct JsonReportModel {
     pub model: Model,
+    /// Whether the report wrote a `significance` that the model's test does not take.
+    pub ignored_significance: bool,
+    /// Whether the report wrote a `confirmations` that the model's test does not take.
+    pub ignored_confirmations: bool,
+}
+
+impl JsonReportModel {
+    fn from_fields(
+        test: Option<ModelTest>,
+        mut fields: ModelFields,
+    ) -> Result<Self, serde_path_to_error::Error<serde_json::Error>> {
+        let ignored_significance = test.is_some_and(|test| !test.takes_significance())
+            && fields.remove("significance").is_some();
+        let ignored_confirmations = test.is_some_and(|test| !test.takes_confirmations())
+            && fields.remove("confirmations").is_some();
+        Self::read(
+            &serde_json::Value::Object(fields),
+            ignored_significance,
+            ignored_confirmations,
+        )
+    }
+
+    fn read(
+        model: &serde_json::Value,
+        ignored_significance: bool,
+        ignored_confirmations: bool,
+    ) -> Result<Self, serde_path_to_error::Error<serde_json::Error>> {
+        serde_path_to_error::deserialize(model).map(|model| Self {
+            model,
+            ignored_significance,
+            ignored_confirmations,
+        })
+    }
+}
+
+impl Serialize for JsonReportModel {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.model.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for JsonReportModel {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_any(JsonReportModelVisitor)
+    }
+}
+
+struct JsonReportModelVisitor;
+
+impl<'de> Visitor<'de> for JsonReportModelVisitor {
+    type Value = JsonReportModel;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("struct Model")
+    }
+
+    fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+    where
+        A: de::MapAccess<'de>,
+    {
+        let (test, fields) = model_fields(map)?;
+        JsonReportModel::from_fields(test, fields).map_err(de::Error::custom)
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: de::SeqAccess<'de>,
+    {
+        let mut fields = Vec::new();
+        while let Some(field) = seq.next_element::<serde_json::Value>()? {
+            fields.push(field);
+        }
+        // A test that cannot be read fails the strict read, which names it.
+        let test = fields
+            .first()
+            .and_then(|test| ModelTest::deserialize(test).ok());
+        // Each field a test does not take is found by its place at the end of the array.
+        let ignored_confirmations = test.is_some_and(|test| !test.takes_confirmations())
+            && fields.len() == MODEL_FIELDS.len()
+            && fields.pop().is_some();
+        let ignored_significance = test.is_some_and(|test| !test.takes_significance())
+            && fields.len() == MODEL_FIELDS.len() - 1
+            && fields.pop().is_some();
+        JsonReportModel::read(
+            &serde_json::Value::Array(fields),
+            ignored_significance,
+            ignored_confirmations,
+        )
+        .map_err(de::Error::custom)
+    }
+}
+
+/// Every field of a model, in the order of its array form, `significance` and `confirmations` the
+/// last of them.
+const MODEL_FIELDS: [&str; 8] = [
+    "test",
+    "min_sample_size",
+    "max_sample_size",
+    "window",
+    "lower_boundary",
+    "upper_boundary",
+    "significance",
+    "confirmations",
+];
+
+/// The fields a model whose test does not take them sets aside.
+const SET_ASIDE_FIELDS: [&str; 2] = ["significance", "confirmations"];
+
+/// A field added to `Model` fails to compile here until `MODEL_FIELDS` and the array read take it.
+const _: fn(Model) = |Model {
+                          test: _,
+                          min_sample_size: _,
+                          max_sample_size: _,
+                          window: _,
+                          lower_boundary: _,
+                          upper_boundary: _,
+                          significance: _,
+                          confirmations: _,
+                      }| {};
+
+/// The model of a BMF version 1 threshold entry, as a report reads it.
+///
+/// A model with the `changepoint` test is read leniently, so a report goes on without it.
+/// A model with any other test is read strictly, so a value its types refuse fails the report.
+#[derive(Debug, Clone)]
+pub enum JsonReportThresholdEntryModel {
+    Model(JsonReportModel),
+    /// A model with the `changepoint` test that its types or its rules refuse, as written.
+    Refused {
+        model: serde_json::Value,
+        error: String,
+    },
+}
+
+impl Serialize for JsonReportThresholdEntryModel {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::Model(model) => model.serialize(serializer),
+            Self::Refused { model, .. } => model.serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for JsonReportThresholdEntryModel {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_map(JsonReportThresholdEntryModelVisitor)
+    }
+}
+
+struct JsonReportThresholdEntryModelVisitor;
+
+impl<'de> Visitor<'de> for JsonReportThresholdEntryModelVisitor {
+    type Value = JsonReportThresholdEntryModel;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("struct Model")
+    }
+
+    fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+    where
+        A: de::MapAccess<'de>,
+    {
+        let (test, fields) = model_fields(map)?;
+        if test != Some(ModelTest::Changepoint) {
+            return JsonReportModel::from_fields(test, fields)
+                .map(JsonReportThresholdEntryModel::Model)
+                .map_err(de::Error::custom);
+        }
+        let model = serde_json::Value::Object(fields);
+        let error = match serde_path_to_error::deserialize::<_, Model>(&model) {
+            Ok(read) => match read.validate() {
+                Ok(()) => {
+                    return Ok(JsonReportThresholdEntryModel::Model(JsonReportModel {
+                        model: read,
+                        ignored_significance: false,
+                        ignored_confirmations: false,
+                    }));
+                },
+                Err(e) => e.to_string(),
+            },
+            Err(e) => e.to_string(),
+        };
+        Ok(JsonReportThresholdEntryModel::Refused { model, error })
+    }
+}
+
+/// Every field of a model as written, its test among them.
+type ModelFields = serde_json::Map<String, serde_json::Value>;
+
+/// Reads `test` through the deserializer it is given, so a refused test is named by its full
+/// path, and holds every field until the test says how to read the model.
+fn model_fields<'de, A>(mut map: A) -> Result<(Option<ModelTest>, ModelFields), A::Error>
+where
+    A: de::MapAccess<'de>,
+{
+    let mut fields = ModelFields::new();
+    let mut test = None;
+    while let Some(key) = map.next_key::<String>()? {
+        if key == "test" {
+            if test.replace(map.next_value::<ModelTest>()?).is_some() {
+                return Err(de::Error::duplicate_field("test"));
+            }
+        } else {
+            let value = map.next_value::<serde_json::Value>()?;
+            if fields.insert(key.clone(), value).is_some()
+                && let Some(field) = read_once(&key)
+            {
+                return Err(de::Error::duplicate_field(field));
+            }
+        }
+    }
+    if let Some(test) = test {
+        let value = serde_json::to_value(test).map_err(de::Error::custom)?;
+        fields.insert("test".to_owned(), value);
+    }
+    Ok((test, fields))
+}
+
+/// The field `key` names, if a model refuses to read it twice: any field but those a model whose
+/// test does not take them sets aside, so their last value wins as an unknown key's does.
+fn read_once(key: &str) -> Option<&'static str> {
+    MODEL_FIELDS
+        .into_iter()
+        .filter(|field| !SET_ASIDE_FIELDS.contains(field))
+        .find(|field| *field == key)
 }
 
 /// The description a derived schema would have taken from the doc comment, spelled
@@ -919,6 +1168,9 @@ const RESOURCE_METRIC_INT: i32 = 3;
 const RESOURCE_THRESHOLD_INT: i32 = 4;
 const RESOURCE_ADAPTER_INT: i32 = 5;
 const RESOURCE_AVERAGE_INT: i32 = 6;
+const RESOURCE_CHANGEPOINT_MODEL_INT: i32 = 7;
+const RESOURCE_SIGNIFICANCE_INT: i32 = 8;
+const RESOURCE_CONFIRMATIONS_INT: i32 = 9;
 
 /// The resource a report warning counts.
 #[typeshare::typeshare]
@@ -936,6 +1188,9 @@ pub enum ReportWarningResource {
     Threshold = RESOURCE_THRESHOLD_INT,
     Adapter = RESOURCE_ADAPTER_INT,
     Average = RESOURCE_AVERAGE_INT,
+    ChangepointModel = RESOURCE_CHANGEPOINT_MODEL_INT,
+    Significance = RESOURCE_SIGNIFICANCE_INT,
+    Confirmations = RESOURCE_CONFIRMATIONS_INT,
 }
 
 const ACTION_SKIP_INT: i32 = 0;
@@ -960,8 +1215,9 @@ pub enum ReportWarningAction {
 mod report_warning_db {
     use super::{
         ACTION_IGNORE_INT, ACTION_SKIP_INT, RESOURCE_ADAPTER_INT, RESOURCE_AVERAGE_INT,
-        RESOURCE_BENCHMARK_INT, RESOURCE_MEASURE_INT, RESOURCE_METRIC_INT, RESOURCE_THRESHOLD_INT,
-        RESOURCE_VARIANT_INT, ReportWarningAction, ReportWarningResource,
+        RESOURCE_BENCHMARK_INT, RESOURCE_CHANGEPOINT_MODEL_INT, RESOURCE_CONFIRMATIONS_INT,
+        RESOURCE_MEASURE_INT, RESOURCE_METRIC_INT, RESOURCE_SIGNIFICANCE_INT,
+        RESOURCE_THRESHOLD_INT, RESOURCE_VARIANT_INT, ReportWarningAction, ReportWarningResource,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -989,6 +1245,9 @@ mod report_warning_db {
                 Self::Threshold => RESOURCE_THRESHOLD_INT.to_sql(out),
                 Self::Adapter => RESOURCE_ADAPTER_INT.to_sql(out),
                 Self::Average => RESOURCE_AVERAGE_INT.to_sql(out),
+                Self::ChangepointModel => RESOURCE_CHANGEPOINT_MODEL_INT.to_sql(out),
+                Self::Significance => RESOURCE_SIGNIFICANCE_INT.to_sql(out),
+                Self::Confirmations => RESOURCE_CONFIRMATIONS_INT.to_sql(out),
             }
         }
     }
@@ -1007,6 +1266,9 @@ mod report_warning_db {
                 RESOURCE_THRESHOLD_INT => Ok(Self::Threshold),
                 RESOURCE_ADAPTER_INT => Ok(Self::Adapter),
                 RESOURCE_AVERAGE_INT => Ok(Self::Average),
+                RESOURCE_CHANGEPOINT_MODEL_INT => Ok(Self::ChangepointModel),
+                RESOURCE_SIGNIFICANCE_INT => Ok(Self::Significance),
+                RESOURCE_CONFIRMATIONS_INT => Ok(Self::Confirmations),
                 value => Err(Box::new(ReportWarningError::Resource(value))),
             }
         }
@@ -1301,6 +1563,34 @@ mod tests {
     #[test]
     fn default_is_zero() {
         assert_eq!(Iteration::default(), Iteration(0));
+    }
+
+    // A refused changepoint model keeps what was written and names the field its type or its rule
+    // refuses, since the server's log is the only place that says why.
+    #[test]
+    fn a_refused_changepoint_model_names_its_field() {
+        for (field, value) in [
+            ("significance", serde_json::json!(1.5)),
+            ("max_sample_size", serde_json::json!(0)),
+            ("upper_boundary", serde_json::json!(-1)),
+            ("window", serde_json::json!(3600)),
+            ("confirmations", serde_json::json!(21)),
+        ] {
+            let mut written = serde_json::json!({
+                "test": "changepoint",
+                "max_sample_size": 50,
+                "upper_boundary": 0.05,
+                "significance": 0.001,
+            });
+            written[field] = value;
+            match serde_json::from_value(written.clone()).unwrap() {
+                JsonReportThresholdEntryModel::Refused { model, error } => {
+                    assert_eq!(model, written, "{field}");
+                    assert!(error.contains(field), "{field}: {error}");
+                },
+                JsonReportThresholdEntryModel::Model(model) => panic!("{field}: read {model:?}"),
+            }
+        }
     }
 
     #[test]
