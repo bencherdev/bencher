@@ -204,7 +204,7 @@ zstd = "0.14"
 # oxide
 dropshot = { version = "0.17.1", default-features = false }
 progenitor = { version = "0.15", default-features = false }
-progenitor-client = { version = "0.15", default-features = false }
+progenitor-client = { version = "0.16", default-features = false }
 
 [workspace.lints.rust]
 # https://doc.rust-lang.org/rustc/lints/listing/index.html
