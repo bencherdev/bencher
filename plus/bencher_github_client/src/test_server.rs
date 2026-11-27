@@ -51,23 +51,75 @@ pub const HOLD: &str = "x-test-hold";
 
 impl Server {
     pub async fn start(responses: Vec<(u16, String)>) -> Self {
-        Self::start_with_headers(
-            responses
-                .into_iter()
-                .map(|(status, body)| (status, Vec::new(), body))
-                .collect(),
-        )
-        .await
+        Unscripted::bind().await.script(responses)
     }
 
     /// Each response with these headers too. A redirect without a `location` points back at this
     /// server, so a client that follows it sends a request that nothing answers.
     pub async fn start_with_headers(responses: Vec<Answer>) -> Self {
+        Unscripted::bind().await.script_with_headers(responses)
+    }
+
+    /// Wait until a held answer's request has arrived.
+    pub async fn until_held(&self) {
+        tokio::time::timeout(Duration::from_secs(10), self.held.notified())
+            .await
+            .expect("no request reached a held answer");
+    }
+
+    /// Send the held answer.
+    pub fn release(&self) {
+        self.release.notify_one();
+    }
+
+    /// The base ends in a path with no trailing slash, so a URL built with `Url::join` misses it.
+    pub fn base(&self) -> Url {
+        self.base.clone()
+    }
+
+    /// Every request, once the server has answered all of its scripted responses.
+    pub async fn received(self) -> Vec<Received> {
+        tokio::time::timeout(Duration::from_secs(10), self.task)
+            .await
+            .expect("the client sent fewer requests than the server scripted")
+            .unwrap()
+    }
+}
+
+/// A server that listens, but answers nothing until it has its script, so a test can point a
+/// client at it before it knows what the server must answer.
+pub struct Unscripted {
+    listener: TcpListener,
+    base: Url,
+}
+
+impl Unscripted {
+    pub async fn bind() -> Self {
         install_crypto_provider();
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let base: Url = format!("http://{}/github", listener.local_addr().unwrap())
+        let base = format!("http://{}/github", listener.local_addr().unwrap())
             .parse()
             .unwrap();
+        Self { listener, base }
+    }
+
+    /// The base ends in a path with no trailing slash, so a URL built with `Url::join` misses it.
+    pub fn base(&self) -> Url {
+        self.base.clone()
+    }
+
+    /// Answer each request with the next scripted status and JSON body.
+    pub fn script(self, responses: Vec<(u16, String)>) -> Server {
+        self.script_with_headers(
+            responses
+                .into_iter()
+                .map(|(status, body)| (status, Vec::new(), body))
+                .collect(),
+        )
+    }
+
+    fn script_with_headers(self, responses: Vec<Answer>) -> Server {
+        let Self { listener, base } = self;
         let redirected = format!("{base}/redirected");
         let held = Arc::new(Notify::new());
         let release = Arc::new(Notify::new());
@@ -109,37 +161,12 @@ impl Server {
             }
             received
         });
-        Self {
+        Server {
             base,
             task,
             held,
             release,
         }
-    }
-
-    /// Wait until a held answer's request has arrived.
-    pub async fn until_held(&self) {
-        tokio::time::timeout(Duration::from_secs(10), self.held.notified())
-            .await
-            .expect("no request reached a held answer");
-    }
-
-    /// Send the held answer.
-    pub fn release(&self) {
-        self.release.notify_one();
-    }
-
-    /// The base ends in a path with no trailing slash, so a URL built with `Url::join` misses it.
-    pub fn base(&self) -> Url {
-        self.base.clone()
-    }
-
-    /// Every request, once the server has answered all of its scripted responses.
-    pub async fn received(self) -> Vec<Received> {
-        tokio::time::timeout(Duration::from_secs(10), self.task)
-            .await
-            .expect("the client sent fewer requests than the server scripted")
-            .unwrap()
     }
 }
 

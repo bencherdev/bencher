@@ -23,7 +23,8 @@ pub async fn auth_link_options(
 /// Sign in with a link
 ///
 /// Sign in with the link from the email: at once in the browser that asked for it, and in any
-/// other only once the reader confirms the address it names.
+/// other only once the reader confirms the address it names. Only in the browser that asked does
+/// it pin the provider account a sign-in carries.
 #[endpoint {
     method = POST,
     path = "/v0/auth/link",
@@ -61,6 +62,19 @@ pub async fn auth_link_post(
     let proof = write_transaction!(context, |conn| {
         let Some(pending) = QueryPendingSignIn::from_link(conn, &secret, now)? else {
             return Ok(None);
+        };
+        // Only the browser that asked ran the provider's sign-in, so a link confirmed in any other
+        // proves the address alone.
+        #[cfg(feature = "plus")]
+        let pending = if asked_here {
+            pending
+        } else {
+            QueryPendingSignIn {
+                pin_provider: None,
+                pin_account: None,
+                pin_handle: None,
+                ..pending
+            }
         };
         prove(conn, context, &pending, &presented, now).map(Some)
     })

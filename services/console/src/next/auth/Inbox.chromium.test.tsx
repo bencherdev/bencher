@@ -100,6 +100,30 @@ test("entering shows the address, six boxes, Resend, and Use another email", asy
 		.toBeEnabled();
 });
 
+// Kills a provider's sign-in that hides which account asks, draws it below
+// the heading, or under another provider's mark; and a sign-in by email that
+// draws an account at all.
+test("a provider's account to prove sits above the heading with its mark", async () => {
+	for (const [provider, mark] of [
+		["github", "svg.mark"],
+		["google", 'img.mark[src="/google.svg"]'],
+	] as const) {
+		mount({ effects: effects(), who: { provider, handle: "ada-work" } });
+		const card = document.querySelector("main") as HTMLElement;
+		const who = card.querySelector(".au-who");
+		expect(who?.textContent, provider).toBe("ada-work");
+		expect(who?.querySelector(mark), provider).not.toBeNull();
+		expect(card.firstElementChild, provider).toBe(who);
+		expect(who?.nextElementSibling?.textContent, provider).toBe(
+			"Check your inbox",
+		);
+		dispose?.();
+		document.body.replaceChildren();
+	}
+	mount({ effects: effects() });
+	expect(document.querySelector(".au-who")).toBeNull();
+});
+
 // Kills a paste that fills only the box it lands in, keeps the non-digits a
 // copied code carries, or waits for a press to send the code.
 test("a pasted code fills every box and sends", async () => {

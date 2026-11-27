@@ -5,7 +5,6 @@ const AUDIENCE_CLIENT: &str = "client";
 const AUDIENCE_API_KEY: &str = "api_key";
 const AUDIENCE_INVITE: &str = "invite";
 const AUDIENCE_EMAIL_CHANGE: &str = "email_change";
-const AUDIENCE_OAUTH: &str = "oauth";
 const AUDIENCE_OCI_PUBLIC: &str = "oci_public";
 const AUDIENCE_OCI_AUTH: &str = "oci_auth";
 const AUDIENCE_OCI_PROJECT: &str = "oci_project";
@@ -20,7 +19,6 @@ pub enum Audience {
     ApiKey,
     Invite,
     EmailChange,
-    OAuth,
     OciPublic,
     OciAuth,
     OciProject,
@@ -37,7 +35,6 @@ impl Audience {
             Self::ApiKey => AUDIENCE_API_KEY,
             Self::Invite => AUDIENCE_INVITE,
             Self::EmailChange => AUDIENCE_EMAIL_CHANGE,
-            Self::OAuth => AUDIENCE_OAUTH,
             Self::OciPublic => AUDIENCE_OCI_PUBLIC,
             Self::OciAuth => AUDIENCE_OCI_AUTH,
             Self::OciProject => AUDIENCE_OCI_PROJECT,
