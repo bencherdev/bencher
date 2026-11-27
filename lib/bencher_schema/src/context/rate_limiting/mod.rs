@@ -10,8 +10,9 @@ use std::{
 use camino::{Utf8Path, Utf8PathBuf};
 
 use bencher_json::{
-    DateTime, OAuthAuthorizationUuid, OAuthGrantUuid, OrganizationUuid, PlanLevel, ProjectUuid,
-    RunnerUuid, UserUuid, system::config::JsonRateLimiting,
+    DateTime, Email, OAuthAuthorizationUuid, OAuthGrantUuid, OrganizationUuid, PlanLevel,
+    ProjectUuid, RunnerUuid, UserUuid,
+    system::config::{JsonRateLimiting, JsonRateLimits},
 };
 use bencher_license::Licensor;
 #[cfg(feature = "otel")]
@@ -32,6 +33,7 @@ use crate::{
 };
 
 mod bandwidth;
+mod email;
 mod project;
 mod public;
 mod remote_ip;
@@ -40,6 +42,7 @@ pub(super) mod snapshot;
 mod user;
 
 use bandwidth::BandwidthRateLimiter;
+use email::EmailKey;
 use project::ProjectRateLimiter;
 use public::PublicRateLimiter;
 use runner::RunnerRateLimiter;
@@ -57,6 +60,10 @@ const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
 const DEFAULT_PLUS_LIMIT: u32 = 1 << 20;
 
+const DEFAULT_EMAILS_PER_MINUTE_LIMIT: usize = 2;
+const DEFAULT_EMAILS_PER_HOUR_LIMIT: usize = 6;
+const DEFAULT_EMAILS_PER_DAY_LIMIT: usize = 12;
+
 pub struct RateLimiting {
     // Database-backed rate limits
     window: Duration,
@@ -71,6 +78,8 @@ pub struct RateLimiting {
     bandwidth: BandwidthRateLimiter,
     /// Refusals of a known OAuth credential, with the public request limits.
     oauth_refusals: RateLimiter<OAuthCredential>,
+    /// Sign-in emails to one address.
+    email: RateLimiter<EmailKey>,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -169,6 +178,7 @@ impl Default for RateLimiting {
             runner: RunnerRateLimiter::default(),
             bandwidth: BandwidthRateLimiter::default(),
             oauth_refusals: RateLimiter::new(public::request_limits(None)),
+            email: RateLimiter::new(email_limits(None)),
         }
     }
 }
@@ -185,6 +195,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             project,
             runner,
             oci_bandwidth,
+            email,
         } = json;
         Self {
             window: window
@@ -199,6 +210,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             runner: runner.map_or_else(RunnerRateLimiter::default, Into::into),
             bandwidth: oci_bandwidth.map_or_else(BandwidthRateLimiter::default, Into::into),
             oauth_refusals: RateLimiter::new(public::request_limits(public)),
+            email: RateLimiter::new(email_limits(email)),
         }
     }
 }
@@ -262,6 +274,11 @@ impl RateLimiting {
                 hour: usize::MAX,
                 day: usize::MAX,
             }),
+            email: RateLimiter::new(RateLimits {
+                minute: usize::MAX,
+                hour: usize::MAX,
+                day: usize::MAX,
+            }),
         }
     }
 
@@ -297,6 +314,7 @@ impl RateLimiting {
             + self.runner.prune()
             + self.bandwidth.prune()
             + self.oauth_refusals.prune()
+            + self.email.prune()
     }
 
     pub fn window(&self) -> (DateTime, DateTime) {
@@ -476,6 +494,12 @@ impl RateLimiting {
         }
     }
 
+    /// Count a sign-in email to `email`, unless the address is at its cap. At the cap, count
+    /// nothing and return how long until the address can get another.
+    pub fn sign_in_email(&self, email: &Email) -> Result<(), Duration> {
+        self.email.acquire(EmailKey::from(email))
+    }
+
     pub fn check_oci_bandwidth(
         &self,
         org_uuid: OrganizationUuid,
@@ -500,6 +524,7 @@ impl RateLimiting {
             self.project.snapshot(),
             self.runner.snapshot(),
             self.bandwidth.snapshot(),
+            self.email.snapshot(),
         );
         let snapshot_path = Self::snapshot_path(db_path)?;
         let partial_path = snapshot_path.with_extension("json.partial");
@@ -558,12 +583,14 @@ impl RateLimiting {
             project,
             runner,
             bandwidth,
+            email,
         } = snapshot;
         self.public.restore(public);
         self.user.restore(user);
         self.project.restore(project);
         self.runner.restore(runner);
         self.bandwidth.restore(bandwidth);
+        self.email.restore(email);
         slog::info!(log, "Restored rate limiting state from {snapshot_path}");
         Ok(())
     }
@@ -663,6 +690,21 @@ impl RateLimitingPruneTask {
     /// failing shutdown over: the task stops on its own once the shutdown signal is tripped.
     pub fn take(&self) -> Option<JoinHandle<()>> {
         self.0.lock().ok().and_then(|mut handle| handle.take())
+    }
+}
+
+/// The limits on sign-in emails to one address, as configured.
+fn email_limits(email: Option<JsonRateLimits>) -> RateLimits {
+    RateLimits {
+        minute: email
+            .and_then(|r| r.minute)
+            .unwrap_or(DEFAULT_EMAILS_PER_MINUTE_LIMIT),
+        hour: email
+            .and_then(|r| r.hour)
+            .unwrap_or(DEFAULT_EMAILS_PER_HOUR_LIMIT),
+        day: email
+            .and_then(|r| r.day)
+            .unwrap_or(DEFAULT_EMAILS_PER_DAY_LIMIT),
     }
 }
 

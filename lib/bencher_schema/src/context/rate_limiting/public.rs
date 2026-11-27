@@ -2,6 +2,7 @@ use std::net::IpAddr;
 
 use bencher_json::system::config::JsonPublicRateLimiter;
 use bencher_rate_limiter::{RateLimiter, RateLimits};
+use http::{HeaderValue, header::RETRY_AFTER};
 
 #[cfg(feature = "otel")]
 use super::interval_kind;
@@ -149,9 +150,13 @@ impl PublicRateLimiter {
                 interval_kind(interval),
                 bencher_otel::AuthorizationKind::Public,
             ));
-            Err(too_many_requests(RateLimitingError::IpAddressAttempts(
-                interval,
-            )))
+            let mut error = too_many_requests(RateLimitingError::IpAddressAttempts(interval));
+            if let Some(wait) = self.attempts.wait(ip) {
+                error
+                    .headers_mut()
+                    .insert(RETRY_AFTER, HeaderValue::from(wait.as_secs()));
+            }
+            Err(error)
         } else {
             Ok(())
         }

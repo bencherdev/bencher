@@ -64,6 +64,7 @@ RUN cargo init --lib bencher_otel
 RUN cargo init --lib bencher_otel_provider
 RUN cargo init --lib bencher_rate_limiter
 RUN cargo init --lib bencher_recaptcha
+RUN cargo init --lib bencher_turnstile
 RUN cargo init --lib bencher_rootfs
 RUN cargo init --lib bencher_runner
 RUN cargo init --lib bencher_init

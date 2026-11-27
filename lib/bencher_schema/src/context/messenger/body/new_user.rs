@@ -4,7 +4,7 @@ use url::Url;
 #[cfg(feature = "plus")]
 use crate::context::messenger::GITHUB_OAUTH2;
 
-use super::FmtBody;
+use super::{FmtBody, escape};
 
 #[derive(Debug)]
 pub struct NewUserBody {
@@ -49,7 +49,16 @@ impl FmtBody for NewUserBody {
             method,
         } = self;
         #[cfg(feature = "plus")]
-        let github_link = (method == GITHUB_OAUTH2)
+        let is_github = method == GITHUB_OAUTH2;
+        let (admin, console_url, name, email, method) = (
+            escape(admin),
+            escape(console_url.as_str()),
+            escape(name),
+            escape(email),
+            escape(method),
+        );
+        #[cfg(feature = "plus")]
+        let github_link = is_github
             .then_some(format!(
                 r#"<a href="https://github.com/{name}">View {name} on GitHub</a><br/>"#
             ))
@@ -89,5 +98,34 @@ fn invited_or_joined(invited: bool) -> &'static str {
         "was invited to"
     } else {
         "has joined"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{FmtBody as _, NewUserBody};
+
+    // An address may hold HTML in a quoted local part, so every value the notice interpolates is
+    // escaped.
+    #[test]
+    fn html_escapes_every_interpolated_value() {
+        let body = NewUserBody {
+            admin: "Ada".to_owned(),
+            console_url: "https://bencher.example/it's".parse().unwrap(),
+            name: "O'Brien".to_owned(),
+            email: "\"<a href='https://evil.example'>x</a>\"@example.com".to_owned(),
+            invited: false,
+            method: "email".to_owned(),
+        };
+        let html = body.html(&slog::Logger::root(slog::Discard, slog::o!()));
+        assert!(!html.contains("<a href='https://evil.example'>"), "{html}");
+        assert!(
+            html.contains(
+                "&quot;&lt;a href=&#39;https://evil.example&#39;&gt;x&lt;/a&gt;&quot;@example.com"
+            ),
+            "{html}"
+        );
+        assert!(html.contains("O&#39;Brien"), "{html}");
+        assert!(html.contains("https://bencher.example/it&#39;s"), "{html}");
     }
 }

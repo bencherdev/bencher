@@ -13739,6 +13739,14 @@
                 "$ref": "#/components/schemas/Secret"
               }
             ]
+          },
+          "turnstile": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonTurnstile"
+              }
+            ]
           }
         },
         "required": [
@@ -18057,6 +18065,15 @@
             "format": "uint32",
             "minimum": 0
           },
+          "email": {
+            "nullable": true,
+            "description": "Sign-in emails to one address.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          },
           "oci_bandwidth": {
             "nullable": true,
             "allOf": [
@@ -20222,6 +20239,22 @@
           "name",
           "percentage",
           "uuid"
+        ]
+      },
+      "JsonTurnstile": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "description": "The secret key of the Cloudflare Turnstile widget.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Secret"
+              }
+            ]
+          }
+        },
+        "required": [
+          "secret"
         ]
       },
       "JsonUpdateAlert": {

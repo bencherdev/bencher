@@ -267,6 +267,24 @@ diesel::table! {
 }
 
 diesel::table! {
+    pending_sign_in (id) {
+        id -> Integer,
+        uuid -> Text,
+        email -> Text,
+        binding_hash -> Text,
+        code_hash -> Text,
+        link_hash -> Text,
+        tries -> Integer,
+        invite -> Nullable<Text>,
+        claim -> Nullable<Text>,
+        plan -> Nullable<Text>,
+        authorization -> Nullable<Text>,
+        created -> BigInt,
+        expiration -> BigInt,
+    }
+}
+
+diesel::table! {
     plan (id) {
         id -> Integer,
         organization_id -> Integer,
@@ -608,6 +626,14 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    wrong_code (id) {
+        id -> Integer,
+        email_hash -> Text,
+        created -> BigInt,
+    }
+}
+
 diesel::joinable!(alert -> boundary (boundary_id));
 diesel::joinable!(alert -> project (project_id));
 diesel::joinable!(alert -> report (report_id));
@@ -708,6 +734,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     oauth_token,
     organization,
     organization_role,
+    pending_sign_in,
     plan,
     plot,
     plot_benchmark,
@@ -735,4 +762,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     user_key,
     variant,
     version,
+    wrong_code,
 );

@@ -40,7 +40,8 @@ async fn org_claim_unclaimed_organization() {
     assert!(user_organizations(&server, user.uuid).contains(&organization.uuid));
 }
 
-// POST /v0/organizations/{organization}/claim - a claim that takes over a claimed organization
+// POST /v0/organizations/{organization}/claim - a claim of a claimed organization is a conflict, not
+// a failed credential
 #[tokio::test]
 async fn org_claim_claimed_organization() {
     let server = TestServer::new().await;
@@ -49,7 +50,7 @@ async fn org_claim_claimed_organization() {
     let user = server.signup("Claim User", "claim@example.com").await;
 
     let (status, body) = post_claim(&server, &user, organization.uuid).await;
-    assert_eq!(status, StatusCode::UNAUTHORIZED, "{body}");
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
     assert_eq!(
         user_organizations(&server, user.uuid),
         [OrganizationUuid::from(user.uuid)]
