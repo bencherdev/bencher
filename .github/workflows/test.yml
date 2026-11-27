@@ -232,6 +232,12 @@ jobs:
           mold-version: ${{ inputs.mold-version }}
       - name: cargo check
         run: cargo check --no-default-features
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
+        with:
+          tool: cargo-nextest
+      - name: cargo nextest run (not(plus))
+        run: cargo nextest run -p bencher_api_tests --no-default-features
 
   foss_console:
     name: Bencher Console (not(plus))

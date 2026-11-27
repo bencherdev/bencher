@@ -148,152 +148,6 @@
         }
       }
     },
-    "/v0/auth/confirm": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "auth_confirm_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonConfirm"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonAuthUser"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
-    "/v0/auth/login": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "auth_login_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonLogin"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonAuthAck"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/auth/oci/token": {
       "get": {
         "tags": [
@@ -352,81 +206,6 @@
                 "schema": {}
               }
             }
-          }
-        }
-      }
-    },
-    "/v0/auth/signup": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "When a user signs up, a new personal organization is automatically created.",
-        "description": "A sign up that carries an invitation is refused: invitations are accepted in the console.",
-        "operationId": "auth_signup_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonSignup"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonAuthAck"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -11725,181 +11504,9 @@
           }
         },
         "deprecated": true
-      },
-      "post": {
-        "tags": [
-          "users",
-          "tokens"
-        ],
-        "summary": "Create a token",
-        "description": "DEPRECATED: User API tokens have been deprecated in favor of user API keys, so this endpoint always fails with a `403 Forbidden` error. Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead. Existing API tokens continue to work and can still be viewed, updated, and revoked.",
-        "operationId": "user_token_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "user",
-            "description": "The slug or UUID for a user.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonNewToken"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "successful creation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonToken"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        },
-        "deprecated": true
       }
     },
     "/v0/users/{user}/tokens/{token}": {
-      "get": {
-        "tags": [
-          "users",
-          "tokens"
-        ],
-        "summary": "View a token",
-        "description": "DEPRECATED: User API tokens have been deprecated in favor of user API keys. This endpoint remains available to manage existing API tokens. Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.\n\nView an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.",
-        "operationId": "user_token_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "token",
-            "description": "The UUID for a token.",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "in": "path",
-            "name": "user",
-            "description": "The slug or UUID for a user.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonToken"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        },
-        "deprecated": true
-      },
       "delete": {
         "tags": [
           "users",
@@ -11966,102 +11573,6 @@
                 "required": true,
                 "schema": {
                   "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        },
-        "deprecated": true
-      },
-      "patch": {
-        "tags": [
-          "users",
-          "tokens"
-        ],
-        "summary": "Update a token",
-        "description": "DEPRECATED: User API tokens have been deprecated in favor of user API keys. This endpoint remains available to manage existing API tokens. Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.\n\nUpdate an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.",
-        "operationId": "user_token_patch",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "token",
-            "description": "The UUID for a token.",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "in": "path",
-            "name": "user",
-            "description": "The slug or UUID for a user.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonUpdateToken"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonToken"
                 }
               }
             }
@@ -13236,29 +12747,6 @@
           "email"
         ]
       },
-      "JsonAuthUser": {
-        "type": "object",
-        "properties": {
-          "creation": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "expiration": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "token": {
-            "$ref": "#/components/schemas/Jwt"
-          },
-          "user": {
-            "$ref": "#/components/schemas/JsonUser"
-          }
-        },
-        "required": [
-          "creation",
-          "expiration",
-          "token",
-          "user"
-        ]
-      },
       "JsonAverage": {
         "type": "string",
         "enum": [
@@ -13501,14 +12989,6 @@
               }
             ]
           },
-          "recaptcha": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonRecaptcha"
-              }
-            ]
-          },
           "sentry": {
             "nullable": true,
             "allOf": [
@@ -13619,17 +13099,6 @@
           "logging",
           "security",
           "server"
-        ]
-      },
-      "JsonConfirm": {
-        "type": "object",
-        "properties": {
-          "token": {
-            "$ref": "#/components/schemas/Jwt"
-          }
-        },
-        "required": [
-          "token"
         ]
       },
       "JsonConsole": {
@@ -14483,50 +13952,6 @@
         "required": [
           "log",
           "name"
-        ]
-      },
-      "JsonLogin": {
-        "type": "object",
-        "properties": {
-          "authorization": {
-            "nullable": true,
-            "description": "An app's pending request to connect, which the emailed link returns to.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/OAuthAuthorizationUuid"
-              }
-            ]
-          },
-          "email": {
-            "$ref": "#/components/schemas/Email"
-          },
-          "invite": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Jwt"
-              }
-            ]
-          },
-          "plan": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PlanLevel"
-              }
-            ]
-          },
-          "recaptcha_token": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NonEmpty"
-              }
-            ]
-          }
-        },
-        "required": [
-          "email"
         ]
       },
       "JsonMcp": {
@@ -15973,30 +15398,6 @@
           "measure",
           "test",
           "testbed"
-        ]
-      },
-      "JsonNewToken": {
-        "description": "DEPRECATED: User API tokens have been deprecated in favor of user API keys, so creating a new token always fails with a `403 Forbidden` error. Create a user API key instead.",
-        "type": "object",
-        "properties": {
-          "name": {
-            "description": "The name of the token. Maximum length is 64 characters.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ResourceName"
-              }
-            ]
-          },
-          "ttl": {
-            "nullable": true,
-            "description": "The time-to-live (TTL) for the token in seconds. If not provided, the token will not expire for over 128 years.",
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "name"
         ]
       },
       "JsonNewUserKey": {
@@ -17962,31 +17363,6 @@
           }
         }
       },
-      "JsonRecaptcha": {
-        "type": "object",
-        "properties": {
-          "min_score": {
-            "description": "The minimum acceptable score for reCAPTCHA verification.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/RecaptchaScore"
-              }
-            ]
-          },
-          "secret": {
-            "description": "The shared key between your site and reCAPTCHA.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Secret"
-              }
-            ]
-          }
-        },
-        "required": [
-          "min_score",
-          "secret"
-        ]
-      },
       "JsonRegistry": {
         "description": "Container registry configuration",
         "type": "object",
@@ -19321,75 +18697,6 @@
           "timestamp"
         ]
       },
-      "JsonSignup": {
-        "type": "object",
-        "properties": {
-          "authorization": {
-            "nullable": true,
-            "description": "An app's pending request to connect, which the emailed link returns to.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/OAuthAuthorizationUuid"
-              }
-            ]
-          },
-          "claim": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/OrganizationUuid"
-              }
-            ]
-          },
-          "email": {
-            "$ref": "#/components/schemas/Email"
-          },
-          "i_agree": {
-            "description": "I agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license)",
-            "type": "boolean"
-          },
-          "invite": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Jwt"
-              }
-            ]
-          },
-          "name": {
-            "$ref": "#/components/schemas/UserName"
-          },
-          "plan": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PlanLevel"
-              }
-            ]
-          },
-          "recaptcha_token": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NonEmpty"
-              }
-            ]
-          },
-          "slug": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/UserSlug"
-              }
-            ]
-          }
-        },
-        "required": [
-          "email",
-          "i_agree",
-          "name"
-        ]
-      },
       "JsonSmtp": {
         "type": "object",
         "properties": {
@@ -20437,20 +19744,6 @@
           }
         ]
       },
-      "JsonUpdateToken": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "nullable": true,
-            "description": "The new name of the token. Maximum length is 64 characters.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ResourceName"
-              }
-            ]
-          }
-        }
-      },
       "JsonUpdateUser": {
         "type": "object",
         "properties": {
@@ -21037,10 +20330,6 @@
       "NonEmpty": {
         "type": "string"
       },
-      "OAuthAuthorizationUuid": {
-        "type": "string",
-        "format": "uuid"
-      },
       "OAuthClientId": {
         "description": "An OAuth client identifier: the URL of the client's metadata document.",
         "type": "string"
@@ -21369,10 +20658,6 @@
       "ProjectUuid": {
         "type": "string",
         "format": "uuid"
-      },
-      "RecaptchaScore": {
-        "type": "number",
-        "format": "float"
       },
       "RegistryStorage": {
         "description": "Container registry storage backend",

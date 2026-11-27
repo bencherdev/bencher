@@ -86,12 +86,11 @@ impl AuthUser {
             let conn = public_conn!(context);
             let (query_user, credential, renewal) = match bearer_token {
                 BearerToken::Jwt(jwt) => {
-                    let (query_user, credential, query_token) =
-                        Self::user_from_jwt(context, conn, &jwt)?;
+                    let (query_user, query_token) = Self::user_from_api_token(context, conn, &jwt)?;
                     let renewal = query_token
-                        .filter(|query_token| query_token.needs_use_recorded(now))
-                        .map(|query_token| Renewal::ApiToken(query_token.id));
-                    (query_user, credential, renewal)
+                        .needs_use_recorded(now)
+                        .then_some(Renewal::ApiToken(query_token.id));
+                    (query_user, AuthCredential::ApiToken, renewal)
                 },
                 BearerToken::UserKey(key) => {
                     let (query_user, query_key) = Self::user_from_user_key(context, conn, &key)?;
@@ -108,7 +107,7 @@ impl AuthUser {
                         .then_some(Renewal::Session(query_session.id));
                     (
                         query_user,
-                        AuthCredential::Session(Some(query_session.id)),
+                        AuthCredential::Session(query_session.id),
                         renewal,
                     )
                 },
@@ -152,25 +151,6 @@ impl AuthUser {
         if query_token.needs_use_recorded(now) {
             Self::renew(context, Renewal::ApiToken(query_token.id), now);
         }
-    }
-
-    /// Authenticate by a JWT: a session from a login, by its signature, or else a deprecated
-    /// user API token, by its row.
-    fn user_from_jwt(
-        context: &ApiContext,
-        conn: &mut DbConnection,
-        jwt: &Jwt,
-    ) -> Result<(QueryUser, AuthCredential, Option<QueryToken>), HttpError> {
-        if let Ok(claims) = context.token_key.validate_client(jwt) {
-            let query_user = QueryUser::get_with_email(conn, claims.email())
-                .map_err(|_err| invalid_credential())?;
-            if query_user.locked {
-                return Err(invalid_credential());
-            }
-            return Ok((query_user, AuthCredential::Session(None), None));
-        }
-        let (query_user, query_token) = Self::user_from_api_token(context, conn, jwt)?;
-        Ok((query_user, AuthCredential::ApiToken, Some(query_token)))
     }
 
     /// Authenticate by a deprecated user API token: the user its row belongs to, unless the row
@@ -491,24 +471,20 @@ impl AuthUser {
     /// Refuse a browser session whose reader has not proved who they are within
     /// [`super::session::FRESH_SIGN_IN_WINDOW`], so a stolen cookie alone cannot do what this
     /// guards.
-    /// A bearer credential passes, and a `client` JWT, which holds no proof time, never does.
+    /// A bearer credential passes.
     pub async fn check_fresh_sign_in(&self, context: &ApiContext) -> Result<(), HttpError> {
-        if !self.credential.is_windowed() {
+        let Some(session_id) = self.session_id() else {
             return Ok(());
-        }
-        let fresh = if let Some(session_id) = self.session_id() {
-            QuerySession::find(auth_conn!(context), session_id)
-                .map_err(|e| {
-                    issue_error(
-                        "Failed to read a session",
-                        "Failed to read a session's last proof:",
-                        e,
-                    )
-                })?
-                .is_some_and(|session| session.is_fresh(context.clock.now()))
-        } else {
-            false
         };
+        let fresh = QuerySession::find(auth_conn!(context), session_id)
+            .map_err(|e| {
+                issue_error(
+                    "Failed to read a session",
+                    "Failed to read a session's last proof:",
+                    e,
+                )
+            })?
+            .is_some_and(|session| session.is_fresh(context.clock.now()));
         if fresh {
             Ok(())
         } else {
@@ -521,7 +497,7 @@ impl AuthUser {
     /// The browser session the request authenticated with, if it presented a session cookie.
     pub fn session_id(&self) -> Option<SessionId> {
         if let AuthCredential::Session(session_id) = self.credential {
-            session_id
+            Some(session_id)
         } else {
             None
         }
@@ -595,8 +571,8 @@ impl Sanitize for AuthUser {
 
 #[derive(Debug, Clone, Copy)]
 pub enum AuthCredential {
-    /// A browser session: a session cookie, or a `client` audience JWT from a login, which has none.
-    Session(Option<SessionId>),
+    /// A browser session, by its session cookie.
+    Session(SessionId),
     /// A deprecated user API token, or a user loaded internally.
     ApiToken,
     UserKey(UserKeyId),
@@ -605,19 +581,6 @@ pub enum AuthCredential {
     OAuthGrant {
         user_key_id: Option<UserKeyId>,
     },
-}
-
-impl AuthCredential {
-    /// Whether the fresh sign-in window holds it: a browser session does, and a bearer
-    /// credential does not.
-    fn is_windowed(self) -> bool {
-        match self {
-            Self::Session(_) => true,
-            Self::ApiToken | Self::UserKey(_) => false,
-            #[cfg(feature = "plus")]
-            Self::OAuthGrant { .. } => false,
-        }
-    }
 }
 
 /// A write a use of a credential leaves for after the request has read what it needs.
@@ -759,33 +722,5 @@ impl From<OrgProjectId> for Project {
 impl ToPolar for &AuthUser {
     fn to_polar(self) -> PolarValue {
         self.rbac.clone().to_polar()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{AuthCredential, SessionId, UserKeyId};
-
-    // A browser session, cookie or old login JWT, is held to the fresh sign-in window; a user
-    // key, a deprecated API token, and an OAuth grant do what they did before. No endpoint takes
-    // an OAuth grant but the MCP server's, whose tools do no guarded action.
-    // Kills a window that holds a bearer credential, or exempts a session.
-    #[test]
-    fn window_holds_browser_sessions_alone() {
-        for session_id in [Some(SessionId::from_raw(1)), None] {
-            assert!(
-                AuthCredential::Session(session_id).is_windowed(),
-                "{session_id:?}"
-            );
-        }
-        assert!(!AuthCredential::ApiToken.is_windowed());
-        assert!(!AuthCredential::UserKey(UserKeyId::from_raw(1)).is_windowed());
-        #[cfg(feature = "plus")]
-        for user_key_id in [None, Some(UserKeyId::from_raw(1))] {
-            assert!(
-                !AuthCredential::OAuthGrant { user_key_id }.is_windowed(),
-                "{user_key_id:?}"
-            );
-        }
     }
 }

@@ -7,21 +7,9 @@ paths:
   - path: /v0/users/{user}/tokens
     method: get
     headers: auth
-    cli: token list USER
-  - path: /v0/users/{user}/tokens
-    method: post
-    headers: auth
-    cli: token create USER
-  - path: /v0/users/{user}/tokens/{token}
-    method: get
-    headers: auth
-    cli: token view USER TOKEN
-  - path: /v0/users/{user}/tokens/{token}
-    method: patch
-    headers: auth
-    cli: token update USER TOKEN
+    cli: null
   - path: /v0/users/{user}/tokens/{token}
     method: delete
     headers: auth
-    cli: token revoke USER TOKEN
+    cli: null
 ---

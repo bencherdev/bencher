@@ -213,6 +213,7 @@ impl TestServer {
             relay_secret: None,
             turnstile: None,
             messenger: None,
+            http_options: false,
         })
         .await
     }
@@ -267,6 +268,7 @@ impl TestServer {
             relay_secret,
             turnstile,
             messenger,
+            http_options,
         } = options;
         // Create logger early so it can be used for OCI storage
         let log = log.unwrap_or_else(stderr_logger);
@@ -314,7 +316,6 @@ impl TestServer {
             stats: bencher_schema::context::StatsSettings::default(),
             biller: None,
             licensor: bencher_license::Licensor::self_hosted().expect("Failed to create licensor"),
-            recaptcha_client: None,
             turnstile,
             is_bencher_cloud: false,
             clock: clock.clone(),
@@ -347,7 +348,10 @@ impl TestServer {
             db_path,
             db_file,
             callback_sender,
-            cloud_routes,
+            Routes {
+                cloud: cloud_routes,
+                http_options,
+            },
         )
     }
 
@@ -399,17 +403,13 @@ impl TestServer {
         db_path: String,
         db_file: NamedTempFile,
         #[cfg(feature = "plus")] callback_sender: Arc<crate::RecordingSender>,
-        #[cfg(feature = "plus")] cloud_routes: bool,
+        #[cfg(feature = "plus")] routes: Routes,
     ) -> Self {
         // Create API description and register endpoints
         let mut api_description = ApiDescription::new();
         #[cfg(feature = "plus")]
-        bencher_api::api::Api::register(
-            &mut api_description,
-            false, // http_options
-            cloud_routes,
-        )
-        .expect("Failed to register endpoints");
+        bencher_api::api::Api::register(&mut api_description, routes.http_options, routes.cloud)
+            .expect("Failed to register endpoints");
         #[cfg(not(feature = "plus"))]
         bencher_api::api::Api::register(
             &mut api_description,
@@ -679,6 +679,18 @@ pub struct TestServerOptions {
     pub relay_secret: Option<bencher_json::Secret>,
     pub turnstile: Option<bencher_schema::context::Turnstile>,
     pub messenger: Option<Messenger>,
+    /// Whether every route's `OPTIONS` preflight is registered, as the API server registers it.
+    pub http_options: bool,
+}
+
+/// The routes a test server registers beyond the plain set.
+#[cfg(feature = "plus")]
+#[derive(Clone, Copy)]
+struct Routes {
+    /// The Bencher Cloud only endpoints.
+    cloud: bool,
+    /// Every route's `OPTIONS` preflight.
+    http_options: bool,
 }
 
 /// A migrated database in a temporary file, with its path and the file that keeps it.

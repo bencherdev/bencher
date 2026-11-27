@@ -29,13 +29,6 @@ pub use context::{HeaderMap, RateLimiting};
 /// same binary, is how a migration's claim to leave responses unchanged is checked.
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
-// TODO Custom max TTL
-// 30 minutes * 60 seconds / minute
-pub const AUTH_TOKEN_TTL: u32 = 30 * 60;
-// TODO Custom max TTL
-// 30 days * 24 hours / day * 60 minutes / hour * 60 seconds / minute
-pub const CLIENT_TOKEN_TTL: u32 = 30 * 24 * 60 * 60;
-
 /// The page cache the migrations run with, in `SQLite`'s negative kibibyte form:
 /// 256 MiB.
 ///

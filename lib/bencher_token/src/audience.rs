@@ -1,7 +1,5 @@
 use std::fmt;
 
-const AUDIENCE_AUTH: &str = "auth";
-const AUDIENCE_CLIENT: &str = "client";
 const AUDIENCE_API_KEY: &str = "api_key";
 const AUDIENCE_OCI_PUBLIC: &str = "oci_public";
 const AUDIENCE_OCI_AUTH: &str = "oci_auth";
@@ -12,8 +10,6 @@ const AUDIENCE_GITHUB_GRANT: &str = "github_grant";
 
 #[derive(Debug, Copy, Clone)]
 pub enum Audience {
-    Auth,
-    Client,
     ApiKey,
     OciPublic,
     OciAuth,
@@ -26,8 +22,6 @@ pub enum Audience {
 impl Audience {
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Auth => AUDIENCE_AUTH,
-            Self::Client => AUDIENCE_CLIENT,
             Self::ApiKey => AUDIENCE_API_KEY,
             Self::OciPublic => AUDIENCE_OCI_PUBLIC,
             Self::OciAuth => AUDIENCE_OCI_AUTH,

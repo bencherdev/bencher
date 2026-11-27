@@ -94,15 +94,6 @@ After `bencher up`:
 3. Create an organization and project
 4. Generate a project API key (or user API key) for CLI/CI use
 
-Or via CLI (the email is a positional argument and `--i-agree` is required).
-`--i-agree` accepts the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use),
-Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement
-(https://bencher.dev/legal/license). Show the user these links and pass it only
-after they agree:
-```bash
-bencher auth signup --name "Admin" --i-agree admin@example.com --host http://localhost:6610
-```
-
 ## Full Documentation
 
 See https://bencher.dev/docs/tutorial/self-hosted/ for the complete self-hosted tutorial

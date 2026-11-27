@@ -6,115 +6,100 @@
 )]
 //! Integration tests for user token endpoints.
 //!
-//! User API tokens are deprecated: `POST /v0/users/{user}/tokens` always fails
-//! with a `403 Forbidden` error pointing at user API keys. Existing tokens can
-//! still be listed, viewed, updated, and revoked, so those tests seed tokens
-//! directly into the database via `seed_token`.
+//! User API tokens are deprecated: none can be made, and an existing token can
+//! only be listed and revoked, so these tests seed tokens directly into the
+//! database via `seed_token`.
 
 use bencher_api_tests::{TestServer, helpers::seed_token};
-use bencher_json::{JsonToken, JsonTokens};
-use http::StatusCode;
+use bencher_json::JsonTokens;
+use http::{Method, StatusCode};
 
-// POST /v0/users/{user}/tokens - token creation is deprecated and always fails
+// A token route's preflight offers only the method the route still has: list
+// on the tokens, and revoke on a token.
+// Kills a preflight that still offers creating, viewing, or updating a token.
+#[cfg(feature = "plus")]
 #[tokio::test]
-async fn tokens_create_deprecated() {
-    let server = TestServer::new().await;
-    let user = server.signup("Test User", "tokenscreate@example.com").await;
-
-    let body = serde_json::json!({
-        "name": "Test Token"
-    });
-
+async fn tokens_preflights_offer_list_and_revoke_only() {
+    let server = TestServer::new_with_options(bencher_api_tests::TestServerOptions {
+        http_options: true,
+        ..bencher_api_tests::TestServerOptions::default()
+    })
+    .await;
+    let user = server
+        .signup("Test User", "tokenspreflight@example.com")
+        .await;
+    let seeded = seed_token(&server, &user, "Preflight Token");
     let user_slug: &str = user.slug.as_ref();
+    let tokens = format!("/v0/users/{}/tokens", user_slug);
+    let token = format!("{}/{}", tokens, seeded.uuid);
+
+    for (path, methods) in [(&tokens, "GET"), (&token, "DELETE")] {
+        let resp = server
+            .client
+            .request(Method::OPTIONS, server.api_url(path))
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::OK, "{}", path);
+        let allowed = resp
+            .headers()
+            .get("access-control-allow-methods")
+            .and_then(|value| value.to_str().ok());
+        assert_eq!(allowed, Some(methods), "{}", path);
+    }
+}
+
+// Creating, viewing, and updating a token are gone: each answers what the
+// router answers a method its path no longer has, and changes nothing.
+// Kills a create, view, or update route left in place.
+#[tokio::test]
+async fn tokens_create_view_and_update_are_gone() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "tokensgone@example.com").await;
+    let seeded = seed_token(&server, &user, "Kept Token");
+    let user_slug: &str = user.slug.as_ref();
+    let tokens = format!("/v0/users/{}/tokens", user_slug);
+    let token = format!("{}/{}", tokens, seeded.uuid);
+
+    for (method, path) in [
+        (Method::POST, &tokens),
+        (Method::GET, &token),
+        (Method::PATCH, &token),
+    ] {
+        let resp = server
+            .client
+            .request(method.clone(), server.api_url(path))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&serde_json::json!({"name": "Changed Token"}))
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(
+            resp.status(),
+            StatusCode::METHOD_NOT_ALLOWED,
+            "{} {}",
+            method,
+            path
+        );
+    }
+
     let resp = server
         .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
+        .get(server.api_url(&tokens))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&user.token),
         )
-        .json(&body)
         .send()
         .await
         .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
-    let message = resp.text().await.expect("Failed to read response");
-    assert!(
-        message.contains("deprecated"),
-        "the 403 must explain the deprecation: {message}"
-    );
-
-    // No token was created
-    let list_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(list_resp.status(), StatusCode::OK);
-    let tokens: JsonTokens = list_resp.json().await.expect("Failed to parse response");
-    assert!(tokens.0.is_empty());
-}
-
-// POST /v0/users/{user}/tokens - invalid credentials still get a 401, not the 403
-#[tokio::test]
-async fn tokens_create_unauthenticated() {
-    let server = TestServer::new().await;
-    let user = server.signup("Test User", "tokensnoauth@example.com").await;
-
-    let body = serde_json::json!({
-        "name": "No Auth Token"
-    });
-
-    // Valid format, no row in `user_key` table.
-    let unknown = "bencher_user_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh";
-    let user_slug: &str = user.slug.as_ref();
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(unknown),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
-}
-
-// POST /v0/users/{user}/tokens - deprecated even for another user's path
-#[tokio::test]
-async fn tokens_create_other_user_deprecated() {
-    let server = TestServer::new().await;
-    let user1 = server.signup("User One", "token1@example.com").await;
-    let user2 = server.signup("User Two", "token2@example.com").await;
-
-    let body = serde_json::json!({
-        "name": "Sneaky Token"
-    });
-
-    // User1 tries to create a token for User2
-    let user2_slug: &str = user2.slug.as_ref();
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user2_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user1.token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert_eq!(resp.status(), StatusCode::OK);
+    let listed: JsonTokens = resp.json().await.expect("Failed to parse response");
+    let names: Vec<String> = listed.0.iter().map(|t| t.name.to_string()).collect();
+    assert_eq!(names, ["Kept Token"]);
 }
 
 // GET /v0/users/{user}/tokens - list tokens (after seeding one)
@@ -140,88 +125,6 @@ async fn tokens_list() {
     assert_eq!(resp.status(), StatusCode::OK);
     let tokens: JsonTokens = resp.json().await.expect("Failed to parse response");
     assert!(tokens.0.iter().any(|t| t.uuid == seeded.uuid));
-}
-
-// GET /v0/users/{user}/tokens/{token} - view token
-#[tokio::test]
-async fn tokens_get() {
-    let server = TestServer::new().await;
-    let user = server.signup("Test User", "tokensget@example.com").await;
-
-    let seeded = seed_token(&server, &user, "View Token");
-
-    let user_slug: &str = user.slug.as_ref();
-    let resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, seeded.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let fetched: JsonToken = resp.json().await.expect("Failed to parse response");
-    assert_eq!(fetched.uuid, seeded.uuid);
-    assert_eq!(fetched.name.as_ref(), "View Token");
-}
-
-// GET /v0/users/{user}/tokens/{token} - token not found
-#[tokio::test]
-async fn tokens_get_not_found() {
-    let server = TestServer::new().await;
-    let user = server
-        .signup("Test User", "tokensnotfound@example.com")
-        .await;
-
-    let user_slug: &str = user.slug.as_ref();
-    let resp = server
-        .client
-        .get(server.api_url(&format!(
-            "/v0/users/{}/tokens/00000000-0000-0000-0000-000000000000",
-            user_slug
-        )))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
-}
-
-// PATCH /v0/users/{user}/tokens/{token} - update token
-#[tokio::test]
-async fn tokens_update() {
-    let server = TestServer::new().await;
-    let user = server.signup("Test User", "tokensupdate@example.com").await;
-
-    let seeded = seed_token(&server, &user, "Original Token");
-
-    let update_body = serde_json::json!({
-        "name": "Updated Token"
-    });
-
-    let user_slug: &str = user.slug.as_ref();
-    let resp = server
-        .client
-        .patch(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, seeded.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .json(&update_body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let updated: JsonToken = resp.json().await.expect("Failed to parse response");
-    assert_eq!(updated.name.as_ref(), "Updated Token");
 }
 
 // DELETE /v0/users/{user}/tokens/{token} - revoke succeeds and hides from default list
@@ -289,48 +192,6 @@ async fn tokens_revoke_hides_from_list() {
         entry.revoked.is_some(),
         "revoked entry must carry a revoked timestamp: {:?}",
         entry
-    );
-}
-
-// DELETE /v0/users/{user}/tokens/{token} - revoked token still readable via direct GET
-#[tokio::test]
-async fn tokens_revoke_visible_on_direct_get() {
-    let server = TestServer::new().await;
-    let user = server
-        .signup("Test User", "tokensrevokeget@example.com")
-        .await;
-    let user_slug: &str = user.slug.as_ref();
-
-    let seeded = seed_token(&server, &user, "Visible After Revoke");
-
-    let revoke_resp = server
-        .client
-        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, seeded.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(revoke_resp.status(), StatusCode::NO_CONTENT);
-
-    let get_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, seeded.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(get_resp.status(), StatusCode::OK);
-    let fetched: JsonToken = get_resp.json().await.expect("Failed to parse response");
-    assert!(
-        fetched.revoked.is_some(),
-        "direct GET on revoked token must expose the revoked timestamp: {:?}",
-        fetched
     );
 }
 

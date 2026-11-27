@@ -18,7 +18,6 @@ import { EXPIRED, type Failure, inboxFailure } from "./copy";
 import Frame from "./Frame";
 import Inbox, { type InboxEffects, type Status } from "./Inbox";
 import { finish, landing } from "./land";
-import { tokenEmail } from "./oldLink";
 import {
 	type Carry,
 	type Door,
@@ -39,9 +38,9 @@ import { loadTurnstile, turnstileToken } from "./turnstile";
 const boot = (mount: HTMLElement) => {
 	// A link pasted into this tab changes only the fragment, which loads no page.
 	window.addEventListener("hashchange", () => location.reload());
-	const { secret, token } = takeAuthReturn();
+	const { secret } = takeAuthReturn();
 	const pending = readPending(sessionStorage);
-	if (!secret && !token && !pending) {
+	if (!secret && !pending) {
 		location.replace("/auth/login");
 		return;
 	}
@@ -59,16 +58,6 @@ const boot = (mount: HTMLElement) => {
 					<Switch>
 						<Match when={secret}>
 							{(secret) => <LinkApp secret={secret()} pending={pending} />}
-						</Match>
-						<Match when={token}>
-							{(token) => (
-								<InboxApp
-									email={tokenEmail(token())}
-									door="login"
-									carry={{}}
-									status={{ kind: "expired" }}
-								/>
-							)}
 						</Match>
 						<Match when={pending}>
 							{(pending) => (
@@ -126,7 +115,7 @@ const verified = async (): Promise<
 	}
 };
 
-/** Check your inbox for the address this tab emailed, or an old link's, whose sign-in has ended. */
+/** Check your inbox for the address this tab emailed, or for none once a link's sign-in has ended. */
 const InboxApp = (props: {
 	email: string | undefined;
 	door: Door;

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
+import { keepPending } from "../src/next/auth/pending";
 import { invite } from "./api";
 import { axeInBothThemes } from "./axe";
 import { continueWithEmail, digit, pasteCode, typeCode } from "./door";
@@ -25,15 +26,26 @@ const heading = (page: Page, name: string) =>
 const hint = (page: Page) =>
 	page.evaluate((key) => localStorage.getItem(key), READER_KEY);
 
-/** Shaped as an old link's token, for the page to read its address; the API never sees it. */
-const tokenFor = (email: string) =>
-	[
-		{ alg: "HS256", typ: "JWT" },
-		{ aud: "auth", sub: email },
-	]
-		.map((part) => Buffer.from(JSON.stringify(part)).toString("base64url"))
-		.concat("c2ln")
-		.join(".");
+/** An old link's token, shaped as one, for a sign-in this release no longer reads. */
+const OLD_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhdXRoIn0.c2ln";
+
+/** What a tab keeps of its sign-in by email to `email`, as its storage entry. */
+const pendingEntry = (email: string): [string, string] => {
+	const kept: [string, string][] = [];
+	keepPending(
+		{
+			getItem: () => null,
+			setItem: (key, value) => kept.push([key, value]),
+			removeItem: () => {},
+		},
+		{ email, door: "login", carry: {} },
+	);
+	const [entry] = kept;
+	if (!entry) {
+		throw new Error("No pending sign-in kept");
+	}
+	return entry;
+};
 
 /** Six digits that are not `code`, the `n`th of such. */
 const wrongCode = (code: string, n: number) =>
@@ -320,17 +332,19 @@ test.describe("signed out", () => {
 		await expect(page).toHaveURL(/\/console\/onboard\//);
 	});
 
-	// Kills a link sent before this release read as a sign in, or left in
-	// the address.
-	test("an old link with a token is expired", async ({ page }) => {
-		const email = newEmail();
-		await page.goto(
-			`/auth/confirm?${new URLSearchParams({ token: tokenFor(email) })}`,
-		);
-		await expect(heading(page, "Check your inbox")).toBeVisible();
-		await expect(page.getByRole("alert")).toHaveText("Expired");
-		await expect(page.getByText(email)).toBeVisible();
-		await expect(page).toHaveURL("/auth/confirm");
+	// Kills a link sent before this release read as anything but a way back
+	// to the door, its token left in the address, or its token sent on past
+	// the page it opened.
+	test("an old link lands on the door", async ({ page }) => {
+		const sent = sentUrls(page);
+		const link = `/auth/confirm?${new URLSearchParams({ token: OLD_TOKEN })}`;
+		await page.goto(link);
+		await expect(page).toHaveURL("/auth/login");
+		await expect(heading(page, "Sign in to Bencher")).toBeVisible();
+		await page.waitForLoadState("networkidle");
+		expect(sent.filter((url) => url.includes(OLD_TOKEN))).toEqual([
+			new URL(link, seed.console_url).href,
+		]);
 	});
 });
 
@@ -390,25 +404,6 @@ test.describe("Resend after a sign-in ended", () => {
 		await typeCode(page, next);
 		await expect(page).toHaveURL(/\/console\//);
 	});
-
-	// Kills an old link's Expired whose Resend asks only for a sign-in this
-	// browser never began, instead of starting one for the link's address.
-	test("an old link's Resend starts a sign-in whose code signs in", async ({
-		page,
-	}) => {
-		const email = newEmail();
-		await page.goto(
-			`/auth/confirm?${new URLSearchParams({ token: tokenFor(email) })}`,
-		);
-		await expect(page.getByRole("alert")).toHaveText("Expired");
-
-		const mark = mailMark();
-		await page.getByRole("button", { name: "Resend", exact: true }).click();
-		await expect(page.getByRole("status")).toHaveText("Sent");
-		const { code } = await mailedSignIn(email, mark);
-		await typeCode(page, code);
-		await expect(page).toHaveURL(/\/console\//);
-	});
 });
 
 // Kills a sign out that leaves the session alive, its hint, or the browser
@@ -433,8 +428,8 @@ test("auth pages send no referrer, are never stored, and load Turnstile only whe
 	context,
 	request,
 }) => {
-	const email = newEmail();
-	const pages = [
+	const inbox = pendingEntry(newEmail());
+	const pages: [path: string, turnstile: boolean, kept?: [string, string]][] = [
 		["/auth/login", true],
 		["/auth/signup", true],
 		["/auth/authorize?request=0b5c4f6e-2a1d-4c3b-9e8f-7a6b5c4d3e2f", false],
@@ -442,10 +437,10 @@ test("auth pages send no referrer, are never stored, and load Turnstile only whe
 		["/auth/github", false],
 		["/auth/google", false],
 		["/auth/logout", false],
-		[`/auth/confirm?${new URLSearchParams({ token: tokenFor(email) })}`, true],
+		["/auth/confirm", true, inbox],
 		["/auth/confirm#s3cr3t", false],
-	] as const;
-	for (const [path] of [...pages, ["/auth"]] as const) {
+	];
+	for (const [path] of [...pages, ["/auth"]]) {
 		const response = await request.get(path, { maxRedirects: 0 });
 		expect(response.status(), path).toBeLessThan(400);
 		expect(response.headers()["referrer-policy"], path).toBe("no-referrer");
@@ -454,9 +449,16 @@ test("auth pages send no referrer, are never stored, and load Turnstile only whe
 	// A page that sends the reader on to the door lands on a page of no scripts,
 	// so whatever loads came from the page itself.
 	const door = (url: URL) => url.pathname === "/auth/login";
-	for (const [path, turnstile] of pages) {
+	for (const [path, turnstile, kept] of pages) {
 		// A page of its own, so nothing an earlier page loaded is read as this one's.
 		const page = await context.newPage();
+		if (kept) {
+			// This tab's own sign-in, which Check your inbox draws.
+			await page.addInitScript(
+				([key, value]) => sessionStorage.setItem(key, value),
+				kept,
+			);
+		}
 		const loaded: string[] = [];
 		page.on("request", (sent) => loaded.push(sent.url()));
 		if (path !== "/auth/login") {

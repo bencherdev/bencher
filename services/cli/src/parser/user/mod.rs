@@ -4,7 +4,6 @@ use clap::{Parser, Subcommand, ValueEnum};
 use crate::parser::{CliBackend, CliPagination};
 
 pub mod key;
-pub mod token;
 
 #[derive(Subcommand, Debug)]
 pub enum CliUser {
