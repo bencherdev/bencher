@@ -1,7 +1,6 @@
 import {
 	type DehydratedState,
 	type Query,
-	QueryCache,
 	QueryClient,
 	defaultShouldDehydrateQuery,
 	dehydrate,
@@ -28,15 +27,8 @@ export interface Persisted {
 export const MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 const SAVE_DELAY = 1000;
 const RETRIES = 2;
-export const createQueryClient = (onUnauthorized: () => void) =>
+export const createQueryClient = () =>
 	new QueryClient({
-		queryCache: new QueryCache({
-			onError: (error) => {
-				if (error instanceof ApiError && error.kind === "unauthorized") {
-					onUnauthorized();
-				}
-			},
-		}),
 		defaultOptions: {
 			queries: {
 				staleTime: 30_000,

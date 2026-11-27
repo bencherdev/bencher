@@ -11,7 +11,8 @@ import {
 	isNotifyText,
 	isNotifyTimeout,
 } from "../../util/notify";
-import { pathname, sameOriginUrl, useSearchParams } from "../../util/url";
+import { pathname, useSearchParams } from "../../util/url";
+import { sameOriginUrl } from "../../util/webUrl";
 
 const Notification = (props: { suppress?: undefined | boolean }) => {
 	const [searchParams, setSearchParams] = useSearchParams();

@@ -2,20 +2,28 @@
 
 use std::fmt;
 
-use bencher_json::{Email, JsonAuthUser, JsonOAuthUser, JsonSignup, PlanLevel, UserName};
+use bencher_endpoint::{Post, ResponseAccepted};
+use bencher_json::{
+    Email, JsonSignedIn, JsonSignup, OAuthAuthorizationUuid, PlanLevel, SessionMethod,
+    SessionToken, UserName,
+};
 use bencher_schema::{
     ApiContext, auth_conn,
     error::{issue_error, payment_required_error},
     model::{
         organization::{QueryOrganization, plan::LicenseUsage, sso::QuerySso},
-        user::{InsertUser, QueryUser},
+        user::{
+            InsertUser, QueryUser,
+            session::{InsertSession, QuerySession, cookie::SessionCookie},
+        },
     },
-    public_conn, write_conn,
+    public_conn, write_conn, write_transaction,
 };
-use dropshot::HttpError;
+use dropshot::{HttpError, RequestInfo};
+use http::header::SET_COOKIE;
 use slog::Logger;
 
-use crate::{CLIENT_TOKEN_TTL, verify_email};
+use crate::{sign_in::Presented, verify_email};
 
 pub mod github;
 pub mod google;
@@ -70,7 +78,7 @@ async fn handle_oauth_user(
     name: UserName,
     email: Email,
     provider: OAuthProvider,
-) -> Result<JsonOAuthUser, HttpError> {
+) -> Result<ProviderSignIn, HttpError> {
     // If the user already exists, then we just need to check if they are locked and possible accept an invite
     // Otherwise, we need to create a new user and notify the admins
     let query_user = QueryUser::get_with_email(public_conn!(context), &email);
@@ -144,58 +152,99 @@ async fn handle_oauth_user(
         .await?;
     }
 
-    let token = context
-        .token_key
-        .new_client(email.clone(), CLIENT_TOKEN_TTL)
-        .map_err(|e| {
-            issue_error(
-                "Failed to create client JWT for OAuth2",
-                &format!(
-                    "Failed to create client JWT for {provider} {auth_action} ({email} | {CLIENT_TOKEN_TTL})"
-                ),
-                e,
-            )
-        })?;
-
-    let claims = context.token_key.validate_client(&token).map_err(|e| {
-        issue_error(
-            "Failed to validate new client JWT for OAuth2",
-            &format!("Failed to validate new client JWT for {provider} {auth_action}"),
-            e,
-        )
-    })?;
-
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(match auth_action {
         AuthAction::Signup => bencher_otel::ApiCounter::UserSignup(auth_method),
         AuthAction::Login => bencher_otel::ApiCounter::UserLogin(auth_method),
     });
 
-    let user = JsonAuthUser {
-        user: query_user.into_json(),
-        token,
-        creation: claims.issued_at(),
-        expiration: claims.expiration(),
-    };
-    Ok(JsonOAuthUser {
-        user,
+    Ok(ProviderSignIn {
+        user: query_user,
+        new: matches!(auth_action, AuthAction::Signup),
         plan: oauth_state.plan(),
         authorization: oauth_state.authorization(),
     })
 }
 
+/// Who a provider signed in, and what the sign-in carries to where it lands.
+struct ProviderSignIn {
+    user: QueryUser,
+    /// Whether the sign-in made the account.
+    new: bool,
+    plan: Option<PlanLevel>,
+    authorization: Option<OAuthAuthorizationUuid>,
+}
+
+/// Begin a session for a provider's sign-in, in place of any the browser presented, and answer
+/// with its cookie and no token.
+async fn sign_in(
+    context: &ApiContext,
+    request: &RequestInfo,
+    provider: OAuthProvider,
+    signed_in: ProviderSignIn,
+) -> Result<ResponseAccepted<JsonSignedIn>, HttpError> {
+    let ProviderSignIn {
+        user,
+        new,
+        plan,
+        authorization,
+    } = signed_in;
+    let token = begin_session(context, &Presented::new(context, request), provider, &user).await?;
+    let cookie = SessionCookie::new(&context.console_url)
+        .set(&token)
+        .map_err(|e| {
+            issue_error(
+                "Failed to set the session cookie",
+                "Failed to set the session cookie:",
+                e,
+            )
+        })?;
+    let mut response = Post::pub_response_accepted(JsonSignedIn {
+        user: user.into_json(),
+        new,
+        plan,
+        authorization,
+    });
+    response.headers_mut().append(SET_COOKIE, cookie);
+    Ok(response)
+}
+
+async fn begin_session(
+    context: &ApiContext,
+    presented: &Presented<'_>,
+    provider: OAuthProvider,
+    user: &QueryUser,
+) -> Result<SessionToken, HttpError> {
+    let now = context.clock.now();
+    let (session, token) = InsertSession::new(user.id, provider.into(), presented.user_agent, now)?;
+    write_transaction!(context, |conn| {
+        if let Some(presented) = &presented.session {
+            QuerySession::delete_by_token(conn, presented)?;
+        }
+        session.insert(conn, now)
+    })
+    .map_err(|e| {
+        issue_error(
+            "Failed to sign in",
+            "Failed to begin a provider's session:",
+            e,
+        )
+    })?;
+    Ok(token)
+}
+
+impl From<OAuthProvider> for SessionMethod {
+    fn from(provider: OAuthProvider) -> Self {
+        match provider {
+            OAuthProvider::GitHub => Self::Github,
+            OAuthProvider::Google => Self::Google,
+        }
+    }
+}
+
 enum AuthAction {
     Signup,
     Login,
-}
-
-impl fmt::Display for AuthAction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Signup => f.write_str("signup"),
-            Self::Login => f.write_str("login"),
-        }
-    }
 }
 
 #[cfg(feature = "otel")]
@@ -211,11 +260,14 @@ impl From<OAuthProvider> for bencher_otel::OAuthProvider {
 #[cfg(test)]
 mod tests {
     use bencher_api_tests::{TestServer, helpers::user_organizations};
-    use bencher_json::{Email, OAuthAuthorizationUuid, OrganizationUuid};
-    use bencher_schema::{model::user::QueryUser, schema};
+    use bencher_json::{Email, OAuthAuthorizationUuid, OrganizationUuid, SessionMethod};
+    use bencher_schema::{
+        model::user::{QueryUser, session::QuerySession},
+        schema,
+    };
     use diesel::{ExpressionMethods as _, RunQueryDsl as _};
 
-    use super::{OAuthProvider, OAuthState, handle_oauth_user};
+    use super::{OAuthProvider, OAuthState, Presented, begin_session, handle_oauth_user};
 
     // Kills a provider sign-in that loses the app's request to connect between the state it sent
     // the provider and the signed-in user the console reads.
@@ -274,6 +326,28 @@ mod tests {
         }
     }
 
+    // Kills a provider's session recorded as another way of signing in, or as the email's.
+    #[tokio::test]
+    async fn a_provider_session_names_its_provider() {
+        let server = TestServer::new().await;
+        let user = server.signup("Provider User", "provider@example.com").await;
+        let query_user = QueryUser::get_with_email(&mut server.db_conn(), &user.email).unwrap();
+        let presented = Presented {
+            user_agent: None,
+            session: None,
+        };
+        for (provider, method) in [
+            (OAuthProvider::GitHub, SessionMethod::Github),
+            (OAuthProvider::Google, SessionMethod::Google),
+        ] {
+            let token = begin_session(server.context(), &presented, provider, &query_user)
+                .await
+                .unwrap();
+            let (_, session) = QuerySession::from_token(&mut server.db_conn(), &token).unwrap();
+            assert_eq!(session.method, method, "{provider}");
+        }
+    }
+
     // Kills a provider signup that makes a new user a member of an organization that already has
     // members.
     #[tokio::test]
@@ -293,7 +367,6 @@ mod tests {
         )
         .await
         .unwrap()
-        .user
         .user
         .uuid;
         assert_eq!(

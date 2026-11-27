@@ -8,6 +8,7 @@ import type {
 	JsonProjectKeyCreated,
 	PlanLevel,
 } from "../../../types/bencher";
+import type { Reader } from "../../../next/reader";
 import { authUser } from "../../../util/auth";
 import { httpGet, httpPost } from "../../../util/http";
 import {
@@ -19,7 +20,6 @@ import { useSearchParams } from "../../../util/url";
 import {
 	type InitValid,
 	init_valid,
-	validJwt,
 	validPlanLevel,
 } from "../../../util/valid";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
@@ -51,12 +51,12 @@ const OnboardKey = () => {
 	const orgsFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
+			reader: user,
 		};
 	});
 	const getOrganizations = async (fetcher: {
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 	}) => {
 		const cachedOrganization = getOrganization();
 		if (cachedOrganization) {
@@ -65,11 +65,11 @@ const OnboardKey = () => {
 		if (!fetcher.bencher_valid) {
 			return;
 		}
-		if (!validJwt(fetcher.token)) {
+		if (!fetcher.reader) {
 			return;
 		}
 		const path = "/v0/organizations";
-		return await httpGet(path, fetcher.token)
+		return await httpGet(path)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -99,23 +99,23 @@ const OnboardKey = () => {
 	const projectsFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
+			reader: user,
 			organization: organization(),
 		};
 	});
 	const getProjects = async (fetcher: {
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 		organization: undefined | JsonOrganization;
 	}) => {
 		if (!fetcher.bencher_valid) {
 			return;
 		}
-		if (!validJwt(fetcher.token) || fetcher.organization === undefined) {
+		if (!fetcher.reader || fetcher.organization === undefined) {
 			return;
 		}
 		const path = `/v0/organizations/${fetcher.organization?.slug}/projects`;
-		return await httpGet(path, fetcher.token)
+		return await httpGet(path)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -137,30 +137,30 @@ const OnboardKey = () => {
 			: undefined;
 	});
 
-	const keyName = createMemo(() => `${user?.user?.name}'s key`);
+	const keyName = createMemo(() => `${user?.name}'s key`);
 
 	const keysFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
+			reader: user,
 			project: project(),
 		};
 	});
 	const getKeys = async (fetcher: {
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 		project: undefined | JsonProject;
 	}) => {
 		if (!fetcher.bencher_valid) {
 			return;
 		}
-		if (!validJwt(fetcher.token) || fetcher.project === undefined) {
+		if (!fetcher.reader || fetcher.project === undefined) {
 			return;
 		}
 		const path = `/v0/projects/${
 			fetcher.project?.slug
 		}/keys?name=${encodeURIComponent(keyName())}`;
-		return await httpGet(path, fetcher.token)
+		return await httpGet(path)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -178,14 +178,14 @@ const OnboardKey = () => {
 	const keyFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
+			reader: user,
 			project: project(),
 			keys: apiKeys(),
 		};
 	});
 	const getKey = async (fetcher: {
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 		project: undefined | JsonProject;
 		keys: undefined | JsonProjectKey[];
 	}) => {
@@ -193,7 +193,7 @@ const OnboardKey = () => {
 			return;
 		}
 		if (
-			!validJwt(fetcher.token) ||
+			!fetcher.reader ||
 			fetcher.project === undefined ||
 			fetcher.keys === undefined
 		) {
@@ -206,7 +206,7 @@ const OnboardKey = () => {
 		const data: JsonNewProjectKey = {
 			name: keyName(),
 		};
-		return await httpPost(path, fetcher.token, data)
+		return await httpPost(path, data)
 			.then((resp) => {
 				const created = resp?.data as JsonProjectKeyCreated;
 				if (created?.key) {

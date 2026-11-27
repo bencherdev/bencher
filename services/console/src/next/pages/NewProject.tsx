@@ -33,9 +33,7 @@ const NewProject = () => {
 	const navigate = useNavigate();
 	const params = useParams();
 	const key = () => params.organization ?? "";
-	const bootstrap = useQueryResult(() =>
-		consoleUserQuery(api, reader().user.uuid),
-	);
+	const bootstrap = useQueryResult(() => consoleUserQuery(api, reader().uuid));
 	const plan = useQueryResult(() => privateQuery(api, key()));
 	const organization = () => organizationIn(bootstrap().data, key());
 	const organizations = createMemo(() =>
@@ -81,7 +79,7 @@ const NewProject = () => {
 		}
 		const { uuid, slug, organization: owner, bmf_version } = project;
 		client.setQueryData<JsonConsoleUser>(
-			consoleUserQuery(api, reader().user.uuid).queryKey,
+			consoleUserQuery(api, reader().uuid).queryKey,
 			(user) =>
 				user && {
 					...user,

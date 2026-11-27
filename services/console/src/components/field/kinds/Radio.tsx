@@ -3,7 +3,6 @@ import type { FieldValue, FieldValueHandler } from "../Field";
 import { For, createMemo, createResource, createSignal } from "solid-js";
 import Pagination, { PaginationSize } from "../../site/Pagination";
 import { X_TOTAL_COUNT, httpGet } from "../../../util/http";
-import { authUser } from "../../../util/auth";
 import * as Sentry from "@sentry/astro";
 import Field from "../Field";
 import FieldKind from "../kind";
@@ -57,14 +56,10 @@ const Radio = (props: Props) => {
 	const fetcher = createMemo(() => {
 		return {
 			url: props.config?.url(params(), per_page(), page(), search()),
-			token: authUser()?.token,
 		};
 	});
-	const getRadio = async (fetcher: {
-		url: string;
-		token: undefined | string;
-	}) => {
-		return await httpGet(fetcher.url, fetcher.token)
+	const getRadio = async (fetcher: { url: string }) => {
+		return await httpGet(fetcher.url)
 			.then((resp) => {
 				setTotalCount(resp?.headers?.[X_TOTAL_COUNT]);
 				return resp?.data;

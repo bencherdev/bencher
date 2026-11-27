@@ -83,7 +83,7 @@ const fakeApi = (
 };
 
 const newClient = (api: Api, bootstrap: JsonConsoleProject) => {
-	const client = createQueryClient(() => {});
+	const client = createQueryClient();
 	client.setDefaultOptions({
 		queries: { ...client.getDefaultOptions().queries, retry: false },
 	});

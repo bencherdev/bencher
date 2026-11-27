@@ -28,7 +28,7 @@ const DeleteOrganization = (props: {
 	const { api, reader } = useAccount();
 	const client = useQueryClient();
 	const flush = useContext(FlushContext);
-	const user = useQueryResult(() => consoleUserQuery(api, reader().user.uuid));
+	const user = useQueryResult(() => consoleUserQuery(api, reader().uuid));
 	const projects = () =>
 		user().data?.projects.filter(
 			({ organization }) => organization === props.organization.uuid,
@@ -58,7 +58,7 @@ const DeleteOrganization = (props: {
 				(scope === "console" && gone.includes(project as string)),
 		});
 		client.setQueryData<JsonConsoleUser>(
-			consoleUserQuery(api, reader().user.uuid).queryKey,
+			consoleUserQuery(api, reader().uuid).queryKey,
 			(current) => current && withOrganization(current, uuid, undefined),
 		);
 		localStorage.removeItem(CLASSIC_ORGANIZATION);

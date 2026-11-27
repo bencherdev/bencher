@@ -25,7 +25,6 @@ import {
 	validResourceName,
 	validSampleSize,
 	validSlug,
-	validUser,
 	validUserName,
 	validUuid,
 	validWindow,
@@ -222,36 +221,6 @@ describe.skipIf(!wasmReady)("WASM validators", () => {
 
 		test("rejects a URL that is not http or https", () => {
 			expect(validOptionUrl("javascript:alert(document.domain)")).toBe(false);
-		});
-	});
-
-	describe("validUser", () => {
-		test("accepts valid user object", () => {
-			const user = {
-				user: {
-					uuid: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-					name: "Test User",
-					slug: "test-user",
-					email: "test@example.com",
-				},
-				token: fakeJwt,
-			};
-			// biome-ignore lint/suspicious/noExplicitAny: partial test object
-			expect(validUser(user as any)).toBe(true);
-		});
-
-		test("rejects user with invalid email", () => {
-			const user = {
-				user: {
-					uuid: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-					name: "Test User",
-					slug: "test-user",
-					email: "invalid",
-				},
-				token: fakeJwt,
-			};
-			// biome-ignore lint/suspicious/noExplicitAny: partial test object
-			expect(validUser(user as any)).toBe(false);
 		});
 	});
 

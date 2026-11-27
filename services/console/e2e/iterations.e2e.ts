@@ -25,7 +25,7 @@ const iterationRow = (iteration: number, value: string) =>
 const newestRun = async (request: APIRequestContext) => {
 	const response = await request.get(
 		`${seed.api_url}/v0/projects/${iterations.slug}/reports?per_page=1`,
-		{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+		{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 	);
 	const [report] = (await response.json()) as { uuid: string }[];
 	if (!report) {
@@ -214,7 +214,7 @@ test.describe("a report run three times", () => {
 	test("a report run once offers no combo", async ({ page, request }) => {
 		const response = await request.get(
 			`${seed.api_url}/v0/projects/${hashbrown.slug}/reports?branch=main&testbed=ubuntu-latest&per_page=1`,
-			{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+			{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 		);
 		const [report] = (await response.json()) as { uuid: string }[];
 		await page.goto(

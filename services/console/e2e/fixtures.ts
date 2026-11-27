@@ -8,12 +8,20 @@ import {
 	type Page,
 	type Request,
 } from "@playwright/test";
-import type { JsonAuthUser } from "../src/types/bencher";
+import type { JsonUser } from "../src/types/bencher";
 
 interface SeedProject {
 	uuid: string;
 	name: string;
 	slug: string;
+}
+
+/** A reader the suite signs in as: a real session for the browser, and a user key for the suite's own requests. */
+export interface Reader {
+	user: JsonUser;
+	/** The value of the session cookie a sign-in by email set. */
+	session: string;
+	key: string;
 }
 
 /** What `cargo test-console e2e` seeded the API with. */
@@ -25,10 +33,10 @@ export interface Seed {
 	/** The API's log, which holds every email it sends. */
 	api_log: string;
 	now: string;
-	admin: JsonAuthUser;
-	member: JsonAuthUser;
-	/** A member of nothing, signed in with a user key. */
-	outsider: JsonAuthUser;
+	admin: Reader;
+	member: Reader;
+	/** A member of nothing. */
+	outsider: Reader;
 	organization: SeedProject;
 	projects: {
 		hashbrown: SeedProject;
@@ -65,31 +73,58 @@ export const seed: Seed = JSON.parse(readFileSync(seedPath, "utf8"));
 /** Where the browser reaches the API: the console's own relay. */
 export const RELAY = `${seed.console_url}/api`;
 
-export const USER_KEY = "BENCHER_USER";
+/** The reader hint, which names who signed in and authenticates nothing. */
+export const READER_KEY = "BENCHER_READER";
+export const SESSION_COOKIE = "__Host-bencher_session";
 export const THEME_KEY = "BENCHER_THEME";
 export const VERSION_KEY = "BENCHER_BMF_VERSIONS";
 export const SHELL_KEY = "BENCHER_CONSOLE_SHELL";
 export const ORGANIZATION_KEY = "BENCHER_ORGANIZATION";
 
 type StorageState = {
-	cookies: [];
+	cookies: {
+		name: string;
+		value: string;
+		domain: string;
+		path: string;
+		expires: number;
+		httpOnly: boolean;
+		secure: boolean;
+		sameSite: "Strict";
+	}[];
 	origins: {
 		origin: string;
 		localStorage: { name: string; value: string }[];
 	}[];
 };
 
-/** A browser that has stored `user` as signed in, plus any other entries. */
+/** The session cookie, as the API sets it for the suite's console. */
+export const sessionCookie = (session: string) => ({
+	name: SESSION_COOKIE,
+	value: session,
+	domain: new URL(seed.console_url).hostname,
+	path: "/",
+	expires: -1,
+	httpOnly: true,
+	secure: true,
+	sameSite: "Strict" as const,
+});
+
+/** What the console keeps of a reader in the browser: who they are, and nothing that signs in. */
+export const hintOf = ({ user }: Pick<Reader, "user">) =>
+	JSON.stringify({ uuid: user.uuid, slug: user.slug, name: user.name });
+
+/** A browser signed in as `reader`, with its session cookie and its hint, plus any other entries. */
 export const signedIn = (
-	user: JsonAuthUser,
+	reader: Reader,
 	extra: Record<string, string> = {},
 ): StorageState => ({
-	cookies: [],
+	cookies: [sessionCookie(reader.session)],
 	origins: [
 		{
 			origin: seed.console_url,
 			localStorage: [
-				{ name: USER_KEY, value: JSON.stringify(user) },
+				{ name: READER_KEY, value: hintOf(reader) },
 				...Object.entries(extra).map(([name, value]) => ({ name, value })),
 			],
 		},
@@ -97,6 +132,12 @@ export const signedIn = (
 });
 
 export const signedOut: StorageState = { cookies: [], origins: [] };
+
+/** `reader` with a session cookie the API never began, as a browser holds one after its session ends. */
+export const ended = (reader: Reader): Reader => ({
+	...reader,
+	session: Buffer.alloc(32, 0xfb).toString("base64url"),
+});
 
 /** Sign in, carrying `back` as the page it returns to. */
 export const logInTo = (back: string) =>
@@ -107,14 +148,26 @@ export const consolePath = (slug: string, tab = "") =>
 
 export const test = base.extend<{
 	freezeClock: boolean;
+	turnstile: undefined;
 	frozenClock: undefined;
 	trackedRequests: undefined;
 	/** Every request a page sent off its console's origin. */
 	strays: string[];
+	/** Every request a page sent with an `Authorization` header. */
+	authorized: string[];
 	/** A browser of its own, at the same date as the test's. */
 	newContext: (options?: BrowserContextOptions) => Promise<BrowserContext>;
 }>({
 	freezeClock: [true, { option: true }],
+	// The console asks Cloudflare's Turnstile for a token, as Bencher Cloud's does; the suite
+	// answers in its place, refusing where a test sets `TURNSTILE_REFUSES`.
+	turnstile: [
+		async ({ context }, use) => {
+			await fakeTurnstile(context);
+			await use(undefined);
+		},
+		{ auto: true },
+	],
 	// Only the date is frozen, never the timers. Playwright's clock fakes the
 	// timers of every frame, each counting its own ids, so a timer set through
 	// a sandbox frame (as Sentry does) and cleared through the page clears the
@@ -147,13 +200,28 @@ export const test = base.extend<{
 		},
 		{ auto: true },
 	],
-	newContext: async ({ browser, freezeClock, strays }, use) => {
+	// Kills a page that sends a credential of its own: the session rides in its cookie alone.
+	authorized: [
+		async ({ context }, use) => {
+			const authorized: string[] = [];
+			watchAuthorization(context, authorized);
+			await use(authorized);
+			expect(
+				authorized,
+				"requests that carried an Authorization header",
+			).toEqual([]);
+		},
+		{ auto: true },
+	],
+	newContext: async ({ browser, freezeClock, strays, authorized }, use) => {
 		const contexts: BrowserContext[] = [];
 		await use(async (options) => {
 			const context = await browser.newContext(options);
 			contexts.push(context);
+			await fakeTurnstile(context);
 			trackPages(context);
 			watchOrigin(context, strays);
+			watchAuthorization(context, authorized);
 			if (freezeClock) {
 				await context.addInitScript(freezeDate, Date.parse(seed.now));
 			}
@@ -162,6 +230,39 @@ export const test = base.extend<{
 		await Promise.all(contexts.map((context) => context.close()));
 	},
 });
+
+/** Cloudflare's Turnstile script, as the auth pages load it. */
+export const TURNSTILE = "https://challenges.cloudflare.com/turnstile/**";
+/** Set in a page, the suite's Turnstile refuses every check. */
+export const TURNSTILE_REFUSES = "BENCHER_E2E_TURNSTILE_REFUSES";
+
+const fakeTurnstile = (context: BrowserContext) =>
+	context.route(TURNSTILE, (route) =>
+		route.fulfill({
+			contentType: "text/javascript",
+			body: `window.turnstile = {
+	drawn: 0,
+	widgets: {},
+	render(container, options) {
+		this.drawn += 1;
+		const id = String(this.drawn);
+		this.widgets[id] = options;
+		return id;
+	},
+	execute(id) {
+		const options = this.widgets[id];
+		setTimeout(() =>
+			window[${JSON.stringify(TURNSTILE_REFUSES)}]
+				? options["error-callback"]()
+				: options.callback("e2e-turnstile-token-" + id),
+		);
+	},
+	remove(id) {
+		delete this.widgets[id];
+	},
+};`,
+		}),
+	);
 
 /** Runs in the page: the current time is `now`, and every other date is itself. */
 const freezeDate = (now: number) => {
@@ -225,6 +326,15 @@ const watchOrigin = (context: BrowserContext, strays: string[]) => {
 		}
 		if (CONSOLES.has(from)) {
 			strays.push(request.url());
+		}
+	});
+};
+
+/** Records every request a page in `context` sends with an `Authorization` header. */
+const watchAuthorization = (context: BrowserContext, authorized: string[]) => {
+	context.on("request", (request) => {
+		if (request.headers().authorization !== undefined) {
+			authorized.push(request.url());
 		}
 	});
 };
@@ -339,8 +449,8 @@ export const approach = async (lines: Locator) => {
 	await mouse.move(box.x + box.width / 2, top + 16, { steps: 4 });
 };
 
-/** How many queries the signed in reader has persisted. */
-export const persistedQueries = (page: Page) =>
+/** How many queries the signed in reader, the member unless named, has persisted. */
+export const persistedQueries = (page: Page, uuid = seed.member.user.uuid) =>
 	page.evaluate(
 		(uuid) =>
 			new Promise<number>((resolve) => {
@@ -363,5 +473,5 @@ export const persistedQueries = (page: Page) =>
 					};
 				};
 			}),
-		seed.member.user.uuid,
+		uuid,
 	);

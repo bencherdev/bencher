@@ -1,13 +1,13 @@
 ---
-import { USER_KEY } from "../reader";
+import { READER_KEY } from "../reader";
 
 // Runs before the first paint and before any module loads: a reader who is
 // not signed in.
 ---
 
-<script is:inline define:vars={{ USER_KEY }}>
+<script is:inline define:vars={{ READER_KEY }}>
 	try {
-		if (!localStorage.getItem(USER_KEY)) {
+		if (!localStorage.getItem(READER_KEY)) {
 			location.replace(
 				"/auth/login?" +
 					new URLSearchParams({

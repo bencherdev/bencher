@@ -1,28 +1,15 @@
-import { Show } from "solid-js";
-import type { JsonAuthUser } from "../../../types/bencher";
+import type { Reader } from "../../../next/reader";
 
 enum Section {
 	KEYS = "keys",
 	APPS = "apps",
-	TOKENS = "tokens",
 	SETTINGS = "settings",
 	HELP = "help",
 }
 
-// User API tokens are deprecated:
-// accounts created after this date never see the API Tokens page.
-const API_TOKENS_SUNSET = new Date("2026-06-15T23:59:59Z");
-
-const UserMenu = (props: { user?: JsonAuthUser }) => {
+const UserMenu = (props: { user?: undefined | Reader }) => {
 	const path = (section: Section) =>
-		`/console/users/${props.user?.user?.slug}/${section}`;
-
-	// Fail open: a missing or unparsable `created` date means the account
-	// predates the sunset (or localStorage predates the field), so show the entry.
-	const showTokens = () => {
-		const created = props.user?.user?.created;
-		return !created || !(new Date(created) > API_TOKENS_SUNSET);
-	};
+		`/console/users/${props.user?.slug}/${section}`;
 
 	return (
 		<aside class="menu is-sticky">
@@ -37,11 +24,6 @@ const UserMenu = (props: { user?: JsonAuthUser }) => {
 				<li>
 					<a href={path(Section.APPS)}>Connected Apps</a>
 				</li>
-				<Show when={showTokens()}>
-					<li>
-						<a href={path(Section.TOKENS)}>API Tokens</a>
-					</li>
-				</Show>
 				<li>
 					<a href={path(Section.SETTINGS)}>Settings</a>
 				</li>

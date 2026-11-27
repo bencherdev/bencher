@@ -12,7 +12,10 @@ import {
 	plotAtEnd,
 } from "./explore";
 import {
+	READER_KEY,
+	SESSION_COOKIE,
 	VERSION_KEY,
+	ended,
 	expect,
 	consolePath,
 	seed,
@@ -164,7 +167,7 @@ test.describe("signed out", () => {
 			page.getByRole("link", { name: "Open in console" }),
 		).toHaveCount(0);
 		await expect(
-			page.getByRole("banner").getByRole("link", { name: "Log in" }),
+			page.getByRole("banner").getByRole("link", { name: "Sign in" }),
 		).toHaveAttribute(
 			"href",
 			signInWayBack(new URL(page.url()).pathname + new URL(page.url()).search),
@@ -400,7 +403,7 @@ test.describe("signed out", () => {
 
 	// Kills a private project drawn for nobody, a page that asks the API again
 	// what it already refused, and a sign in that forgets the way back.
-	test("a private project asks the reader to log in, through a link that keeps the page", async ({
+	test("a private project asks the reader to sign in, through a link that keeps the page", async ({
 		page,
 	}) => {
 		const asked: string[] = [];
@@ -415,7 +418,7 @@ test.describe("signed out", () => {
 			page.getByRole("heading", { level: 1, name: "Private or not found" }),
 		).toBeVisible();
 		await expect(
-			page.getByRole("main").getByRole("link", { name: "Log in" }),
+			page.getByRole("main").getByRole("link", { name: "Sign in" }),
 		).toHaveAttribute("href", signInWayBack(path));
 		await page.waitForLoadState("networkidle");
 		expect(asked).toEqual([
@@ -472,7 +475,7 @@ test.describe("a signed in member", () => {
 		await twoLinesDrawn(page);
 		// A public project's plot is the same for every reader.
 		expect((await asked).headers().authorization).toBeUndefined();
-		await expect(page.getByRole("link", { name: "Log in" })).toHaveCount(0);
+		await expect(page.getByRole("link", { name: "Sign in" })).toHaveCount(0);
 		await page.getByRole("link", { name: "Open in console" }).click();
 		await expect(page).toHaveURL(
 			(url) =>
@@ -483,17 +486,23 @@ test.describe("a signed in member", () => {
 	});
 
 	// Kills a private project's public plot refused to a reader who may read
-	// it, a reader's token sent before the project refused everyone, which
+	// it, a reader's session sent before the project refused everyone, which
 	// would lift a public project's window for members alone, and one whose
 	// Share offers an embed no one can load.
 	test("a private project's public plot opens for its member", async ({
 		page,
 	}) => {
 		const { private: locked } = seed.projects;
-		const reads: (string | undefined)[] = [];
+		const reads: Promise<boolean>[] = [];
 		page.on("request", (sent) => {
 			if (sent.url() === `${RELAY}/v0/projects/${locked.slug}`) {
-				reads.push(sent.headers().authorization);
+				reads.push(
+					sent
+						.allHeaders()
+						.then(({ cookie }) =>
+							Boolean(cookie?.includes(`${SESSION_COOKIE}=`)),
+						),
+				);
 			}
 		});
 		await page.goto(publicPath(locked.slug));
@@ -503,7 +512,7 @@ test.describe("a signed in member", () => {
 		await expect(
 			page.getByRole("link", { name: "Open in console" }),
 		).toBeVisible();
-		expect(reads).toEqual([undefined, `Bearer ${seed.member.token}`]);
+		expect(await Promise.all(reads)).toEqual([false, true]);
 
 		// Its embed would load for no one, so Share copies the link at once.
 		await page
@@ -532,8 +541,8 @@ test.describe("a signed in member of a version 0 project", () => {
 	}) => {
 		const project = await createProject(request);
 		for (const [token, data] of [
-			[seed.member.token, { visibility: "private" }],
-			[seed.admin.token, { bmf_version: 0 }],
+			[seed.member.key, { visibility: "private" }],
+			[seed.admin.key, { bmf_version: 0 }],
 		] as const) {
 			const response = await request.patch(
 				`${seed.api_url}/v0/projects/${project.slug}`,
@@ -552,7 +561,7 @@ test.describe("a signed in member of a version 0 project", () => {
 test.describe("a signed in reader who is not a member", () => {
 	test.use({ storageState: signedIn(seed.outsider) });
 
-	// Kills a reader the project refuses who is shown a plot, or told to log in
+	// Kills a reader the project refuses who is shown a plot, or told to sign in
 	// or sign up while signed in.
 	test("a private project tells them it is private or missing", async ({
 		page,
@@ -561,7 +570,7 @@ test.describe("a signed in reader who is not a member", () => {
 		await expect(
 			page.getByRole("heading", { level: 1, name: "Private or not found" }),
 		).toBeVisible();
-		for (const name of ["Log in", "Sign up"]) {
+		for (const name of ["Sign in", "Sign up"]) {
 			await expect(page.getByRole("link", { name })).toHaveCount(0);
 		}
 		await expect(page.getByRole("figure")).toHaveCount(0);
@@ -569,27 +578,23 @@ test.describe("a signed in reader who is not a member", () => {
 });
 
 test.describe("a reader whose session ended", () => {
-	test.use({
-		storageState: signedIn({
-			...seed.member,
-			expiration: new Date(Date.now() - DAY).toISOString(),
-		}),
-	});
+	test.use({ storageState: signedIn(ended(seed.member)) });
 
-	// Kills an ended session taken for a reader, which hides Log in for good.
-	test("is asked to log in, with no Open in console", async ({
+	// Kills an ended session taken for a reader once the API refuses it, which
+	// hides Sign in for good.
+	test("is asked to sign in once the API refuses the session", async ({
 		page,
-		request,
 	}) => {
-		const { project, search } = await twoRecentLines(request);
-		await page.goto(publicPath(project.slug, search));
-		await twoLinesDrawn(page);
+		await page.goto(publicPath(seed.projects.private.slug));
 		await expect(
-			page.getByRole("banner").getByRole("link", { name: "Log in" }),
+			page.getByRole("heading", { level: 1, name: "Private or not found" }),
 		).toBeVisible();
 		await expect(
-			page.getByRole("link", { name: "Open in console" }),
-		).toHaveCount(0);
+			page.getByRole("banner").getByRole("link", { name: "Sign in" }),
+		).toBeVisible();
+		expect(
+			await page.evaluate((key) => localStorage.getItem(key), READER_KEY),
+		).toBeNull();
 	});
 });
 
@@ -608,7 +613,7 @@ test.describe("narrow", () => {
 		const show = page.getByRole("button", { name: "Show query" });
 		for (const target of [
 			show,
-			page.getByRole("banner").getByRole("link", { name: "Log in" }),
+			page.getByRole("banner").getByRole("link", { name: "Sign in" }),
 			page.getByRole("radiogroup", { name: "Window" }).getByText("1w"),
 		]) {
 			expect((await target.boundingBox())?.height).toBeGreaterThanOrEqual(44);
@@ -632,16 +637,16 @@ test.describe("narrow", () => {
 		).toBe(true);
 	});
 
-	// Kills a phone bar that drops Sign up, or crowds Log in or Sign up off the
+	// Kills a phone bar that drops Sign up, or crowds Sign in or Sign up off the
 	// screen or under another control.
-	test("Log in and Sign up both show and take a press at 390 and 320 px", async ({
+	test("Sign in and Sign up both show and take a press at 390 and 320 px", async ({
 		page,
 	}) => {
 		for (const width of [390, 320]) {
 			await page.setViewportSize({ width, height: 844 });
 			await page.goto(publicPath(hashbrown.slug));
 			const bar = page.getByRole("banner");
-			for (const name of ["Log in", "Sign up"]) {
+			for (const name of ["Sign in", "Sign up"]) {
 				const link = bar.getByRole("link", { name });
 				await expect(link).toBeInViewport({ ratio: 1 });
 				await link.click({ trial: true });

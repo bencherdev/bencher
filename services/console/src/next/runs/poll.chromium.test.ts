@@ -78,7 +78,7 @@ for (const [surface, query] of SURFACES) {
 	test(`${surface} asks again while a job runs, only in view, and stops once none does`, async () => {
 		let ended = false;
 		const reading = api(() => ended);
-		const client = createQueryClient(() => {});
+		const client = createQueryClient();
 		const observer = new QueryObserver(
 			client,
 			client.defaultQueryOptions(query(reading.api) as never),
@@ -123,7 +123,7 @@ test("a run page's later batch asks again only while its own reports run", async
 			throw new Error("A poll sends nothing");
 		},
 	};
-	const client = createQueryClient(() => {});
+	const client = createQueryClient();
 	const observer = new QueryObserver(
 		client,
 		client.defaultQueryOptions(

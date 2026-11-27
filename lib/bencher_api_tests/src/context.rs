@@ -165,6 +165,17 @@ impl TestServer {
         .await
     }
 
+    /// Create a new test server that signs in with Google, whose every Google request goes to
+    /// `base`.
+    #[cfg(feature = "plus")]
+    pub async fn new_with_google(base: &url::Url) -> Self {
+        Self::new_with_options(TestServerOptions {
+            google_client: Some(crate::helpers::google_client().with_base_url(base)),
+            ..TestServerOptions::default()
+        })
+        .await
+    }
+
     /// Create a new test server with the GitHub App, whose every GitHub request goes to `base`,
     /// with an injectable clock that logs to `log`.
     #[cfg(feature = "plus")]

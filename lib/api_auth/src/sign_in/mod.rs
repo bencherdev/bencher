@@ -86,7 +86,10 @@ async fn admit_email(
     Ok(())
 }
 
-fn check_same_origin(context: &ApiContext, request: &RequestInfo) -> Result<(), HttpError> {
+pub(crate) fn check_same_origin(
+    context: &ApiContext,
+    request: &RequestInfo,
+) -> Result<(), HttpError> {
     if passes_same_origin_check(request.method(), request.headers(), &context.console_url) {
         Ok(())
     } else {
@@ -295,13 +298,13 @@ fn support_url(context: &ApiContext) -> Option<url::Url> {
 }
 
 /// What the browser presents at a proof: its device, and any session it is signed in to.
-struct Presented<'a> {
-    user_agent: Option<&'a str>,
-    session: Option<SessionToken>,
+pub(crate) struct Presented<'a> {
+    pub user_agent: Option<&'a str>,
+    pub session: Option<SessionToken>,
 }
 
 impl<'a> Presented<'a> {
-    fn new(context: &ApiContext, request: &'a RequestInfo) -> Self {
+    pub(crate) fn new(context: &ApiContext, request: &'a RequestInfo) -> Self {
         Self {
             user_agent: request
                 .headers()

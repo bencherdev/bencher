@@ -4,21 +4,15 @@ import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { type Component, Suspense } from "solid-js";
 import { render } from "solid-js/web";
-import type { JsonAuthUser } from "../../types/bencher";
 import type { Api } from "../api";
+import type { Reader } from "../reader";
 import { AccountContext } from "./context";
 
-const READER = {
-	user: {
-		uuid: "user-uuid",
-		name: "Muriel Bagge",
-		slug: "muriel-bagge",
-		email: "muriel@nowhere.example",
-		admin: false,
-		locked: false,
-	},
-	token: "tok",
-} as JsonAuthUser;
+const READER: Reader = {
+	uuid: "user-uuid",
+	name: "Muriel Bagge",
+	slug: "muriel-bagge",
+};
 
 /** Render an account page at `/users/muriel-bagge/<segment>`, with `cached` answers already held. */
 export const mountAccount = (
@@ -36,7 +30,7 @@ export const mountAccount = (
 	}
 	const history = createMemoryHistory();
 	history.set({
-		value: `/users/${READER.user.slug}/${segment}`,
+		value: `/users/${READER.slug}/${segment}`,
 		replace: true,
 	});
 	const root = document.createElement("div");

@@ -64,7 +64,7 @@ const mount = (api: Api, client: QueryClient, path = PATH) => {
 	return history;
 };
 
-const client = () => createQueryClient(() => {});
+const client = () => createQueryClient();
 
 let perPage = 0;
 

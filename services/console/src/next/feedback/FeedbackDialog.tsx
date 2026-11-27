@@ -6,6 +6,7 @@ import Icon from "@bencherdev/ui/Icon";
 import Segmented from "@bencherdev/ui/Segmented";
 import TextArea from "@bencherdev/ui/TextArea";
 import Truncate from "@bencherdev/ui/Truncate";
+import { QueryClientContext } from "@tanstack/solid-query";
 import {
 	For,
 	Show,
@@ -13,8 +14,13 @@ import {
 	createUniqueId,
 	onCleanup,
 	onMount,
+	useContext,
 } from "solid-js";
 import { version } from "../../../package.json";
+import { AccountContext } from "../account/context";
+import { ProjectContext } from "../project";
+import { userQuery } from "../queries";
+import { useQueryResult } from "../query";
 import { type Attached, type Kind, browserOf, sizeOf } from "./report";
 import { send } from "./send";
 
@@ -30,7 +36,8 @@ export interface FeedbackAbout {
 	/** The organization and project as the crumb names them, on a project's page. */
 	project?: string | undefined;
 	slug?: string | undefined;
-	email: string;
+	/** The signed in reader's slug, whose account holds the email the dialog offers. */
+	reader?: string | undefined;
 }
 
 const FeedbackDialog = (props: {
@@ -49,26 +56,52 @@ const FeedbackDialog = (props: {
 	const [copied, setCopied] = createSignal(false);
 	let picker: HTMLInputElement | undefined;
 
-	const items: { id: Attached; label: string; value: string }[] = [
-		{
-			id: "page",
-			label: "Page",
-			value: document.title.replace(/ \| Bencher$/, "").replaceAll(" | ", ", "),
-		},
-		...(props.about.project
-			? [
-					{
-						id: "project" as const,
-						label: "Project",
-						value: props.about.project,
-					},
-				]
-			: []),
-		{ id: "browser", label: "Browser", value: browserOf(navigator.userAgent) },
-		{ id: "build", label: "Console build", value: version },
-		{ id: "session", label: "Session link", value: "Sentry trace and replay" },
-		{ id: "email", label: "Your email", value: props.about.email },
-	];
+	// The browser keeps no email for the reader, so the dialog asks for their account.
+	const client = useContext(QueryClientContext);
+	const api =
+		useContext(AccountContext)?.api ?? useContext(ProjectContext)?.api;
+	const reader = props.about.reader;
+	const account =
+		client && api && reader
+			? useQueryResult(() => userQuery(api, reader))
+			: undefined;
+	const email = () => account?.().data?.email;
+
+	const items = (): { id: Attached; label: string; value: string }[] => {
+		const known = email();
+		return [
+			{
+				id: "page",
+				label: "Page",
+				value: document.title
+					.replace(/ \| Bencher$/, "")
+					.replaceAll(" | ", ", "),
+			},
+			...(props.about.project
+				? [
+						{
+							id: "project" as const,
+							label: "Project",
+							value: props.about.project,
+						},
+					]
+				: []),
+			{
+				id: "browser",
+				label: "Browser",
+				value: browserOf(navigator.userAgent),
+			},
+			{ id: "build", label: "Console build", value: version },
+			{
+				id: "session",
+				label: "Session link",
+				value: "Sentry trace and replay",
+			},
+			...(known
+				? [{ id: "email" as const, label: "Your email", value: known }]
+				: []),
+		];
+	};
 	const toggle = (id: Attached) => {
 		const next = new Set(off());
 		if (!next.delete(id)) {
@@ -95,7 +128,7 @@ const FeedbackDialog = (props: {
 				{
 					url: location.href,
 					slug: props.about.slug,
-					email: props.about.email,
+					email: email(),
 					build: version,
 				},
 			);
@@ -208,7 +241,7 @@ const FeedbackDialog = (props: {
 					<fieldset class="fset field">
 						<legend class="flab">Attached</legend>
 						<div class="fb-ctx">
-							<For each={items}>
+							<For each={items()}>
 								{(item) => (
 									<label classList={{ off: off().has(item.id) }}>
 										<input

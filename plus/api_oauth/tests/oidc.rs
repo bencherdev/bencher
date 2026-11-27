@@ -11,6 +11,7 @@
 use bencher_api_tests::{
     TestServer, TestServerOptions, TestUser,
     helpers::{OAUTH_ISSUER, OAUTH_SIGNING_KEY},
+    session_cookie,
 };
 use std::{
     sync::{
@@ -29,7 +30,10 @@ use bencher_schema::{
     schema,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
-use http::{Method, StatusCode, header::LOCATION};
+use http::{
+    Method, StatusCode,
+    header::{COOKIE, LOCATION},
+};
 use jsonwebtoken::{Algorithm, DecodingKey, Header, Validation, jwk::JwkSet};
 use serde_json::{Value, json};
 use url::{Url, form_urlencoded};
@@ -288,6 +292,43 @@ async fn auth_time_is_when_the_session_signed_in() {
     let key = harness.create_user_key(&user).await;
     let tokens = harness.tokens("openid", &key).await;
     assert_eq!(id_token_claims(&tokens).get("auth_time"), None);
+}
+
+// Kills an ID token approved by the session cookie whose `auth_time` is not when that session
+// last proved who its reader is: neither when it began nor when it was last used.
+#[tokio::test]
+async fn auth_time_is_when_the_cookie_session_last_proved() {
+    let harness = Harness::new(SigningKey::Configured).await;
+    let user = harness.server.signup("Proved", "proved@example.com").await;
+    let began = NOW - 2 * 60 * 60;
+    let session = harness
+        .server
+        .session_at(&user, DateTime::try_from(began).expect("Invalid time"));
+    let proved = NOW - 60;
+    diesel::update(schema::session::table)
+        .set(schema::session::proved.eq(DateTime::try_from(proved).expect("Invalid time")))
+        .execute(&mut harness.server.db_conn())
+        .expect("Failed to prove the session");
+
+    let request = harness.request_with("openid", &[("max_age", "600")]).await;
+    let resp = harness
+        .client
+        .post(
+            harness
+                .server
+                .api_url(&format!("/v0/oauth/authorizations/{request}")),
+        )
+        .header(COOKIE, session_cookie(&session))
+        .header("Sec-Fetch-Site", "same-origin")
+        .json(&json!({ "approve": true }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let answer: Value = resp.json().await.expect("Invalid answer");
+    let url = Url::parse(&string(&answer, "url")).expect("Invalid answer URL");
+    let tokens = harness.exchange(&param(&url, "code")).await;
+    assert_eq!(integer(&id_token_claims(&tokens), "auth_time"), proved);
 }
 
 // Kills advertising or granting OpenID Connect without a key to sign ID tokens with.

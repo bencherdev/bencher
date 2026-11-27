@@ -43,7 +43,7 @@ const LATENCY =
 const ALERTING = "blake3";
 const DISMISSED = "sha256";
 
-const headers = (token = seed.member.token) => ({
+const headers = (token = seed.member.key) => ({
 	Authorization: `Bearer ${token}`,
 });
 

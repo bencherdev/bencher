@@ -1,10 +1,10 @@
 import type { Page } from "@playwright/test";
-import type { JsonAuthUser } from "../src/types/bencher";
 import { createOwnProject, createProject, createReader } from "./api";
 import {
 	VERSION_KEY,
 	expect,
 	consolePath,
+	type Reader,
 	seed,
 	signedIn,
 	test,
@@ -13,8 +13,7 @@ import {
 const { hashbrown } = seed.projects;
 const ORGANIZATIONS = "/console/organizations";
 
-const keysPath = (reader: JsonAuthUser) =>
-	`/console/users/${reader.user.slug}/keys`;
+const keysPath = (reader: Reader) => `/console/users/${reader.user.slug}/keys`;
 const wordmark = (page: Page) =>
 	page.getByRole("banner").getByRole("link", { name: "Bencher, home" });
 
@@ -92,7 +91,7 @@ test("deleting the reader's last project lands on Organizations", async ({
 	newContext,
 	request,
 }) => {
-	const reader = await createReader(request);
+	const reader = await createReader();
 	const project = await createOwnProject(request, reader);
 	const page = await (
 		await newContext({ storageState: signedIn(reader) })

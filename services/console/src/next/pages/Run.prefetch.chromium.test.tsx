@@ -14,7 +14,7 @@ const alertsCodeLoaded = () =>
 // Kills a prefetch that loads the alerts' code for a run that raised none, or
 // leaves it for the page to find after the move for a run that raised some.
 test("prefetching a run starts its alerts' code only when it raised any", async () => {
-	const client = createQueryClient(() => {});
+	const client = createQueryClient();
 	const quiet = fakeApi(() => ({
 		data: runPageFixture([runReportFixture(0)]),
 	}));

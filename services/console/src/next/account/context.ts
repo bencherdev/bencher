@@ -1,14 +1,15 @@
 import { createContext, useContext } from "solid-js";
-import type { JsonAuthUser, JsonUser } from "../../types/bencher";
+import type { JsonUser } from "../../types/bencher";
 import type { Api } from "../api";
+import type { Reader } from "../reader";
 
 interface Account {
 	api: Api;
-	reader: () => JsonAuthUser;
+	reader: () => Reader;
 	/** The reader's own account as the API now has it. */
 	keepUser: (user: JsonUser) => void;
-	/** End the session and sign in again, back where the reader is. */
-	signOut: (back?: boolean) => void;
+	/** Sign the reader out. */
+	signOut: () => void;
 }
 
 /** The API and the signed in reader, for the account pages. */
