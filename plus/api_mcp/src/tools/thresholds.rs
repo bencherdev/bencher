@@ -83,6 +83,8 @@ pub fn create_tool(name: &'static str) -> Tool {
          `parameters` is the filter over variants, and a variant is checked when any entry \
          in the filter is a subset of its parameters; the default checks every variant. \
          `metric` names the metric the threshold checks and defaults to `value`. \
+         At BMF version 1 a harness measure usually has named statistics and no `value`, \
+         so name the metric that the adapter's docs name to threshold first. \
          Every threshold that matches a metric row runs, so a row may earn several boundaries \
          and several alerts.",
         json_schema::<CreateThresholdInput>(),

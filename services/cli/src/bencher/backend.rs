@@ -1,4 +1,9 @@
-use std::{fmt, ops::Deref, time::Duration};
+use std::{
+    fmt,
+    ops::Deref,
+    sync::{Arc, OnceLock},
+    time::Duration,
+};
 
 use bencher_json::{BENCHER_API_URL, BENCHER_URL, JsonApiVersion, JsonConsole};
 use serde::{Serialize, de::DeserializeOwned};
@@ -18,6 +23,8 @@ pub struct AuthBackend {
 #[derive(Debug, Clone)]
 pub struct Backend {
     client: bencher_client::BencherClient,
+    /// The server's version, fetched once and shared by every clone of the backend.
+    api_version: Arc<OnceLock<String>>,
 }
 
 #[derive(Clone, Copy)]
@@ -109,6 +116,7 @@ impl TryFrom<(CliBackend, BackendKind)> for Backend {
 
         Ok(Self {
             client: builder.build(),
+            api_version: Arc::default(),
         })
     }
 }
@@ -238,16 +246,22 @@ impl Backend {
     }
 
     pub async fn check_version(&self) -> Result<Option<VersionMismatch>, BackendError> {
-        let json_api_version: JsonApiVersion = self
-            .client
-            .clone()
-            .into_builder()
-            .log(false)
-            .build()
-            .send_with(|client| async move { client.server_version_get().send().await })
-            .await
-            .map_err(BackendError::ApiVersion)?;
-        let api_version = json_api_version.version;
+        let api_version = if let Some(api_version) = self.api_version.get() {
+            api_version.clone()
+        } else {
+            let json_api_version: JsonApiVersion = self
+                .client
+                .clone()
+                .into_builder()
+                .log(false)
+                .build()
+                .send_with(|client| async move { client.server_version_get().send().await })
+                .await
+                .map_err(BackendError::ApiVersion)?;
+            self.api_version
+                .get_or_init(|| json_api_version.version)
+                .clone()
+        };
         let mismatch = VersionMismatch::check(&self.client.host, api_version);
         if let Some(mismatch) = &mismatch {
             cli_eprintln_quietable!(self.client.log, "Warning: {mismatch}",);

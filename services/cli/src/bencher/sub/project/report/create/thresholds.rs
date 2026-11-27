@@ -2,9 +2,11 @@ use bencher_client::types::{
     JsonReportThresholdEntry, JsonReportThresholdModels, JsonReportThresholds,
 };
 use bencher_json::{
-    Boundary, MeasureNameId, MetricName, ParameterFilter, ParameterSet, SampleSize, Window,
+    BmfVersion, Boundary, MeasureNameId, MetricName, ParameterFilter, ParameterSet, SampleSize,
+    Window,
 };
 
+use super::DeclaredBmfVersion;
 use crate::{
     ThresholdError,
     bencher::sub::project::threshold::model::Model,
@@ -19,7 +21,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Thresholds {
-    models: Option<JsonReportThresholdModels>,
+    models: Option<Models>,
     reset: bool,
 }
 
@@ -38,6 +40,14 @@ pub enum ThresholdsError {
         "The {0} Measure Threshold is missing its metric. Once any Threshold has a metric or parameters, every Threshold needs one. Use the `--threshold-metric` option to set the metric."
     )]
     MissingMetric(MeasureNameId),
+    #[error(
+        "The {0} Measure Threshold has a metric or parameters, which need BMF version 1, but this report is read at BMF version 0. A user who can edit the project can move it to BMF version 1 with `bencher project update --bmf-version 1`. Otherwise, remove `--threshold-metric` and `--threshold-parameters`."
+    )]
+    MetricAtVersion0(MeasureNameId),
+    #[error(
+        "The {0} Measure Threshold has a metric or parameters, which need BMF version 1, but `--adapter json_v0` reads at BMF version 0. Use `--adapter json_v1`, or remove `--threshold-metric` and `--threshold-parameters`."
+    )]
+    MetricWithJsonV0(MeasureNameId),
     #[error("Failed to send the parameters of the {measure} Measure Threshold: {err}")]
     BadParameters {
         measure: MeasureNameId,
@@ -163,54 +173,90 @@ impl TryFrom<CliReportThresholds> for Thresholds {
         }
 
         Ok(Self {
-            // Do not short circuit early if there are no measures
-            // because we need to still check if there are any dangling options
-            models: into_models(declared)?,
+            models: Models::new(declared)?,
             reset: thresholds_reset,
         })
     }
 }
 
-impl From<Thresholds> for Option<JsonReportThresholds> {
-    fn from(thresholds: Thresholds) -> Self {
-        let Thresholds { models, reset } = thresholds;
-        if models.is_none() && !reset {
+impl Thresholds {
+    /// The thresholds of a report read at the version it declares.
+    pub fn at(
+        &self,
+        declared: DeclaredBmfVersion,
+    ) -> Result<Option<JsonReportThresholds>, ThresholdsError> {
+        let models = self
+            .models
+            .as_ref()
+            .map(|models| models.at(declared))
+            .transpose()?;
+        Ok(if models.is_none() && !self.reset {
             None
         } else {
             Some(JsonReportThresholds {
                 models,
-                reset: reset.then_some(reset),
+                reset: self.reset.then_some(true),
             })
-        }
+        })
     }
 }
 
-/// The BMF version 1 list once any threshold gives a metric or parameters, else the version 0 map.
-fn into_models(
-    declared: Vec<Declared>,
-) -> Result<Option<JsonReportThresholdModels>, ThresholdsError> {
-    if declared.is_empty() {
-        return Ok(None);
+/// The BMF version 1 list once any threshold gives a metric or parameters, else the version 0
+/// map, which a report read at version 1 skips with a warning.
+#[derive(Debug, Clone)]
+enum Models {
+    Map(JsonReportThresholdModels),
+    /// The list, and the measure of its first threshold, which a version 0 refusal names.
+    List(JsonReportThresholdModels, MeasureNameId),
+}
+
+impl Models {
+    fn new(declared: Vec<Declared>) -> Result<Option<Self>, ThresholdsError> {
+        let Some(first) = declared.first() else {
+            return Ok(None);
+        };
+        Ok(Some(
+            if declared
+                .iter()
+                .any(|threshold| threshold.metric.is_some() || threshold.parameters.is_some())
+            {
+                let measure = first.measure.clone();
+                Self::List(
+                    JsonReportThresholdModels::List(
+                        declared
+                            .into_iter()
+                            .map(Declared::into_entry)
+                            .collect::<Result<_, _>>()?,
+                    ),
+                    measure,
+                )
+            } else {
+                Self::Map(JsonReportThresholdModels::Map(
+                    declared
+                        .into_iter()
+                        .map(|threshold| (threshold.measure.to_string(), threshold.model.into()))
+                        .collect(),
+                ))
+            },
+        ))
     }
-    let models = if declared
-        .iter()
-        .any(|threshold| threshold.metric.is_some() || threshold.parameters.is_some())
-    {
-        JsonReportThresholdModels::List(
-            declared
-                .into_iter()
-                .map(Declared::into_entry)
-                .collect::<Result<_, _>>()?,
-        )
-    } else {
-        JsonReportThresholdModels::Map(
-            declared
-                .into_iter()
-                .map(|threshold| (threshold.measure.to_string(), threshold.model.into()))
-                .collect(),
-        )
-    };
-    Ok(Some(models))
+
+    fn at(
+        &self,
+        declared: DeclaredBmfVersion,
+    ) -> Result<JsonReportThresholdModels, ThresholdsError> {
+        let (Self::Map(models) | Self::List(models, _)) = self;
+        if let Self::List(_, measure) = self
+            && declared.version() != BmfVersion::V1
+        {
+            let measure = measure.clone();
+            return Err(match declared {
+                DeclaredBmfVersion::Adapter(_) => ThresholdsError::MetricWithJsonV0(measure),
+                DeclaredBmfVersion::Project(_) => ThresholdsError::MetricAtVersion0(measure),
+            });
+        }
+        Ok(models.clone())
+    }
 }
 
 /// One threshold the flags declare.
@@ -254,7 +300,9 @@ impl Declared {
 mod tests {
     use clap::Parser as _;
 
-    use super::{JsonReportThresholds, Thresholds, ThresholdsError};
+    use bencher_json::BmfVersion;
+
+    use super::{DeclaredBmfVersion, Thresholds, ThresholdsError};
     use crate::parser::project::report::CliReportThresholds;
 
     // Every threshold gives every option, with an underscore for the one it goes without.
@@ -279,19 +327,65 @@ mod tests {
         "_",
     ];
 
-    // Without a metric the flags send the BMF version 0 map, as they always have.
+    // Without a metric the flags send the BMF version 0 map at either version, as they always
+    // have, and a report read at version 1 skips it with a warning.
+    // Kills: plain flags refused, or sent as a list, at either version.
     #[test]
     fn thresholds_without_a_metric_are_a_map() {
         let flags = [LATENCY.as_slice(), THROUGHPUT.as_slice()].concat();
-        assert_eq!(
-            thresholds(&flags).unwrap(),
-            serde_json::json!({
-                "models": {
-                    "latency": model("upper_boundary"),
-                    "throughput": model("lower_boundary"),
-                },
-            })
-        );
+        for bmf_version in [BmfVersion::V0, BmfVersion::V1] {
+            assert_eq!(
+                thresholds_at(&flags, bmf_version).unwrap(),
+                serde_json::json!({
+                    "models": {
+                        "latency": model("upper_boundary"),
+                        "throughput": model("lower_boundary"),
+                    },
+                }),
+                "{bmf_version}"
+            );
+        }
+    }
+
+    // A report read at BMF version 0 refuses a metric or parameters on any threshold, and names
+    // the first threshold and the move to version 1.
+    // Kills: no refusal at version 0, a refusal of metrics alone, and a refusal that names another
+    // threshold.
+    #[test]
+    fn thresholds_at_version_0_refuse_a_metric_or_parameters() {
+        for (latency, throughput) in [
+            (
+                ["--threshold-metric", "p99", "--threshold-parameters", "_"],
+                ["--threshold-metric", "value", "--threshold-parameters", "_"],
+            ),
+            (
+                ["--threshold-metric", "value", "--threshold-parameters", "_"],
+                [
+                    "--threshold-metric",
+                    "value",
+                    "--threshold-parameters",
+                    r#"{"size": 1}"#,
+                ],
+            ),
+        ] {
+            let flags = [
+                LATENCY.as_slice(),
+                &latency,
+                THROUGHPUT.as_slice(),
+                &throughput,
+            ]
+            .concat();
+            let err = thresholds_at(&flags, BmfVersion::V0).unwrap_err();
+            assert!(
+                matches!(&err, ThresholdsError::MetricAtVersion0(measure) if measure.to_string() == "latency"),
+                "{err}"
+            );
+            assert!(
+                err.to_string()
+                    .contains("`bencher project update --bmf-version 1`"),
+                "{err}"
+            );
+        }
     }
 
     // A metric sends the BMF version 1 list, each entry with its own metric and its parameters as
@@ -339,7 +433,9 @@ mod tests {
     }
 
     // Once any threshold gives a metric or parameters, every threshold needs a metric, and the
-    // refusal names the measure that has none.
+    // refusal names the measure that has none, as the flags are read, before the version is known.
+    // Kills: a refusal that names another measure, and one deferred until the thresholds are built
+    // at a version.
     #[test]
     fn thresholds_in_a_list_each_need_a_metric() {
         for (latency, throughput, missing) in [
@@ -361,7 +457,7 @@ mod tests {
                 &throughput,
             ]
             .concat();
-            let err = thresholds(&flags).unwrap_err();
+            let err = Thresholds::try_from(parse(&flags)).unwrap_err();
             assert!(
                 matches!(&err, ThresholdsError::MissingMetric(measure) if measure.to_string() == missing),
                 "{err}"
@@ -405,19 +501,25 @@ mod tests {
         thresholds: CliReportThresholds,
     }
 
-    /// The thresholds the flags send, as the request body carries them.
+    /// The thresholds the flags send on a report read at BMF version 1, as the request body
+    /// carries them.
     fn thresholds(flags: &[&str]) -> Result<serde_json::Value, ThresholdsError> {
-        Thresholds::try_from(parse(flags)).map(body)
+        thresholds_at(flags, BmfVersion::V1)
+    }
+
+    fn thresholds_at(
+        flags: &[&str],
+        bmf_version: BmfVersion,
+    ) -> Result<serde_json::Value, ThresholdsError> {
+        Thresholds::try_from(parse(flags))?
+            .at(DeclaredBmfVersion::Project(bmf_version))
+            .map(|thresholds| serde_json::to_value(thresholds).unwrap())
     }
 
     fn parse(flags: &[&str]) -> CliReportThresholds {
         Cli::try_parse_from(std::iter::once("bencher").chain(flags.iter().copied()))
             .unwrap()
             .thresholds
-    }
-
-    fn body(thresholds: Thresholds) -> serde_json::Value {
-        serde_json::to_value(Option::<JsonReportThresholds>::from(thresholds)).unwrap()
     }
 
     fn model(boundary: &str) -> serde_json::Value {

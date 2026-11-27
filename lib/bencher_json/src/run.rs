@@ -65,7 +65,7 @@ pub struct JsonNewRun {
     pub start_time: DateTime,
     /// End time for the report. Must be an ISO 8601 formatted string.
     pub end_time: DateTime,
-    /// An array of benchmarks results in Bencher Metric Format (BMF).
+    /// Benchmark harness output, or BMF for the `json` adapters, read at the report's BMF version.
     pub results: Vec<String>,
     /// The Bencher Metric Format (BMF) version these results are written in.
     /// The accepted versions are 0 or 1.

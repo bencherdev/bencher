@@ -13,7 +13,7 @@ pub mod output;
 mod pipe;
 mod shell;
 
-use bencher_json::MAX_FILE_PATHS_LEN;
+use bencher_json::{BmfVersion, MAX_FILE_PATHS_LEN};
 use build_time::BuildTime;
 use command::{Command, CommandOutput};
 use file_path::FilePath;
@@ -151,12 +151,15 @@ impl Runner {
         matches!(self, Self::CommandToFileSize(..) | Self::FileSize(_))
     }
 
-    pub async fn run(&self, log: bool) -> Result<Vec<Output>, RunError> {
+    /// Run once, with the build time and file sizes written at `bmf_version`.
+    pub async fn run(&self, log: bool, bmf_version: BmfVersion) -> Result<Vec<Output>, RunError> {
         match self {
             Self::Pipe(pipe) => Ok(pipe.output().into()),
-            Self::Command(command, build_time) => {
-                command.run(log, *build_time).await?.build().map(Into::into)
-            },
+            Self::Command(command, build_time) => command
+                .run(log, *build_time)
+                .await?
+                .build(bmf_version)
+                .map(Into::into),
             Self::CommandToFile(command, file_path) => command
                 .run(log, None)
                 .await?
@@ -164,11 +167,11 @@ impl Runner {
             Self::CommandToFileSize(command, build_time, file_size) => command
                 .run(log, *build_time)
                 .await?
-                .build_with_file_size(file_size)
+                .build_with_file_size(file_size, bmf_version)
                 .map(Into::into),
             Self::File(file_path) => CommandOutput::default().build_with_file_path(file_path),
             Self::FileSize(file_size) => CommandOutput::default()
-                .build_with_file_size(file_size)
+                .build_with_file_size(file_size, bmf_version)
                 .map(Into::into),
         }
     }
