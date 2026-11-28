@@ -7,14 +7,14 @@ use bencher_github_client::GitHubClient;
 use bencher_google_client::GoogleClient;
 use bencher_json::{
     DateTime, Email, JsonOAuthUrl, JsonProviderFinish, JsonProviderSignIn, JsonProviderStart,
-    NonEmpty, PlanLevel, Secret, SignInProvider, SignInRefusal, UserName,
+    NonEmpty, Secret, SignInProvider, SignInRefusal, UserName,
 };
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
     error::{issue_error, payment_required_error, unauthorized_error},
     model::{
-        organization::plan::LicenseUsage,
+        organization::license::any_valid_license,
         user::{
             auth::{AuthSession, AuthUser},
             provider::{InsertProviderState, ProviderPin, ProviderSecrets, QueryProviderState},
@@ -352,7 +352,7 @@ enum Client<'a> {
 
 impl<'a> Client<'a> {
     /// The provider's client, where the server has one and may sign in with it: on Bencher Cloud,
-    /// or with an Enterprise license for an organization on the server.
+    /// or while an organization on the server holds a valid license, its grace included.
     async fn new(
         log: &Logger,
         context: &'a ApiContext,
@@ -462,16 +462,15 @@ impl<'a> Client<'a> {
     }
 }
 
-/// Whether the server may sign in with a provider: on Bencher Cloud, or with an Enterprise license
-/// for an organization on the server.
+/// Whether the server may sign in with a provider: on Bencher Cloud, or while an organization on
+/// the server holds a valid license, its grace included.
 async fn is_licensed(context: &ApiContext) -> Result<bool, HttpError> {
     Ok(context.is_bencher_cloud
-        || !LicenseUsage::get_for_server(
+        || any_valid_license(
             public_conn!(context),
             &context.licensor,
-            Some(PlanLevel::Enterprise),
-        )?
-        .is_empty())
+            context.clock.now(),
+        )?)
 }
 
 /// The console's page that GitHub sends the reader back to, named on both the authorize URL and

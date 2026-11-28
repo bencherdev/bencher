@@ -1498,6 +1498,8 @@ mod tests {
             warnings: None,
             #[cfg(feature = "plus")]
             job: None,
+            #[cfg(feature = "plus")]
+            license: None,
             created: DateTime::TEST,
         }
     }

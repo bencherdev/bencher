@@ -576,9 +576,7 @@ async fn confirm_joins_single_sign_on_and_keeps_grants_and_pins() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "admin@example.com").await;
     let org = server.create_org(&admin, "Sso Org").await;
-    server
-        .license_org(&admin, &org, bencher_json::PlanLevel::Enterprise)
-        .await;
+    server.license_org(&admin, &org).await;
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/organizations/{}/sso", org.slug)))

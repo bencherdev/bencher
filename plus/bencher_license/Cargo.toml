@@ -32,7 +32,9 @@ thiserror = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 
 [dev-dependencies]
+bencher_json = { workspace = true, features = ["test-clock"] }
 pretty_assertions.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

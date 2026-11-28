@@ -14,7 +14,8 @@
 
 use api_runners::{RunnerMessage, ServerMessage};
 pub use bencher_api_tests::helpers::{
-    base_timestamp, create_test_report, get_project_id, plan_project, post_metrics, set_job_status,
+    base_timestamp, create_test_report, expired_license_project, get_project_id, plan_project,
+    post_metrics, set_job_status,
 };
 use bencher_api_tests::{CallbackRequest, TestServer, TestUser};
 use bencher_json::{

@@ -2,12 +2,13 @@
 
 use bencher_billing::{Biller, CustomerId};
 use bencher_json::{
-    DateTime, Entitlements, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId, PlanLevel, Priority,
-    project::Visibility,
+    DateTime, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId, Priority,
+    organization::plan::JsonReportLicense, project::Visibility,
 };
-use bencher_license::Licensor;
+use bencher_license::{LicenseError, Licensor};
 use diesel::{BelongingToDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
+use slog::Logger;
 
 use crate::{
     ApiContext, actor_conn, auth_conn,
@@ -17,8 +18,8 @@ use crate::{
         resource_conflict_err, resource_not_found_err,
     },
     model::{
-        organization::{OrganizationId, QueryOrganization},
-        project::{QueryProject, metric::QueryMetric},
+        organization::{OrganizationId, QueryOrganization, license::OrganizationLicense},
+        project::QueryProject,
         user::{actor::ApiActor, auth::AuthUser},
     },
     schema::{self, plan as plan_table},
@@ -58,6 +59,7 @@ impl QueryPlan {
         &self,
         biller: &Biller,
         licensor: &Licensor,
+        now: DateTime,
     ) -> Result<Option<JsonPlan>, HttpError> {
         let Some(licensed_plan_id) = &self.licensed_plan else {
             return Ok(None);
@@ -79,7 +81,7 @@ impl QueryPlan {
         };
 
         let json_license = licensor
-            .into_json(license)
+            .into_json(license, now)
             .map_err(payment_required_error)?;
         json_plan.license = Some(json_license);
 
@@ -175,37 +177,26 @@ pub struct MeteredPlan {
 
 pub enum PlanKind {
     Metered(MeteredPlan),
-    Licensed(LicenseUsage),
+    /// A valid Self-Hosted license, which is Enterprise.
+    Licensed(OrganizationLicense),
     None,
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum PlanKindError {
-    #[error("License usage exceeded for organization ({uuid}). {usage} > {entitlements}", uuid = organization.uuid)]
-    LicensePlanOverage {
-        organization: QueryOrganization,
-        entitlements: Entitlements,
-        usage: u32,
-    },
     #[error("No plan (subscription or license) found for organization ({uuid}) with private project", uuid = organization.uuid)]
     NoPlan { organization: QueryOrganization },
-    #[error("License usage exceeded for project ({uuid}). {prior_usage} + {usage} > {entitlements}", uuid = project.uuid)]
-    Overage {
-        project: QueryProject,
-        entitlements: Entitlements,
-        prior_usage: u32,
-        usage: u32,
+    #[error("The Bencher Plus Enterprise license for organization ({uuid}) is not valid, so it has no plan for a private project: {error}", uuid = organization.uuid)]
+    InvalidLicense {
+        organization: QueryOrganization,
+        error: LicenseError,
     },
 }
 
 impl PlanKind {
     pub fn is_paid(&self) -> bool {
         match self {
-            Self::Metered(_) => true,
-            Self::Licensed(license_usage) => match license_usage.level {
-                PlanLevel::Free => false,
-                PlanLevel::Pro | PlanLevel::Enterprise => true,
-            },
+            Self::Metered(_) | Self::Licensed(_) => true,
             Self::None => false,
         }
     }
@@ -250,26 +241,23 @@ impl PlanKind {
             QueryPlan::get_active_metered_plan(context, biller, api_actor, query_organization)
                 .await?
         {
-            Ok(Self::Metered(metered_plan))
-        } else if let Some(license_usage) = LicenseUsage::get(
-            actor_conn!(context, api_actor),
-            licensor,
-            query_organization,
-        )? {
-            if license_usage.usage < license_usage.entitlements.into() {
-                Ok(Self::Licensed(license_usage))
-            } else {
-                Err(payment_required_error(PlanKindError::LicensePlanOverage {
-                    organization: query_organization.clone(),
-                    entitlements: license_usage.entitlements,
-                    usage: license_usage.usage,
-                }))
-            }
+            return Ok(Self::Metered(metered_plan));
+        }
+
+        let license = OrganizationLicense::get(licensor, query_organization, context.clock.now());
+        if let Ok(Some(license)) = license {
+            Ok(Self::Licensed(license))
         } else if visibility.is_public() {
+            // A license that is not valid reads as none, so it never blocks a public project.
             Ok(Self::None)
         } else {
-            Err(payment_required_error(PlanKindError::NoPlan {
-                organization: query_organization.clone(),
+            let organization = query_organization.clone();
+            Err(payment_required_error(match license {
+                Err(error) => PlanKindError::InvalidLicense {
+                    organization,
+                    error,
+                },
+                Ok(_) => PlanKindError::NoPlan { organization },
             }))
         }
     }
@@ -408,28 +396,20 @@ impl PlanKind {
         Ok(())
     }
 
-    /// Hold a licensed plan to its entitlements. A metered plan bills on active series,
-    /// which the report posts once its metrics are committed, so it records nothing here.
-    pub fn check_usage(self, project: &QueryProject, usage: u32) -> Result<(), HttpError> {
+    /// After a report to an organization with a license: count its active Benchmark Series,
+    /// raise the peak of the license's term, and return what the report response says about the
+    /// license.
+    /// A license never refuses a report here, and every other plan says nothing.
+    pub async fn license_after_report(
+        &self,
+        log: &Logger,
+        context: &ApiContext,
+        organization_id: OrganizationId,
+    ) -> Option<JsonReportLicense> {
         match self {
-            Self::Licensed(LicenseUsage {
-                entitlements,
-                usage: prior_usage,
-                level: _,
-            }) => {
-                if prior_usage + usage > entitlements.into() {
-                    return Err(payment_required_error(PlanKindError::Overage {
-                        project: project.clone(),
-                        entitlements,
-                        prior_usage,
-                        usage,
-                    }));
-                }
-            },
-            Self::Metered(_) | Self::None => {},
+            Self::Licensed(license) => license.after_report(log, context, organization_id).await,
+            Self::Metered(_) | Self::None => None,
         }
-
-        Ok(())
     }
 }
 
@@ -444,74 +424,12 @@ impl From<&PlanKind> for bencher_otel::PlanKind {
     }
 }
 
-pub struct LicenseUsage {
-    pub entitlements: Entitlements,
-    pub usage: u32,
-    pub level: PlanLevel,
-}
-
-impl LicenseUsage {
-    pub fn get(
-        conn: &mut DbConnection,
-        licensor: &Licensor,
-        query_organization: &QueryOrganization,
-    ) -> Result<Option<Self>, HttpError> {
-        // It is important that we check the organization license and NOT the plan license
-        // The organization license is the one that is actually in use, either on Bencher Cloud or Self-Hosted
-        // The plan license is simply there to keep track of the license on Bencher Cloud only
-        let Some(license) = &query_organization.license else {
-            return Ok(None);
-        };
-
-        let token_data = licensor
-            .validate_organization(license, query_organization.uuid)
-            .map_err(payment_required_error)?;
-
-        let start_time = token_data.claims.issued_at();
-        let end_time = token_data.claims.expiration();
-
-        let usage = QueryMetric::usage(conn, query_organization.id, start_time, end_time)?;
-        let entitlements = licensor
-            .validate_usage(&token_data.claims, usage)
-            .map_err(payment_required_error)?;
-
-        Ok(Some(Self {
-            entitlements,
-            usage,
-            level: token_data.claims.level(),
-        }))
-    }
-
-    pub fn get_for_server(
-        conn: &mut DbConnection,
-        licensor: &Licensor,
-        min_level: Option<PlanLevel>,
-    ) -> Result<Vec<Self>, HttpError> {
-        let min_level = min_level.unwrap_or_default();
-
-        // Intentionally includes soft-deleted organizations for server admin license usage
-        Ok(schema::organization::table
-            .load::<QueryOrganization>(conn)
-            .map_err(resource_not_found_err!(Organization))?
-            .iter()
-            .filter_map(|query_organization| {
-                if let Ok(Some(license_usage)) = Self::get(conn, licensor, query_organization)
-                    && license_usage.level >= min_level
-                {
-                    Some(license_usage)
-                } else {
-                    None
-                }
-            })
-            .collect())
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, Entitlements, PlanLevel};
+    use bencher_json::DateTime;
 
-    use super::{LicenseUsage, MeteredPlan, PlanKind};
+    use super::{MeteredPlan, PlanKind};
+    use crate::model::organization::license::OrganizationLicense;
 
     // Fails if a metered plan does not post its active series for its own customer and
     // period, or any other plan does.
@@ -528,12 +446,15 @@ mod tests {
             Some(("cus_test".into(), DateTime::TEST, period_end)),
         );
 
-        let licensed = PlanKind::Licensed(LicenseUsage {
-            entitlements: Entitlements::MIN,
-            usage: 0,
-            level: PlanLevel::Enterprise,
-        });
+        let licensed = PlanKind::Licensed(OrganizationLicense::test());
         assert!(licensed.metered_series_billing().is_none());
         assert!(PlanKind::None.metered_series_billing().is_none());
+    }
+
+    // Fails if a valid license is not a paid plan, or no plan is.
+    #[test]
+    fn every_license_is_paid() {
+        assert!(PlanKind::Licensed(OrganizationLicense::test()).is_paid());
+        assert!(!PlanKind::None.is_paid());
     }
 }
