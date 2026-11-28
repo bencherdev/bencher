@@ -3,7 +3,7 @@ title: "Privacy Policy"
 description: "The privacy agreement for Bencher software and services"
 heading: "Bencher Privacy Policy"
 published: "2023-07-31T09:47:00Z"
-modified: "2026-10-23T20:59:25Z"
+modified: "2026-11-27T21:58:33Z"
 sortOrder: 2
 ---
 
@@ -32,13 +32,17 @@ This policy covers Bencher's services (the "Services"):
 ### Account and Sign-In
 
 - Your email address, name, and slug (the short name in your profile URL).
-- You sign in with a link that Bencher emails to you, or with GitHub or Google.
-  If you sign in with GitHub, Bencher receives your GitHub login and your primary verified email address.
-  If you sign in with Google, Bencher receives your name and your verified email address.
+- You sign in with a code or a link that Bencher emails to you, or with GitHub or Google.
+  If you sign in with GitHub, Bencher receives your GitHub login, your name, and your primary verified email address.
+  If you sign in with Google, Bencher receives your name, your verified email address, and, for a Google Workspace account, its domain.
+  Bencher keeps the ID of the GitHub or Google account you sign in with, and its GitHub login or Google email address, so that the account signs in to the same Bencher account each time.
+- For each browser you sign in from, a session: how you signed in, the browser and operating system your browser reports, such as "Firefox on macOS", when the session began, when it was last used, and when you last proved it was you.
+- While you sign in by email, the email address, hashes of the code and the link Bencher emails to you, and any GitHub or Google account the sign-in will link.
+- When you change your email address, your old and new email addresses.
 - The organizations you belong to and your role in each.
 - When you invite someone to an organization, the email address you invite.
 
-Bencher uses this data to identify you, sign you in, send you sign-in links, confirmations, and invitations, and let you work with the other members of your organizations.
+Bencher uses this data to identify you, sign you in, send you sign-in codes and links, confirmations, and invitations, and let you work with the other members of your organizations.
 When someone signs up, Bencher's administrators receive an email with the new user's name, email address, and sign-up method.
 Bencher sends no marketing email.
 
@@ -46,6 +50,7 @@ Bencher sends no marketing email.
 
 The sign-up, sign-in, and confirmation pages run a bot protection check.
 Bencher's server sends the token from that check and your IP address to the bot protection provider to verify that you are not a bot.
+The bot protection provider handles this data under its [privacy addendum](https://www.cloudflare.com/turnstile-privacy-policy/).
 
 ### Billing
 
@@ -143,7 +148,8 @@ You can untick every item except the message before you send it.
 
 Bencher stores data in your browser:
 
-- Local storage holds your signed-in session, with your name, slug, and email address, and your preferences, such as theme.
+- Cookies hold your signed-in session and any sign-in under way.
+- Local storage holds your name, slug, and user identifier, whether you administer the server, the projects you opened most recently, and your preferences, such as theme.
 - Session storage holds short-lived sign-in and onboarding data, such as the email address you are signing in with.
 - IndexedDB caches API responses for up to 7 days.
 
@@ -215,7 +221,7 @@ The members of an organization see each other's name, slug, email address, and r
 
 ## How Bencher Uses Data
 
-- **Account and sign-in data:** to identify you, sign you in, send you sign-in links, confirmations, and invitations, and notify Bencher's administrators of new users.
+- **Account and sign-in data:** to identify you, sign you in, send you sign-in codes and links, confirmations, and invitations, and notify Bencher's administrators of new users.
 - **Bot protection data:** to stop automated sign-ups and sign-ins.
 - **Billing data:** to run subscriptions and bill metered usage.
 - **Project data, run context, and git hashes:** to provide the Services and to name new projects.
@@ -268,8 +274,10 @@ Bencher shares data with service providers that help operate the Services, only 
 | Self-hosted usage statistics                                                                                                        | While the server's license or use continues                   |
 | Backups                                                                                                                             | Up to 12 months                                               |
 | Server logs, which hold IP addresses, user identifiers, and the other log data above                                                | Up to 30 days                                                 |
-| Sign-in links                                                                                                                       | 30 minutes                                                    |
-| Console sessions                                                                                                                    | 30 days                                                       |
+| Sign-in codes and links, with the email address they were sent to                                                                   | 30 minutes                                                    |
+| GitHub and Google sign-ins under way                                                                                                | 10 minutes                                                    |
+| Console sessions, with the browser and operating system they were signed in from                                                    | Until you sign out or 30 days after last use, at most 90 days |
+| Email address changes, with the old and new email addresses                                                                         | 30 minutes                                                    |
 | MCP OAuth authorization codes                                                                                                       | 5 minutes                                                     |
 | MCP OAuth access tokens                                                                                                             | 1 hour                                                        |
 | MCP OAuth refresh tokens                                                                                                            | 30 days                                                       |
@@ -297,9 +305,13 @@ Bencher shares data with service providers that help operate the Services, only 
 
 ## Cookies and Browser Storage
 
-Bencher sets no first-party cookies.
-Your signed-in session and your preferences live in your browser's local storage.
-Signing out clears your session and the cached API data.
+Bencher sets first-party cookies only to sign you in:
+
+- a session cookie, which keeps you signed in for up to 90 days
+- sign-in cookies, which tie a sign-in under way to the browser that started it for up to 30 minutes
+
+Your preferences live in your browser's local storage.
+Signing out ends your session, clears its cookie, and clears your account details and the cached API data from your browser.
 The third-party analytics, bot protection, error monitoring, and embedded video and slide services on Bencher's pages may set their own cookies.
 You can block or clear cookies and browser storage in your browser's settings.
 

@@ -157,12 +157,14 @@ describe("shell memory", () => {
 		expect(projects).not.toContain("project-0");
 	});
 
-	// Kills a sign out that leaves the reader, their organization, their names,
-	// or their landing behind, or that forgets anything else.
+	// Kills a sign out that leaves the reader, the earlier console's user, their
+	// organization, their names, or their landing behind, or that forgets
+	// anything else.
 	test("is forgotten with the reader", () => {
 		const store = storage({
 			BENCHER_READER: "{}",
 			BENCHER_ORGANIZATION: "{}",
+			BENCHER_USER: "{}",
 			BENCHER_THEME: "dark",
 		});
 		rememberShell(store, "reader-a", "hashbrown", shell);
