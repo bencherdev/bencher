@@ -38,6 +38,7 @@ import {
 	cardExpiry,
 	cardName,
 	estimate,
+	expired,
 	fullDay,
 	inGrace,
 	manageQuery,
@@ -238,6 +239,39 @@ const UsageView = (props: { usage: Usage; name: string; stored: string }) => {
 							current={license().key}
 							editable={kind() === "self_hosted_licensed"}
 						/>
+					</>
+				)}
+			</Match>
+			<Match when={kind() === "cloud_self_hosted_licensed" && props.usage.plan}>
+				{(plan) => (
+					<>
+						<section class="setcard" aria-labelledby="sec-lic">
+							<div class="setcard-head">
+								<h2 class="seclabel" id="sec-lic">
+									Enterprise License
+								</h2>
+								<span class="spacer" />
+								<span class="muted sm">
+									{period(
+										plan().current_period_start,
+										plan().current_period_end,
+									)}
+								</span>
+							</div>
+						</section>
+						<Payment
+							organization={props.usage.organization}
+							card={plan().card}
+							collectionMethod={plan().collection_method}
+						/>
+						<section class="setcard" aria-labelledby="sec-key">
+							<div class="setcard-head">
+								<h2 class="seclabel" id="sec-key">
+									License key
+								</h2>
+								<span class="set-status">No license</span>
+							</div>
+						</section>
 					</>
 				)}
 			</Match>
@@ -744,7 +778,7 @@ const LastTerm = (props: { peak: JsonLicensePeak }) => (
 	</Stat>
 );
 
-/** Every license is Enterprise: its term, and on Self-Hosted its active series against its own, with the peak. */
+/** Every license is Enterprise: its term, whether it is in its grace or expired by the server's time, at which the usage ends, and on Self-Hosted its active series against its own, with the peak. */
 const License = (props: { usage: Usage; license: JsonLicense }) => (
 	<section class="setcard" aria-labelledby="sec-lic">
 		<div class="setcard-head">
@@ -756,15 +790,37 @@ const License = (props: { usage: Usage; license: JsonLicense }) => (
 				{period(props.license.issued_at, props.license.term_end)}
 			</span>
 		</div>
-		{/* Bencher Cloud keeps a license for a Self-Hosted server to copy, and counts nothing for it. */}
-		<Show when={props.usage.active_series != null}>
-			<div class="setcard-body">
-				<Show when={inGrace(props.license, props.usage.end_time)}>
+		<div class="setcard-body">
+			<Switch>
+				<Match when={expired(props.license, props.usage.end_time)}>
+					<Banner status="error" role="status">
+						The license expired {fullDay(props.license.expiration)}.
+					</Banner>
+				</Match>
+				<Match when={inGrace(props.license, props.usage.end_time)}>
 					<Banner status="warning" role="status">
 						The term ended {fullDay(props.license.term_end)}. The license
 						expires {fullDay(props.license.expiration)}.
 					</Banner>
-				</Show>
+				</Match>
+			</Switch>
+			{/* Bencher Cloud keeps a license for a Self-Hosted server to copy, and counts nothing for it. */}
+			<Show
+				when={props.usage.active_series != null}
+				fallback={
+					<div class="stats">
+						<Stat label="Benchmark Series">
+							<span class="figure">{formatCount(props.license.series)}</span>
+						</Stat>
+						<Stat label="Term ends">
+							<span class="figure">{fullDay(props.license.term_end)}</span>
+						</Stat>
+						<Stat label="Expires">
+							<span class="figure">{fullDay(props.license.expiration)}</span>
+						</Stat>
+					</div>
+				}
+			>
 				<div class="stats">
 					<Stat label="Active series">
 						<span class="figure">
@@ -805,10 +861,29 @@ const License = (props: { usage: Usage; license: JsonLicense }) => (
 						</span>
 					</Stat>
 				</div>
-			</div>
-		</Show>
+			</Show>
+		</div>
 	</section>
 );
+
+/** A button that copies `text`, named for `what` it copies. */
+const Copy = (props: { text: string; what: string }) => {
+	const [copied, setCopied] = createSignal(false);
+	return (
+		<Button
+			size="sm"
+			aria-label={`${copied() ? "Copied" : "Copy"} the ${props.what}`}
+			onClick={() =>
+				navigator.clipboard.writeText(props.text).then(
+					() => setCopied(true),
+					() => setCopied(false),
+				)
+			}
+		>
+			{copied() ? "Copied" : "Copy"}
+		</Button>
+	);
+};
 
 /** The organization's UUID, which a license is issued for, then the key itself. */
 const LicenseKey = (props: {
@@ -847,7 +922,6 @@ const LicenseKey = (props: {
 		}
 	};
 	const uuid = () => props.uuid;
-	const [copied, setCopied] = createSignal(false);
 	return (
 		<section class="setcard" aria-labelledby="sec-key">
 			<div class="setcard-head">
@@ -872,26 +946,15 @@ const LicenseKey = (props: {
 			<div class="formrows">
 				<div class="formrow">
 					<div class="fl">
-						<span>Organization UUID</span>
+						<span>
+							{props.editable
+								? "Organization UUID"
+								: "Self-Hosted organization UUID"}
+						</span>
 					</div>
 					<div class="fvalue">
 						<span class="mono">{uuid()}</span>
-						<Button
-							size="sm"
-							aria-label={
-								copied()
-									? "Organization UUID copied"
-									: "Copy the organization UUID"
-							}
-							onClick={() =>
-								navigator.clipboard.writeText(uuid()).then(
-									() => setCopied(true),
-									() => setCopied(false),
-								)
-							}
-						>
-							{copied() ? "Copied" : "Copy"}
-						</Button>
+						<Copy text={uuid()} what="organization UUID" />
 					</div>
 				</div>
 				<div class="formrow">
@@ -912,7 +975,10 @@ const LicenseKey = (props: {
 								autocomplete="off"
 								spellcheck={false}
 							/>
-							<Show when={props.editable}>
+							<Show
+								when={props.editable}
+								fallback={<Copy text={current()} what="license key" />}
+							>
 								<Button
 									variant={licensed() ? "secondary" : "primary"}
 									disabled={saving() || !changed()}

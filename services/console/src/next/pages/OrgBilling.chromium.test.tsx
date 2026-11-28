@@ -964,26 +964,107 @@ describe("self-hosted", () => {
 });
 
 describe("a license kept on Cloud", () => {
+	// A Self-Hosted deal billed by invoice, read a month into its term by the server's time.
 	const CLOUD_LICENSED = {
 		organization: "o1",
 		kind: "cloud_self_hosted_licensed",
-		plan: PLAN,
+		plan: { ...ENTERPRISE, card: null, collection_method: "send_invoice" },
 		license: { ...LICENSED.license, organization: "s1" },
-		...PERIOD,
+		start_time: PERIOD.start_time,
+		end_time: PERIOD.end_time,
 	} as unknown as JsonUsage;
+	/** The license kept on Cloud, as the server reads it at `now`. */
+	const readAt = (now: string) =>
+		({ ...CLOUD_LICENSED, end_time: now }) as unknown as JsonUsage;
 
 	// Kills a key offered for editing where the API refuses to change it, or
 	// a key box that names this organization rather than the install's.
-	test("its key is read only, for the install's UUID, beside the card", async () => {
+	test("its key is read only, for the install's UUID, beside the invoice", async () => {
 		open(CLOUD_LICENSED);
 		await expect
 			.element(page.getByRole("textbox", { name: "License key" }))
 			.toHaveAttribute("readonly");
-		expect(button("Replace key").query()).toBeNull();
-		await expect.element(region("License key")).toHaveTextContent("s1");
 		await expect
-			.element(region("Payment method"))
-			.toHaveTextContent("Visa ending 0417");
+			.element(page.getByRole("textbox", { name: "License key" }))
+			.toHaveValue(KEY);
+		expect(button("Replace key").query()).toBeNull();
+		await expect
+			.element(region("License key"))
+			.toHaveTextContent("Self-Hosted organization UUIDs1");
+		await expect.element(region("Payment method")).toHaveTextContent("Invoice");
+	});
+
+	// Kills a license whose count, term end, or expiration is not shown, since the
+	// Self-Hosted server counts nothing on Cloud.
+	test("it shows the Benchmark Series it covers, its term end, and its expiration", async () => {
+		open(CLOUD_LICENSED);
+		const license = region("Enterprise License");
+		await expect.element(license).toHaveTextContent("Benchmark Series2,000");
+		await expect.element(license).toHaveTextContent("Term endsOct 1, 2027");
+		await expect.element(license).toHaveTextContent("ExpiresOct 31, 2027");
+		expect(license.getByRole("status").query()).toBeNull();
+	});
+
+	// Kills a Copy for the key that copies anything but the key, or none at all.
+	test("Copy copies the license key", async () => {
+		const copy = vi
+			.spyOn(navigator.clipboard, "writeText")
+			.mockResolvedValue(undefined);
+		open(CLOUD_LICENSED);
+		await button("Copy the license key").click();
+
+		expect(copy).toHaveBeenCalledWith(KEY);
+		await expect.element(button("Copied the license key")).toBeVisible();
+	});
+
+	// Kills a grace told by the browser's clock, or not told at all.
+	test("a license in its grace by the server's time says when it expires", async () => {
+		at("2026-01-01T12:00:00Z");
+		open(readAt("2027-10-10T12:00:00Z"));
+		await expect
+			.element(region("Enterprise License").getByRole("status"))
+			.toHaveTextContent(
+				"The term ended Oct 1, 2027. The license expires Oct 31, 2027.",
+			);
+	});
+
+	// Kills an expired license drawn as one in its grace, or as valid, or told by the
+	// browser's clock.
+	test("a license expired by the server's time says so", async () => {
+		at("2027-10-10T12:00:00Z");
+		open(readAt("2027-11-05T12:00:00Z"));
+		await expect
+			.element(region("Enterprise License").getByRole("status"))
+			.toHaveTextContent("The license expired Oct 31, 2027.");
+		expect(page.getByText("The term ended").query()).toBeNull();
+		await expect
+			.element(page.getByRole("textbox", { name: "License key" }))
+			.toHaveValue(KEY);
+	});
+
+	// Kills a plan whose license the read left out drawn as its heading alone, or with a key
+	// to copy.
+	test("a plan whose license the read left out shows its term and no license", async () => {
+		open({ ...CLOUD_LICENSED, license: null } as unknown as JsonUsage);
+		await expect
+			.element(region("Enterprise License"))
+			.toHaveTextContent("Oct 1 to Nov 1, 2026");
+		await expect.element(region("Payment method")).toHaveTextContent("Invoice");
+		await expect.element(region("License key")).toHaveTextContent("No license");
+		expect(
+			page.getByRole("textbox", { name: "License key" }).query(),
+		).toBeNull();
+		expect(button("Copy the license key").query()).toBeNull();
+	});
+
+	// Kills a self-serve checkout or cancel offered for a contract that sales provisioned.
+	test("it offers no checkout and no cancel", async () => {
+		open(CLOUD_LICENSED);
+		await expect.element(region("Enterprise License")).toBeVisible();
+		expect(button("Start 1-month free trial").query()).toBeNull();
+		expect(button("Cancel plan").query()).toBeNull();
+		expect(button("Resume plan").query()).toBeNull();
+		expect(region("Plan").query()).toBeNull();
 	});
 });
 

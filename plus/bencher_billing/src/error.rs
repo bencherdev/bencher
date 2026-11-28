@@ -1,4 +1,5 @@
-use bencher_json::{PlanLevel, PlanStatus};
+use bencher_json::{DateTime, PlanLevel, PlanStatus};
+use bencher_license::LicenseError;
 use stripe_billing::{Subscription, SubscriptionId};
 use stripe_checkout::CheckoutSession;
 use stripe_payment::PaymentMethodId;
@@ -61,6 +62,8 @@ pub enum AttachError {
     NotFound(String),
     #[error("{0}")]
     Billing(#[from] BillingError),
+    #[error("Failed to sign the Self-Hosted license: {0}")]
+    License(#[from] LicenseError),
 }
 
 /// Why a subscription cannot be attached to an organization.
@@ -76,10 +79,45 @@ pub enum AttachRefusal {
     NoBareMetal,
     #[error("A self-serve checkout sells only the Pro plan, not the {0} plan")]
     NotPro(PlanLevel),
+    #[error("A Self-Hosted license is sold only on the Enterprise product, not the {0} plan")]
+    NotEnterprise(PlanLevel),
+    #[error(
+        "The subscription is {0}, and Bencher Cloud signs a Self-Hosted license only for an active subscription"
+    )]
+    NotActive(PlanStatus),
+    #[error("{0}")]
+    Term(LicenseTermError),
     #[error("The subscription names no organization")]
     NoOrganization,
     #[error("The subscription names another organization ({0})")]
     OtherOrganization(String),
+}
+
+/// Why a read of a licensed plan whose subscription is active cannot sign a new license for it.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum RenewalError {
+    #[error("{0}")]
+    Term(LicenseTermError),
+    #[error("A Self-Hosted license is signed only from the Enterprise product, not the {0} plan")]
+    NotEnterprise(PlanLevel),
+}
+
+/// Why a subscription has no term that Bencher Cloud can sign a Self-Hosted license for.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum LicenseTermError {
+    #[error(
+        "The subscription has no `series` metadata, the Benchmark Series that a Self-Hosted license covers"
+    )]
+    NoSeries,
+    #[error("The subscription's `series` metadata ({0}) is not a whole number greater than zero")]
+    BadSeries(String),
+    #[error(
+        "The subscription's current period has already ended: it ends ({term_end}) when or before it starts ({issued_at})"
+    )]
+    Ended {
+        issued_at: DateTime,
+        term_end: DateTime,
+    },
 }
 
 /// Why a subscription has no single plan item: one item on the Pro or Enterprise product.
