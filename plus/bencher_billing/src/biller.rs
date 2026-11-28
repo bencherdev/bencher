@@ -7,8 +7,7 @@ use bencher_json::{
     DateTime, Email, Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel,
     PlanStatus,
     organization::plan::{
-        ACTIVE_SERIES_METER_NAME, JsonCardDetails, JsonPlan, METRICS_METER_NAME,
-        RUNNER_MINUTES_METER_NAME,
+        ACTIVE_SERIES_METER_NAME, JsonCardDetails, JsonPlan, RUNNER_MINUTES_METER_NAME,
     },
     system::{
         config::JsonBilling,
@@ -111,53 +110,19 @@ impl fmt::Display for PriceName {
 
 #[derive(Debug, Clone)]
 enum PlusPlan {
-    Free,
     // Bencher Cloud self-serve tier. Carries the price name for the single tiered
     // active-series price (on the `pro` product) that bills both the flat monthly base
-    // fee (tier 1) and the per-series step-ups. Gets a native free trial. This tier has
-    // no licensed (Self-Hosted) form.
+    // fee (tier 1) and the per-series step-ups. Gets a native free trial.
     Pro(PriceName),
-    Team(PlusUsage),
-    Enterprise(PlusUsage),
-}
-
-#[derive(Debug, Clone)]
-enum PlusUsage {
-    Metered(PriceName),
-    Licensed(PriceName, Entitlements),
+    // Bencher Self-Hosted license for its entitlements, on the `enterprise` product.
+    Enterprise(PriceName, Entitlements),
 }
 
 impl PlusPlan {
-    fn metered(plan_level: PlanLevel, price_name: String) -> Self {
-        match plan_level {
-            PlanLevel::Free => Self::Free,
-            PlanLevel::Pro => Self::Pro(price_name.into()),
-            PlanLevel::Team => Self::Team(PlusUsage::Metered(price_name.into())),
-            PlanLevel::Enterprise => Self::Enterprise(PlusUsage::Metered(price_name.into())),
-        }
-    }
-
-    fn licensed(plan_level: PlanLevel, price_name: String, entitlements: Entitlements) -> Self {
-        match plan_level {
-            PlanLevel::Free => Self::Free,
-            // This tier is Bencher Cloud metered only; it has no licensed form.
-            // The API layer rejects a licensed request for it before reaching here.
-            PlanLevel::Pro => Self::Pro(price_name.into()),
-            PlanLevel::Team => Self::Team(PlusUsage::Licensed(price_name.into(), entitlements)),
-            PlanLevel::Enterprise => {
-                Self::Enterprise(PlusUsage::Licensed(price_name.into(), entitlements))
-            },
-        }
-    }
-
     fn bare_metal_price<'a>(&self, products: &'a Products) -> Result<&'a Price, BillingError> {
         let (pricing, price_name) = match self {
-            Self::Free => return Err(BillingError::ProductLevelFree),
             Self::Pro(price_name) => (&products.bare_metal.metered, price_name),
-            Self::Team(usage) | Self::Enterprise(usage) => match usage {
-                PlusUsage::Metered(price_name) => (&products.bare_metal.metered, price_name),
-                PlusUsage::Licensed(price_name, _) => (&products.bare_metal.licensed, price_name),
-            },
+            Self::Enterprise(price_name, _) => (&products.bare_metal.licensed, price_name),
         };
         pricing
             .get(price_name.as_str())
@@ -169,7 +134,7 @@ impl PlusPlan {
     fn trial_period_days(&self) -> Option<u32> {
         match self {
             Self::Pro(_) => Some(PRO_TRIAL_PERIOD_DAYS),
-            Self::Free | Self::Team(_) | Self::Enterprise(_) => None,
+            Self::Enterprise(..) => None,
         }
     }
 
@@ -177,59 +142,18 @@ impl PlusPlan {
         self,
         products: &Products,
     ) -> Result<(&Price, Option<Entitlements>), BillingError> {
-        Ok(match self {
-            Self::Free => return Err(BillingError::ProductLevelFree),
-            // Pro bills on its own tiered active-series price (base fee + step-ups),
-            // which lives on the `pro` product, not the shared `metrics` product.
-            Self::Pro(price_name) => (
-                products
-                    .pro
-                    .metered
-                    .get(price_name.as_str())
-                    .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string()))?,
-                None,
+        let (pricing, price_name, entitlements) = match self {
+            Self::Pro(price_name) => (&products.pro.metered, price_name, None),
+            Self::Enterprise(price_name, entitlements) => (
+                &products.enterprise.licensed,
+                price_name,
+                Some(entitlements),
             ),
-            Self::Team(plus_usage) => match plus_usage {
-                // Metered metrics bill on the shared `metrics` ("Bencher Metrics")
-                // product across paid tiers; only the licensed price stays on the
-                // tier's own product.
-                PlusUsage::Metered(price_name) => (
-                    products
-                        .metrics
-                        .metered
-                        .get(price_name.as_str())
-                        .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string()))?,
-                    None,
-                ),
-                PlusUsage::Licensed(price_name, entitlements) => (
-                    products
-                        .team
-                        .licensed
-                        .get(price_name.as_str())
-                        .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string()))?,
-                    Some(entitlements),
-                ),
-            },
-            Self::Enterprise(plus_usage) => match plus_usage {
-                // Metered metrics bill on the shared `metrics` product (see Team).
-                PlusUsage::Metered(price_name) => (
-                    products
-                        .metrics
-                        .metered
-                        .get(price_name.as_str())
-                        .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string()))?,
-                    None,
-                ),
-                PlusUsage::Licensed(price_name, entitlements) => (
-                    products
-                        .enterprise
-                        .licensed
-                        .get(price_name.as_str())
-                        .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string()))?,
-                    Some(entitlements),
-                ),
-            },
-        })
+        };
+        let price = pricing
+            .get(price_name.as_str())
+            .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string()))?;
+        Ok((price, entitlements))
     }
 }
 
@@ -281,22 +205,50 @@ impl Biller {
         Ok(Self { client, products })
     }
 
-    pub async fn new_checkout_session(
+    /// A checkout session for a metered Pro subscription.
+    pub async fn new_metered_checkout_session(
         &self,
         organization: OrganizationUuid,
         customer: &JsonCustomer,
-        plan_level: PlanLevel,
         price_name: String,
-        entitlements: Option<Entitlements>,
+        return_url: &str,
+    ) -> Result<JsonCheckout, BillingError> {
+        self.new_checkout_session(
+            organization,
+            customer,
+            PlusPlan::Pro(price_name.into()),
+            return_url,
+        )
+        .await
+    }
+
+    /// A checkout session for a licensed Enterprise subscription for a Self-Hosted license.
+    pub async fn new_licensed_checkout_session(
+        &self,
+        organization: OrganizationUuid,
+        customer: &JsonCustomer,
+        price_name: String,
+        entitlements: Entitlements,
+        return_url: &str,
+    ) -> Result<JsonCheckout, BillingError> {
+        self.new_checkout_session(
+            organization,
+            customer,
+            PlusPlan::Enterprise(price_name.into(), entitlements),
+            return_url,
+        )
+        .await
+    }
+
+    async fn new_checkout_session(
+        &self,
+        organization: OrganizationUuid,
+        customer: &JsonCustomer,
+        plus_plan: PlusPlan,
         return_url: &str,
     ) -> Result<JsonCheckout, BillingError> {
         let customer = self.get_or_create_customer(customer).await?;
 
-        let plus_plan = if let Some(entitlements) = entitlements {
-            PlusPlan::licensed(plan_level, price_name, entitlements)
-        } else {
-            PlusPlan::metered(plan_level, price_name)
-        };
         let bare_metal_price = plus_plan.bare_metal_price(&self.products)?;
         let trial_period_days = self.trial_period_days(&customer, &plus_plan).await?;
         let (plus_price, entitlements) = plus_plan.into_plus_price(&self.products)?;
@@ -458,29 +410,29 @@ impl Biller {
             .map_err(Into::into)
     }
 
+    /// Create a metered Pro subscription.
     pub async fn create_metered_subscription(
         &self,
         organization: OrganizationUuid,
         customer_id: CustomerId,
         payment_method_id: PaymentMethodId,
-        plan_level: PlanLevel,
         price_name: String,
     ) -> Result<Subscription, BillingError> {
         self.create_subscription(
             organization,
             customer_id,
             payment_method_id,
-            PlusPlan::metered(plan_level, price_name),
+            PlusPlan::Pro(price_name.into()),
         )
         .await
     }
 
+    /// Create a licensed Enterprise subscription for a Self-Hosted license.
     pub async fn create_licensed_subscription(
         &self,
         organization: OrganizationUuid,
         customer_id: CustomerId,
         payment_method_id: PaymentMethodId,
-        plan_level: PlanLevel,
         price_name: String,
         entitlements: Entitlements,
     ) -> Result<Subscription, BillingError> {
@@ -488,7 +440,7 @@ impl Biller {
             organization,
             customer_id,
             payment_method_id,
-            PlusPlan::licensed(plan_level, price_name, entitlements),
+            PlusPlan::Enterprise(price_name.into(), entitlements),
         )
         .await
     }
@@ -585,8 +537,8 @@ impl Biller {
 
     /// Derive a paid subscription's plan level from its line items. Pro is the only
     /// paid tier that carries the tiered active-series price (on the `pro` product), so
-    /// a Pro active-series item identifies the plan level; any other paid metered
-    /// subscription is Team.
+    /// a Pro active-series item identifies the plan level; any other paid subscription
+    /// is Enterprise.
     fn subscription_plan_level(&self, subscription: &Subscription) -> PlanLevel {
         let pro_price_ids: HashSet<&PriceId> = self
             .products
@@ -933,23 +885,14 @@ impl Biller {
         }
     }
 
-    pub async fn record_metrics_usage(
-        &self,
-        customer_id: &CustomerId,
-        quantity: u32,
-    ) -> Result<BillingMeterEvent, BillingError> {
-        self.record_metered_usage(METRICS_METER_NAME, customer_id, quantity, None)
-            .await
-    }
-
     /// Post an organization's cumulative period-to-date active-series count to the
-    /// `active_series` meter (which backs the Pro tiered price), stamped with `when` (the
-    /// time the count was taken). Billed with `last` aggregation: the explicit timestamp
-    /// orders concurrent posts by `when` (to one-second granularity) rather than by
-    /// Stripe's receipt order, so reports more than a second apart bill the later count
-    /// deterministically; a same-second tie self-heals on the next report. Posting after
-    /// each report makes the final post of the period the period total, and a missed post
-    /// self-heals on the next report. Mirrors [`Self::record_metrics_usage`].
+    /// `active_series` meter (which backs every metered plan's price), stamped with
+    /// `when` (the time the count was taken). Billed with `last` aggregation: the
+    /// explicit timestamp orders concurrent posts by `when` (to one-second granularity)
+    /// rather than by Stripe's receipt order, so reports more than a second apart bill the
+    /// later count deterministically; a same-second tie self-heals on the next report.
+    /// Posting after each report makes the final post of the period the period total, and
+    /// a missed post self-heals on the next report.
     pub async fn record_series_usage(
         &self,
         customer_id: &CustomerId,
@@ -976,8 +919,8 @@ impl Biller {
 
     /// `timestamp` (Unix seconds) is set on the meter event only for `last`-aggregation
     /// meters (the `active_series` meter), where it makes ordering deterministic; the
-    /// `sum`-aggregation meters (metrics, runner minutes) pass `None` and use Stripe's
-    /// receipt time.
+    /// `sum`-aggregation runner minutes meter passes `None` and uses Stripe's receipt
+    /// time.
     async fn record_metered_usage(
         &self,
         meter_name: &str,
@@ -1054,12 +997,12 @@ impl Biller {
 
 /// A paid subscription's plan level. Pro is the only paid tier that carries the tiered
 /// active-series price (on the `pro` product), so a subscription with that item is Pro;
-/// any other paid metered subscription is Team.
+/// any other paid subscription is Enterprise.
 fn plan_level_from_pro_price(is_pro: bool) -> PlanLevel {
     if is_pro {
         PlanLevel::Pro
     } else {
-        PlanLevel::Team
+        PlanLevel::Enterprise
     }
 }
 
@@ -1085,8 +1028,7 @@ mod tests {
     use bencher_json::{
         Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
         organization::plan::{
-            ACTIVE_SERIES_METER_NAME, DEFAULT_PRICE_NAME, METRICS_METER_NAME,
-            RUNNER_MINUTES_METER_NAME,
+            ACTIVE_SERIES_METER_NAME, DEFAULT_PRICE_NAME, RUNNER_MINUTES_METER_NAME,
         },
         system::{
             config::{JsonBilling, JsonProduct, JsonProducts},
@@ -1107,10 +1049,8 @@ mod tests {
 
     #[test]
     fn plan_level_from_pro_price_resolves_tier() {
-        // Pro is the only paid tier carrying the tiered active-series price, so it
-        // resolves to Pro; any other paid metered subscription resolves to Team.
         assert_eq!(plan_level_from_pro_price(true), PlanLevel::Pro);
-        assert_eq!(plan_level_from_pro_price(false), PlanLevel::Team);
+        assert_eq!(plan_level_from_pro_price(false), PlanLevel::Enterprise);
     }
 
     #[test]
@@ -1164,7 +1104,7 @@ mod tests {
 
     #[test]
     fn get_plan_unit_amount_reads_price() {
-        let mut item = make_subscription_item("price_metrics");
+        let mut item = make_subscription_item("price_flat");
         item.price.unit_amount = Some(1);
         assert_eq!(Biller::get_plan_unit_amount(&item, None).unwrap(), 1);
     }
@@ -1173,7 +1113,7 @@ mod tests {
     fn get_plan_unit_amount_missing_errors() {
         // `make_subscription_item` builds a price with `unit_amount: None` and no tier
         // fallback, so the amount is unresolved.
-        let item = make_subscription_item("price_metrics");
+        let item = make_subscription_item("price_flat");
         let err = Biller::get_plan_unit_amount(&item, None).unwrap_err();
         assert!(matches!(err, crate::BillingError::NoUnitAmount(_)));
     }
@@ -1203,15 +1143,6 @@ mod tests {
                 },
                 licensed: HashMap::new(),
             },
-            team: JsonProduct {
-                id: "prod_NKz5B9dGhDiSY1".into(),
-                metered: hmap! {
-                    "default".to_owned() => "price_1T8NRdKal5vzTlmhBfL9IdMi".to_owned(),
-                },
-                licensed: hmap! {
-                    "default".to_owned() => "price_1O4XlwKal5vzTlmh0n0wtplQ".to_owned(),
-                },
-            },
             enterprise: JsonProduct {
                 id: "prod_NLC7fDet2C8Nmk".into(),
                 metered: hmap! {
@@ -1219,15 +1150,6 @@ mod tests {
                 },
                 licensed: hmap! {
                     "default".to_owned() => "price_1O4Xo1Kal5vzTlmh1KrcEbq0".to_owned(),
-                },
-            },
-            metrics: JsonProduct {
-                id: "prod_UjlAPYSw7n3RDq".into(),
-                metered: hmap! {
-                    "default".to_owned() => "price_1TkHeSKal5vzTlmhijDCkWDe".to_owned(),
-                },
-                licensed: hmap! {
-                    "default".to_owned() => "price_1TkHeSKal5vzTlmhPKXPOW7c".to_owned(),
                 },
             },
             bare_metal: JsonProduct {
@@ -1286,26 +1208,20 @@ mod tests {
         (customer_id, payment_method_id)
     }
 
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "test helper exercising the full metered subscription lifecycle"
-    )]
     async fn metered_subscription(
         biller: &Biller,
         organization: OrganizationUuid,
         customer_id: CustomerId,
         payment_method_id: PaymentMethodId,
-        plan_level: PlanLevel,
         price_name: String,
         runner_minutes: usize,
-        metrics_quantity: u32,
+        series_quantity: u32,
     ) {
         let create_subscription = biller
             .create_metered_subscription(
                 organization,
                 customer_id,
                 payment_method_id.clone(),
-                plan_level,
                 price_name.clone(),
             )
             .await
@@ -1317,33 +1233,19 @@ mod tests {
 
         let metered_plan_id = &subscription_id.as_ref().parse().unwrap();
         let json_plan = biller.get_metered_plan(metered_plan_id).await.unwrap();
-        // The plan level is derived from the tiered active-series price: Pro carries it
-        // and resolves to Pro; tiers without it resolve to Team.
-        let expected_level = if plan_level == PlanLevel::Pro {
-            PlanLevel::Pro
-        } else {
-            PlanLevel::Team
-        };
-        assert_eq!(json_plan.level, expected_level);
+        assert_eq!(json_plan.level, PlanLevel::Pro);
 
         let billing = biller
             .get_metered_plan_billing(metered_plan_id)
             .await
             .unwrap();
-        // Pro starts in a native free trial, so it is `Trialing`; the other tiers have no
-        // trial and are `Active` immediately.
-        let expected_status = if plan_level == PlanLevel::Pro {
-            PlanStatus::Trialing
-        } else {
-            PlanStatus::Active
-        };
-        assert_eq!(billing.status, expected_status);
+        // Pro starts in a native free trial.
+        assert_eq!(billing.status, PlanStatus::Trialing);
         // The billing path derives the same level as the full plan fetch.
-        assert_eq!(billing.level, expected_level);
+        assert_eq!(billing.level, PlanLevel::Pro);
         let customer_id = billing.customer_id;
 
-        record_metrics_usage(biller, &customer_id, metrics_quantity).await;
-        record_series_usage(biller, &customer_id, metrics_quantity).await;
+        record_series_usage(biller, &customer_id, series_quantity).await;
         record_runner_usage(biller, &customer_id, runner_minutes).await;
 
         // PATCH path: schedule cancel-at-period-end, then clear it (resume). The
@@ -1384,16 +1286,14 @@ mod tests {
             .unwrap();
         assert_eq!(billing.status, PlanStatus::Canceled);
 
-        if plan_level == PlanLevel::Pro {
-            resubscribe_has_no_trial(
-                biller,
-                organization,
-                customer_id,
-                payment_method_id,
-                price_name,
-            )
-            .await;
-        }
+        resubscribe_has_no_trial(
+            biller,
+            organization,
+            customer_id,
+            payment_method_id,
+            price_name,
+        )
+        .await;
     }
 
     /// Re-subscribing after cancellation must not restart the free trial: the
@@ -1407,13 +1307,7 @@ mod tests {
         price_name: String,
     ) {
         let resubscription = biller
-            .create_metered_subscription(
-                organization,
-                customer_id,
-                payment_method_id,
-                PlanLevel::Pro,
-                price_name,
-            )
+            .create_metered_subscription(organization, customer_id, payment_method_id, price_name)
             .await
             .unwrap();
         let metered_plan_id = &resubscription.id.as_ref().parse().unwrap();
@@ -1433,7 +1327,6 @@ mod tests {
         organization: OrganizationUuid,
         customer_id: CustomerId,
         payment_method_id: PaymentMethodId,
-        plan_level: PlanLevel,
         price_name: String,
         entitlements: Entitlements,
     ) {
@@ -1442,7 +1335,6 @@ mod tests {
                 organization,
                 customer_id,
                 payment_method_id,
-                plan_level,
                 price_name,
                 entitlements,
             )
@@ -1454,7 +1346,8 @@ mod tests {
         assert_eq!(create_subscription.id, get_subscription.id);
 
         let licensed_plan_id = &subscription_id.as_ref().parse().unwrap();
-        biller.get_licensed_plan(licensed_plan_id).await.unwrap();
+        let json_plan = biller.get_licensed_plan(licensed_plan_id).await.unwrap();
+        assert_eq!(json_plan.level, PlanLevel::Enterprise);
 
         let plan_status = biller
             .get_licensed_plan_status(licensed_plan_id)
@@ -1492,22 +1385,6 @@ mod tests {
             );
             assert_eq!(event.payload.get(METER_VALUE_KEY), Some(&"1".to_owned()),);
         }
-    }
-
-    async fn record_metrics_usage(biller: &Biller, customer_id: &CustomerId, quantity: u32) {
-        let event = biller
-            .record_metrics_usage(customer_id, quantity)
-            .await
-            .unwrap();
-        assert_eq!(event.event_name, METRICS_METER_NAME);
-        assert_eq!(
-            event.payload.get(METER_CUSTOMER_KEY),
-            Some(&customer_id.to_string()),
-        );
-        assert_eq!(
-            event.payload.get(METER_VALUE_KEY),
-            Some(&quantity.to_string()),
-        );
     }
 
     async fn record_series_usage(biller: &Biller, customer_id: &CustomerId, quantity: u32) {
@@ -1678,17 +1555,17 @@ mod tests {
     #[test]
     fn filter_subscription_items_excludes_bare_metal() {
         let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
-        let team_price: stripe_product::PriceId = "price_team".parse().unwrap();
+        let enterprise_price: stripe_product::PriceId = "price_enterprise".parse().unwrap();
         let bare_metal_price: stripe_product::PriceId = "price_bare_metal".parse().unwrap();
         let items = vec![
-            make_subscription_item("price_team"),
+            make_subscription_item("price_enterprise"),
             make_subscription_item("price_bare_metal"),
         ];
-        // Only team/enterprise prices, not bare_metal
-        let price_ids = HashSet::from([&team_price]);
+        // Only plan prices, not bare_metal
+        let price_ids = HashSet::from([&enterprise_price]);
         let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
         assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered.first().unwrap().price.id, team_price);
+        assert_eq!(filtered.first().unwrap().price.id, enterprise_price);
         // Verify bare_metal was excluded
         assert!(
             filtered
@@ -1738,51 +1615,9 @@ mod tests {
             organization,
             customer_id.clone(),
             payment_method_id.clone(),
-            PlanLevel::Pro,
             DEFAULT_PRICE_NAME.into(),
             3,
             7,
-        ))
-        .await;
-
-        // Team Metered Plan
-        let organization = OrganizationUuid::new();
-        Box::pin(metered_subscription(
-            &biller,
-            organization,
-            customer_id.clone(),
-            payment_method_id.clone(),
-            PlanLevel::Team,
-            DEFAULT_PRICE_NAME.into(),
-            5,
-            10,
-        ))
-        .await;
-
-        // Team Licensed Plan
-        let organization = OrganizationUuid::new();
-        licensed_subscription(
-            &biller,
-            organization,
-            customer_id.clone(),
-            payment_method_id.clone(),
-            PlanLevel::Team,
-            DEFAULT_PRICE_NAME.into(),
-            1_000.try_into().unwrap(),
-        )
-        .await;
-
-        // Enterprise Metered Plan
-        let organization = OrganizationUuid::new();
-        Box::pin(metered_subscription(
-            &biller,
-            organization,
-            customer_id.clone(),
-            payment_method_id.clone(),
-            PlanLevel::Enterprise,
-            DEFAULT_PRICE_NAME.into(),
-            10,
-            25,
         ))
         .await;
 
@@ -1793,7 +1628,6 @@ mod tests {
             organization,
             customer_id.clone(),
             payment_method_id.clone(),
-            PlanLevel::Team,
             DEFAULT_PRICE_NAME.into(),
             1_000.try_into().unwrap(),
         )

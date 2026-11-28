@@ -3,12 +3,7 @@ import type { Carry } from "./pending";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // Values, not the enum: importing it would put the shared types in every door's bundle.
-const PLANS: ReadonlySet<string> = new Set([
-	"free",
-	"pro",
-	"team",
-	"enterprise",
-]);
+const PLANS: ReadonlySet<string> = new Set(["free", "pro", "enterprise"]);
 
 /** What the door's address asks a sign-in to carry, each part only in its own shape. */
 export const carryOf = (query: URLSearchParams): Carry => {

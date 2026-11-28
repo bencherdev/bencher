@@ -29,8 +29,6 @@ pub enum BillingError {
     EmailCollision(Box<Customer>, Vec<Customer>),
     #[error("Failed to find price: {0}")]
     PriceNotFound(String),
-    #[error("Cannot create a subscription for the free tier")]
-    ProductLevelFree,
     #[error("Multiple subscriptions: {0:#?} {1:#?}")]
     MultipleSubscriptions(Box<Subscription>, Vec<Subscription>),
     #[error("Multiple subscription items for {0}: {1:#?} {2:#?}")]

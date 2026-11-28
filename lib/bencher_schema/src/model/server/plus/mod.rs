@@ -135,8 +135,11 @@ impl QueryServer {
                         "Sending stats is disabled, but running on Bencher Cloud"
                     );
                 } else {
-                    match LicenseUsage::get_for_server(&mut conn, &licensor, Some(PlanLevel::Team))
-                    {
+                    match LicenseUsage::get_for_server(
+                        &mut conn,
+                        &licensor,
+                        Some(PlanLevel::Enterprise),
+                    ) {
                         Ok(license_usages) if license_usages.is_empty() => {
                             violations += 1;
                             // Be kind. Allow for a seven day grace period.

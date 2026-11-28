@@ -167,7 +167,7 @@ async fn plan_post_requires_session() {
     let key = server.create_user_key(&user, "plan-key").await;
 
     let org_slug: &str = org.slug.as_ref();
-    let body = serde_json::json!({"checkout": "cs_test", "level": "team"});
+    let body = serde_json::json!({"checkout": "cs_test", "level": "pro"});
     let post = |credential| {
         server
             .client

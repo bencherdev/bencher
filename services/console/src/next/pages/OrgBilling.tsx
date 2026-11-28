@@ -266,10 +266,7 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 	const client = useQueryClient();
 	const params = useParams();
 	const level = () => levelName(props.plan.level);
-	// Pro bills on active series; the retiring plans bill on metrics.
-	const seriesBilled = () => props.usage.active_series != null;
-	const used = () =>
-		(seriesBilled() ? props.usage.active_series : props.usage.metrics) ?? 0;
+	const used = () => props.usage.active_series ?? 0;
 	const minutes = () => props.usage.runner_minutes ?? 0;
 	const tiers = () => props.plan.tiers ?? [];
 	const included = () => tiers()[0]?.up_to;
@@ -360,7 +357,7 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 						)}
 					</Show>
 					<div class="stats">
-						<Stat label={seriesBilled() ? "Active series" : "Metrics"}>
+						<Stat label="Active series">
 							<span class="figure">
 								{formatCount(used())}
 								<Show when={included()}>
@@ -368,13 +365,7 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 								</Show>
 							</span>
 							<Show when={included()}>
-								{(of) => (
-									<Meter
-										used={used()}
-										of={of()}
-										unit={seriesBilled() ? "active series" : "metrics"}
-									/>
-								)}
+								{(of) => <Meter used={used()} of={of()} unit="active series" />}
 							</Show>
 						</Stat>
 						<Stat label="Bare metal">
