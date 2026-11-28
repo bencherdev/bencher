@@ -3,22 +3,22 @@ title: "セルフホストの Google OAuth"
 description: "Bencher Self-Hosted が Google による認証を行えるようにする Google OAuth 2.0 クライアントの作成方法"
 heading: "セルフホストでの Google OAuth 2.0 クライアントの作成方法"
 published: "2025-09-07T12:36:00Z"
-modified: "2025-09-08T04:05:44Z"
+modified: "2026-11-14T07:24:37Z"
 sortOrder: 10
 ---
 
 Bencher Cloud をご利用の場合は、`Google` ボタンを使って [サインアップ](/auth/signup) または [ログイン](/auth/login) できます。
 
-Bencher Self-Hosted を利用するには、[Bencher Plus Enterprise プラン][bencher plus enterprise] を契約し、独自の Google OAuth2 クライアントを作成し、[コンソールサーバの設定][console config] と [API サーバの設定][server config] を更新する必要があります。
+Bencher Self-Hosted を利用するには、サーバー上の少なくとも1つの組織が有効な [Bencher Plus Enterprise ライセンス][bencher plus enterprise] を保有している必要があります。また、独自の Google OAuth2 クライアントを作成し、[コンソールサーバの設定][console config] と [API サーバの設定][server config] を更新する必要があります。
 
-[bencher plus enterprise]: /pricing/?level=enterprise
+[bencher plus enterprise]: /pricing/#faq-self-hosted-license
 [console config]: /ja/docs/reference/console-config/
 [server config]: /ja/docs/reference/server-config/
 
 ## Google OAuth 2.0 クライアントの作成
 
 - [Google API コンソール][google api console] にサインアップする
-- 左側のサイドバーで [the `Credentials` page][google cloud credentials] に移動する
+- 左側のサイドバーで [`Credentials` ページ][google cloud credentials] に移動する
 - `OAuth 2.0 Client ID` を作成する
   - `➕ Create Credentials` > `OAuth client ID` をクリック
   - 同意画面を設定する
@@ -63,7 +63,7 @@ Bencher Self-Hosted を利用するには、[Bencher Plus Enterprise プラン][
 Client ID がないと、UI に Google ボタンが表示されません。
 
 ### API サーバ
-`client_id` と `client_secret` を [the `plus.google` section of the server config](/ja/docs/reference/server-config/#plusgoogle) に追加します。
+`client_id` と `client_secret` を [サーバ設定の `plus.google` セクション](/ja/docs/reference/server-config/#plusgoogle) に追加します。
 Google セクションが存在しない場合、サーバは Google 認証リクエストを失敗させます。
 
 <br/>

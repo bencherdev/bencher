@@ -1,6 +1,6 @@
 ### `plus.rate_limiting`
 
-Dieser Abschnitt spezifiziert die Ratenbegrenzung für den API-Server. Der gesamte Abschnitt ist optional. Wenn nicht angegeben, werden die aufgelisteten Standardwerte verwendet.
+Dieser Abschnitt spezifiziert die Ratenbegrenzung für den API-Server. Der gesamte Abschnitt ist optional. Bei Bencher Self-Hosted erfordern benutzerdefinierte Ratenbegrenzungen eine gültige Bencher Plus _Enterprise_ Lizenz für mindestens eine Organisation auf dem Server. Der API-Server prüft nur beim Start, ob eine gültige Lizenz vorhanden ist. Starten Sie den API-Server daher neu, nachdem Sie eine Lizenz hinzugefügt haben. Ohne diesen Abschnitt oder ohne gültige Lizenz wendet Bencher Self-Hosted keine Ratenbegrenzungen an. Andernfalls wird für jeden nicht angegebenen Wert der aufgelistete Standardwert verwendet.
 
 Um zu verhindern, dass [`unclaimed` Projekte][unclaimed projects] erstellt werden, setzen Sie `unclaimed_limit` auf `0`.
 
@@ -8,7 +8,7 @@ Um zu verhindern, dass [`unclaimed` Projekte][unclaimed projects] erstellt werde
 | :--------------------: | :----------: | :----------: | :----------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 |         window         |    86400     |    86400     |     Nein     |                                      Spezifiziert das Fenster für die Ratenbegrenzung in Sekunden. Standardmäßig auf einen Tag gesetzt.                                       |
 |    unclaimed_limit     |     255      |     255      |     Nein     | Kontrolliert die Ratenbegrenzung für [`unclaimed` Projekte][unclaimed projects]. Um zu verhindern, dass `unclaimed` Projekte erstellt werden, setzen Sie diesen Wert auf `0`. |
-|     claimed_limit      |    65536     |    65536     |     Nein     |                                                           Kontrolliert die Ratenbegrenzung für `claimed` Projekte.                                                            |
+|     claimed_limit      |    65535     |    65535     |     Nein     |                                                           Kontrolliert die Ratenbegrenzung für `claimed` Projekte.                                                            |
 |       plus_limit       |   1048576    |   1048576    |     Nein     |                                         Kontrolliert die Ratenbegrenzung von Metriken für Organisationen mit einem Bencher Plus-Plan.                                         |
 
 #### `public`
@@ -127,4 +127,4 @@ Eine Adresse an ihrem Limit erhält keine neue E-Mail, und ihre frühere Anmeldu
 |       hour       |    6     |    6     |     Nein     |           Maximale Anmelde-E-Mails pro Stunde pro E-Mail-Adresse und Anfragendem.           |
 |       day        |    12    |    12    |     Nein     |             Maximale Anmelde-E-Mails pro Tag pro E-Mail-Adresse und Anfragendem.            |
 
-[unclaimed projects]: /de/docs/how-to/claim/#unclaimed-projects
+[unclaimed projects]: /de/docs/how-to/claim/#unclaimed-projekte
