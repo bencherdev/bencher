@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "Connect AI agents and assistants to Bencher with the hosted MCP server to query benchmark data and submit results"
 heading: "How to Use Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-11-27T23:40:00Z"
+modified: "2026-11-28T03:23:37Z"
 sortOrder: 11
 ---
 
@@ -65,7 +65,7 @@ Bencher asks every time an app connects, and a project API key (`bencher_run_*`)
 
 An app stays connected for up to a year.
 An app approved with a user API key is disconnected as soon as that key is revoked or expires.
-OAuth access tokens are for Bencher MCP:
+An app's OAuth access tokens are for Bencher MCP:
 the Bencher API refuses them with `401 Unauthorized`.
 
 On Bencher Self-Hosted, signing in works once the API server's [`plus.oauth`](/docs/reference/server-config/#plusoauth) section is configured.

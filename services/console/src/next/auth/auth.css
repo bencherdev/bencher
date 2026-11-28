@@ -101,6 +101,11 @@
 	align-self: flex-start;
 }
 
+/* The Bencher CLI's code: one long word, broken anywhere at a phone's width. */
+.au-card .secret > span {
+	overflow-wrap: anywhere;
+}
+
 @media (max-width: 767px) {
 	.au-main {
 		padding: 24px 16px 40px;

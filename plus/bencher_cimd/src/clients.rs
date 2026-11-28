@@ -52,8 +52,9 @@ impl OAuthClients {
                     let JsonOAuthServerClient { id, metadata } = client;
                     // Parsing the configuration validates the metadata, so only a client built
                     // some other way is dropped here.
+                    let url = id.url()?;
                     let metadata = metadata
-                        .map(|metadata| metadata.validate(id.url()))
+                        .map(|metadata| metadata.validate(url))
                         .transpose()
                         .ok()?;
                     Some((id, metadata.map(Arc::new)))
@@ -85,7 +86,11 @@ impl OAuthClients {
                 return Ok(Arc::clone(metadata));
             }
         }
-        self.documents.get(client_id.url(), clock, charge).await
+        // The Bencher CLI is built in, so it never has a document to fetch.
+        let Some(url) = client_id.url() else {
+            return Err(OAuthClientError::NotAllowed);
+        };
+        self.documents.get(url, clock, charge).await
     }
 
     /// Whether `client_id` may use its codes and tokens: any client, unless this server was

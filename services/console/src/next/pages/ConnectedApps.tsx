@@ -9,13 +9,15 @@ import { useNavigate, useParams } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import { For, Show, createSignal } from "solid-js";
 import { scopeText } from "../../components/auth/authorize/scope";
-import type { JsonOAuthGrant } from "../../types/bencher";
+import type { JsonOAuthGrant, OAuthScope } from "../../types/bencher";
 import {
+	appName,
 	day,
 	dropGrant,
 	grantList,
 	grantPath,
 	grantsKey,
+	isCli,
 	lastRefreshed,
 	refusalOf,
 } from "../account/apps";
@@ -192,7 +194,7 @@ const ConnectedApps = () => {
 						onDismiss={() => setTarget(undefined)}
 					>
 						<div class="ui-dialog-head">
-							<h2 id="ra-title">Revoke {grant.client.host}?</h2>
+							<h2 id="ra-title">Revoke {appName(grant)}?</h2>
 							<Button
 								variant="ghost"
 								iconOnly
@@ -204,7 +206,7 @@ const ConnectedApps = () => {
 						</div>
 						<div class="ui-dialog-body">
 							<p id="ra-desc" class="text2">
-								{grant.client.host} loses access to this account at once.
+								{appName(grant)} loses access to this account at once.
 							</p>
 						</div>
 						<div class="ui-dialog-foot">
@@ -240,15 +242,24 @@ const App = (props: {
 	return (
 		<section class="setcard" aria-labelledby={id()}>
 			<div class="setcard-head">
-				<Heading level={2} id={id()} class="mono">
-					<Host host={props.grant.client.host} />
-				</Heading>
+				<Show
+					when={isCli(props.grant)}
+					fallback={
+						<Heading level={2} id={id()} class="mono">
+							<Host host={props.grant.client.host} />
+						</Heading>
+					}
+				>
+					<Heading level={2} id={id()}>
+						Bencher CLI
+					</Heading>
+				</Show>
 				<span class="spacer" />
 				<button
 					type="button"
 					class="lnk danger"
 					aria-haspopup="dialog"
-					aria-label={`Revoke ${props.grant.client.host}`}
+					aria-label={`Revoke ${appName(props.grant)}`}
 					onClick={() => props.onRevoke()}
 				>
 					Revoke
@@ -256,10 +267,24 @@ const App = (props: {
 			</div>
 			<div class="setcard-body">
 				<dl>
-					<div class="kv">
-						<dt>calls itself</dt>
-						<dd>{props.grant.client.name}</dd>
-					</div>
+					<Show
+						when={isCli(props.grant)}
+						fallback={
+							<div class="kv">
+								<dt>calls itself</dt>
+								<dd>{props.grant.client.name}</dd>
+							</div>
+						}
+					>
+						<Show when={props.grant.device}>
+							{(device) => (
+								<div class="kv">
+									<dt>device</dt>
+									<dd class="mono">{device()}</dd>
+								</div>
+							)}
+						</Show>
+					</Show>
 					<div class="kv">
 						<dt>can</dt>
 						<dd>
@@ -269,7 +294,7 @@ const App = (props: {
 									"font-weight": "var(--font-weight-normal)",
 								}}
 							>
-								<For each={props.grant.scopes}>
+								<For each={cliScopes(props.grant)}>
 									{(scope) => <li>{scopeText(scope)}</li>}
 								</For>
 							</ul>
@@ -289,23 +314,34 @@ const App = (props: {
 							</Show>
 						</dd>
 					</div>
-					<div class="kv">
-						<dt>approved</dt>
-						<dd>
-							<Show when={props.grant.user_key} fallback="while signed in">
-								{(key) => (
-									<>
-										with key <a href={props.keys}>{key().name}</a>
-									</>
-								)}
-							</Show>
-						</dd>
-					</div>
+					<Show when={!isCli(props.grant)}>
+						<div class="kv">
+							<dt>approved</dt>
+							<dd>
+								<Show when={props.grant.user_key} fallback="while signed in">
+									{(key) => (
+										<>
+											with key <a href={props.keys}>{key().name}</a>
+										</>
+									)}
+								</Show>
+							</dd>
+						</div>
+					</Show>
 				</dl>
 			</div>
 		</section>
 	);
 };
+
+/**
+ * What the app can do, one line a scope: the Bencher CLI's admin grant reads
+ * as admin alone, since it acts as the user too.
+ */
+const cliScopes = (grant: JsonOAuthGrant): JsonOAuthGrant["scopes"] =>
+	isCli(grant) && grant.scopes.includes("admin" as OAuthScope)
+		? grant.scopes.filter((scope) => scope === ("admin" as OAuthScope))
+		: grant.scopes;
 
 const Day = (props: { at: string }) => (
 	<time datetime={props.at}>{day(props.at)}</time>

@@ -334,7 +334,7 @@
 	"consentColdLoad": {
 		"apiRequests": 2,
 		"cls": 0,
-		"jsBytes": 23794,
+		"jsBytes": 24319,
 		"stylesheets": 1,
 		"cssBytes": 9574,
 		"htmlBytes": 1110,
@@ -466,7 +466,7 @@
 		"apiRounds": 1,
 		"cls": 0,
 		"shellShift": 0,
-		"jsBytes": 53182,
+		"jsBytes": 53416,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 20019,

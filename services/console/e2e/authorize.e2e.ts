@@ -685,3 +685,67 @@ test.describe("accessibility", () => {
 		});
 	}
 });
+
+test.describe("Bencher CLI", () => {
+	test.use({ storageState: signedIn(seed.member) });
+
+	const CODE_PAGE = "/auth/cli";
+	const cliUrl = () =>
+		`${seed.api_url}/oauth/authorize?${new URLSearchParams({
+			response_type: "code",
+			client_id: "bencher_cli",
+			redirect_uri: `${seed.console_url}${CODE_PAGE}`,
+			code_challenge: CHALLENGE,
+			code_challenge_method: "S256",
+			state: randomUUID(),
+			device: "ada-macbook",
+		})}`;
+
+	// Kills the CLI drawn as an outside app or without its device, a code page
+	// that keeps the code in its address, and a Copy that copies anything but
+	// the code.
+	test("approving shows the code to paste, and Copy copies it", async ({
+		page,
+		context,
+	}) => {
+		await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+		await page.goto(cliUrl());
+		await expect(heading(page)).toHaveText("Connect Bencher CLI");
+		await expect(main(page)).toContainText(/device\s*ada-macbook/);
+		await expect(main(page)).toContainText("Act as you, without server admin");
+		await expect(main(page)).toContainText(/returns to\s*this computer/);
+		await signedInAs(page, seed.member.user.email);
+		await approve(page).click();
+
+		await expect(page).toHaveURL((url) => url.pathname === CODE_PAGE);
+		await expect(heading(page)).toHaveText("CLI code");
+		expect(new URL(page.url()).search).toBe("");
+		const code = main(page).getByText(/^bencher_code_/);
+		await expect(code).toBeVisible();
+		await page.getByRole("button", { name: "Copy the code" }).click();
+		await expect(page.getByRole("button", { name: "Code copied" })).toHaveText(
+			"Copied",
+		);
+		expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+			await code.textContent(),
+		);
+	});
+
+	// Kills contrast, names, and roles on the code page that fail axe in either
+	// theme.
+	test("the code page passes axe in both themes", async ({ page }) => {
+		await axeInBothThemes(
+			page,
+			CODE_PAGE,
+			() =>
+				expect(
+					page.getByRole("button", { name: "Copy the code" }),
+				).toBeVisible(),
+			async () => {
+				await page.goto(cliUrl());
+				await approve(page).click();
+				await expect(page).toHaveURL((url) => url.pathname === CODE_PAGE);
+			},
+		);
+	});
+});

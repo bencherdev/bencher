@@ -1,5 +1,6 @@
+use bencher_json::OAuthIssuer;
 use bencher_schema::{
-    context::{ApiContext, OAuthCredential, OAuthServer},
+    context::{ApiContext, OAuthCredential},
     error::issue_error,
     model::user::oauth::OAuthGrantFailure,
 };
@@ -63,7 +64,7 @@ impl TokenError {
     pub(crate) fn into_response(
         self,
         log: &Logger,
-        oauth: &OAuthServer,
+        issuer: &OAuthIssuer,
     ) -> Result<Response<Body>, HttpError> {
         slog::info!(log, "OAuth token request refused";
             "error" => self.code(),
@@ -71,12 +72,7 @@ impl TokenError {
         );
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthTokenFailed(self.into()));
-        oauth_error(
-            self.status(),
-            self.code(),
-            self.description(),
-            oauth.issuer(),
-        )
+        oauth_error(self.status(), self.code(), self.description(), issuer)
     }
 
     fn status(self) -> StatusCode {

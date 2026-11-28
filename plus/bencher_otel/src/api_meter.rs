@@ -1114,7 +1114,11 @@ pub enum OAuthTokenAuthFailureReason {
     Locked,
     KeyRevoked,
     KeyExpired,
+    /// A token presented to the REST API that it does not take: an outside app's, a refresh
+    /// token, or an authorization code.
     RestApi,
+    /// The Bencher CLI's token, presented to the MCP server or the user info endpoint.
+    CliClient,
 }
 
 impl fmt::Display for OAuthTokenAuthFailureReason {
@@ -1132,6 +1136,7 @@ impl fmt::Display for OAuthTokenAuthFailureReason {
             Self::KeyRevoked => write!(f, "key_revoked"),
             Self::KeyExpired => write!(f, "key_expired"),
             Self::RestApi => write!(f, "rest_api"),
+            Self::CliClient => write!(f, "cli_client"),
         }
     }
 }

@@ -225,6 +225,11 @@ pub enum ValidError {
     #[error("Failed to validate OAuth nonce: expected at most 256 bytes")]
     OAuthNonce,
     #[cfg(feature = "plus")]
+    #[error(
+        "Failed to validate OAuth device ({0}): expected 1 to 64 ASCII letters, digits, `.`, `-`, or `_`, starting with a letter or digit"
+    )]
+    OAuthDevice(String),
+    #[cfg(feature = "plus")]
     #[error("Failed to validate OAuth max age: expected a number of seconds")]
     OAuthMaxAge,
     // The secrets of a provider's sign-in are left out: each is a credential.

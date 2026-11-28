@@ -7,7 +7,7 @@ use bencher_json::{
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{forbidden_error, not_found_error, resource_conflict_err, resource_not_found_err},
+    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     model::user::{QueryUser, auth::AuthUser, oauth::QueryOAuthGrant, same_user},
     schema, write_transaction,
 };
@@ -222,13 +222,10 @@ async fn delete_inner(
     Ok(())
 }
 
-/// Authenticate a request that manages OAuth grants, which exist only once OAuth is configured.
+/// Authenticate a request that manages OAuth grants, which the Bencher CLI makes on every server.
 /// Only a session may manage them, so a leaked key or API token can neither see nor sever
 /// the connections it did not make.
 async fn grants_user(rqctx: &RequestContext<ApiContext>) -> Result<AuthUser, HttpError> {
-    if rqctx.context().oauth.is_none() {
-        return Err(not_found_error("OAuth is not configured on this server"));
-    }
     let auth_user = AuthUser::new(rqctx).await?;
     // Checked only after authentication: an invalid credential still gets the opaque `401`.
     if !auth_user.is_session() {

@@ -52,10 +52,16 @@ impl<'de> Deserialize<'de> for JsonOAuthServerClient {
         }
 
         let Unchecked { id, metadata } = Unchecked::deserialize(deserializer)?;
+        // The Bencher CLI is built in, so it is never an outside app with a document.
+        let Some(url) = id.url() else {
+            return Err(serde::de::Error::custom(
+                "The Bencher CLI's client is built in and cannot be configured",
+            ));
+        };
         if let Some(metadata) = &metadata {
             metadata
                 .clone()
-                .validate(id.url())
+                .validate(url)
                 .map_err(serde::de::Error::custom)?;
         }
         Ok(Self { id, metadata })
@@ -138,6 +144,17 @@ mod tests {
         serde_json::from_value::<JsonOAuthServer>(json!({
             "issuer": "https://api.example.com",
             "clients": [{"id": "http://client.example/client.json"}],
+        }))
+        .unwrap_err();
+    }
+
+    // Kills configuring the built-in Bencher CLI client as an outside app, which would give it a
+    // metadata document of the operator's choosing.
+    #[test]
+    fn the_cli_client_is_never_configured() {
+        serde_json::from_value::<JsonOAuthServer>(json!({
+            "issuer": "https://api.example.com",
+            "clients": [{"id": "bencher_cli"}],
         }))
         .unwrap_err();
     }

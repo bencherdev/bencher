@@ -10,27 +10,53 @@ use crate::ValidError;
 
 const MAX_LEN: usize = 2 << 10;
 
-/// An OAuth client identifier: the URL of the client's metadata document.
+/// An OAuth client identifier: the Bencher CLI's fixed ID, or the URL of an outside app's metadata
+/// document.
 #[typeshare(serialized_as = "String")]
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(try_from = "String", into = "String")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
-pub struct OAuthClientId(#[cfg_attr(feature = "schema", schemars(with = "String"))] Url);
+pub struct OAuthClientId(#[cfg_attr(feature = "schema", schemars(with = "String"))] Client);
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+enum Client {
+    BencherCli,
+    Document(Url),
+}
 
 #[cfg(feature = "db")]
 crate::typed_string!(OAuthClientId);
 
 impl OAuthClientId {
-    /// The host that serves the client's metadata document, which is who the client is.
-    pub fn host(&self) -> String {
-        self.0.host_str().unwrap_or_default().to_owned()
+    /// The Bencher CLI's client ID, which no URL can spell.
+    pub const BENCHER_CLI: &str = "bencher_cli";
+
+    pub fn bencher_cli() -> Self {
+        Self(Client::BencherCli)
     }
 
-    /// Where the client's metadata document is published.
-    pub fn url(&self) -> &Url {
-        &self.0
+    /// Whether this is the Bencher CLI, the client built into the server.
+    pub fn is_bencher_cli(&self) -> bool {
+        matches!(self.0, Client::BencherCli)
+    }
+
+    /// The host that serves the client's metadata document, which is who the client is.
+    /// The Bencher CLI has none.
+    pub fn host(&self) -> String {
+        self.url()
+            .and_then(Url::host_str)
+            .unwrap_or_default()
+            .to_owned()
+    }
+
+    /// Where the client's metadata document is published, for any client but the Bencher CLI.
+    pub fn url(&self) -> Option<&Url> {
+        match &self.0 {
+            Client::BencherCli => None,
+            Client::Document(url) => Some(url),
+        }
     }
 }
 
@@ -38,8 +64,10 @@ impl TryFrom<String> for OAuthClientId {
     type Error = ValidError;
 
     fn try_from(client_id: String) -> Result<Self, Self::Error> {
-        if let Some(url) = parse(&client_id) {
-            Ok(Self(url))
+        if client_id == Self::BENCHER_CLI {
+            Ok(Self(Client::BencherCli))
+        } else if let Some(url) = parse(&client_id) {
+            Ok(Self(Client::Document(url)))
         } else {
             Err(ValidError::OAuthClientId(client_id))
         }
@@ -77,19 +105,25 @@ impl FromStr for OAuthClientId {
 
 impl fmt::Display for OAuthClientId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.0.as_str())
+        f.write_str(self.as_ref())
     }
 }
 
 impl AsRef<str> for OAuthClientId {
     fn as_ref(&self) -> &str {
-        self.0.as_str()
+        match &self.0 {
+            Client::BencherCli => Self::BENCHER_CLI,
+            Client::Document(url) => url.as_str(),
+        }
     }
 }
 
 impl From<OAuthClientId> for String {
     fn from(client_id: OAuthClientId) -> Self {
-        client_id.0.into()
+        match client_id.0 {
+            Client::BencherCli => OAuthClientId::BENCHER_CLI.to_owned(),
+            Client::Document(url) => url.into(),
+        }
     }
 }
 
@@ -142,6 +176,36 @@ mod tests {
         ] {
             client_id.parse::<OAuthClientId>().unwrap_err();
         }
+    }
+
+    // Kills a client ID that spells the Bencher CLI's some other way, which an outside app could
+    // then publish a document for.
+    #[test]
+    fn bencher_cli_is_one_spelling() {
+        let cli: OAuthClientId = "bencher_cli".parse().unwrap();
+        assert!(cli.is_bencher_cli());
+        assert_eq!(cli.as_ref(), "bencher_cli");
+        assert_eq!(cli.url(), None);
+        assert_eq!(cli.host(), "");
+        for other in [
+            "Bencher_CLI",
+            "bencher_cli ",
+            "bencher-cli",
+            "https://bencher.dev/bencher_cli",
+        ] {
+            assert!(
+                !other
+                    .parse::<OAuthClientId>()
+                    .is_ok_and(|client_id| client_id.is_bencher_cli()),
+                "{other}"
+            );
+        }
+        assert!(
+            !"https://client.example/oauth/client.json"
+                .parse::<OAuthClientId>()
+                .unwrap()
+                .is_bencher_cli()
+        );
     }
 
     #[test]

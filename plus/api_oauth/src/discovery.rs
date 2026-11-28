@@ -6,8 +6,9 @@ use http::Response;
 use serde::Serialize;
 
 use crate::{
-    AUTHORIZATION_CODE, AUTHORIZATION_CODE_RESPONSE, REFRESH_TOKEN, S256, oauth_server,
-    openid_provider, response::metadata,
+    AUTHORIZATION_CODE, AUTHORIZATION_CODE_RESPONSE, Authority, REFRESH_TOKEN, S256, oauth_server,
+    openid_provider,
+    response::{json, metadata},
 };
 
 const AUTHORIZE_PATH: &str = "/oauth/authorize";
@@ -18,6 +19,8 @@ const JWKS_PATH: &str = "/oauth/jwks.json";
 const DOCUMENTATION: &str = "https://bencher.dev/docs/how-to/mcp/";
 /// Every scope that reaches the MCP server.
 const SCOPES: [OAuthScope; 2] = [OAuthScope::ProjectsRead, OAuthScope::ProjectsWrite];
+/// Every scope the Bencher CLI is granted.
+const CLI_SCOPES: [OAuthScope; 2] = [OAuthScope::Admin, OAuthScope::User];
 /// The scopes that ask who the user is, granted only when ID tokens are signed.
 const IDENTITY_SCOPES: [OAuthScope; 3] =
     [OAuthScope::Openid, OAuthScope::Email, OAuthScope::Profile];
@@ -100,11 +103,14 @@ pub async fn mcp_protected_resource_get(
 pub async fn authorization_server_options(
     rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    oauth_server(rqctx.context())?;
+    Authority::new(&rqctx)?;
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
 /// OAuth authorization server metadata (RFC 8414)
+///
+/// The configured server's, or without one, the Bencher CLI's at the URL the request reached,
+/// which no cache may keep for another request.
 #[endpoint {
     method = GET,
     path = "/.well-known/oauth-authorization-server",
@@ -113,7 +119,12 @@ pub async fn authorization_server_options(
 pub async fn authorization_server_get(
     rqctx: RequestContext<ApiContext>,
 ) -> Result<Response<Body>, HttpError> {
-    metadata(&AuthorizationServer::new(oauth_server(rqctx.context())?))
+    match Authority::new(&rqctx)? {
+        Authority::Configured(oauth) => metadata(&AuthorizationServer::new(oauth)),
+        // Made from the request, so `no-store`: a cache could serve it to a request that reached
+        // another URL.
+        Authority::Cli(issuer) => json(&CliAuthorizationServer::new(&issuer)),
+    }
 }
 
 #[endpoint {
@@ -242,6 +253,46 @@ impl<'a> AuthorizationServer<'a> {
                 .collect(),
             service_documentation: DOCUMENTATION,
             openid,
+        }
+    }
+}
+
+/// The metadata of a server that serves the Bencher CLI alone: no outside app's metadata document,
+/// and no `iss` in the authorization response, since the consent that sends it reaches the API by
+/// the console's relay and not at the URL the CLI chose.
+#[derive(Serialize)]
+struct CliAuthorizationServer<'a> {
+    issuer: &'a OAuthIssuer,
+    authorization_endpoint: String,
+    token_endpoint: String,
+    revocation_endpoint: String,
+    response_types_supported: [&'static str; 1],
+    response_modes_supported: [&'static str; 1],
+    grant_types_supported: [&'static str; 2],
+    code_challenge_methods_supported: [&'static str; 1],
+    token_endpoint_auth_methods_supported: [&'static str; 1],
+    revocation_endpoint_auth_methods_supported: [&'static str; 1],
+    client_id_metadata_document_supported: bool,
+    authorization_response_iss_parameter_supported: bool,
+    scopes_supported: [OAuthScope; 2],
+}
+
+impl<'a> CliAuthorizationServer<'a> {
+    fn new(issuer: &'a OAuthIssuer) -> Self {
+        Self {
+            issuer,
+            authorization_endpoint: format!("{issuer}{AUTHORIZE_PATH}"),
+            token_endpoint: format!("{issuer}{TOKEN_PATH}"),
+            revocation_endpoint: format!("{issuer}{REVOKE_PATH}"),
+            response_types_supported: [AUTHORIZATION_CODE_RESPONSE],
+            response_modes_supported: ["query"],
+            grant_types_supported: [AUTHORIZATION_CODE, REFRESH_TOKEN],
+            code_challenge_methods_supported: [S256],
+            token_endpoint_auth_methods_supported: [NO_CLIENT_AUTHENTICATION],
+            revocation_endpoint_auth_methods_supported: [NO_CLIENT_AUTHENTICATION],
+            client_id_metadata_document_supported: false,
+            authorization_response_iss_parameter_supported: false,
+            scopes_supported: CLI_SCOPES,
         }
     }
 }

@@ -23,6 +23,10 @@
 - `bencher up` puts the API and Console containers on a labeled `bencher` network, which `bencher down` removes
 - Add the `plus.rate_limiting.email` server config option for the sign in emails one requester can have sent to an email address, and cap each address at twice its daily limit
 - **BREAKING CHANGE** Bencher MCP's `submit_run` now needs a signed-in caller: an anonymous call is asked to sign in, or is refused when the server has no OAuth
+- The Bencher CLI signs in through the browser as an OAuth client built into every Bencher Plus server, `bencher_cli`, with no `plus.oauth` config: PKCE, a loopback redirect or the Console's code page at `/auth/cli`, its device's hostname on the consent page, a 1 hour access token, a rotating refresh token, and a grant of at most a year
+- The Bencher CLI's access token acts as its user at the REST API, with server admin only for a grant a server admin approved as admin and only while they are one, but not to manage keys or Connected Apps, change an email address, a plan, a member's role, or a user's admin or lock, or invite, and never at Bencher MCP; another app's OAuth token still answers `401 Unauthorized` at the REST API
+- Approving the Bencher CLI needs a browser session signed in within the last 10 minutes, and Connected Apps lists each of its sign ins by device, on every Bencher Plus server
+- Without `plus.oauth`, `GET /.well-known/oauth-authorization-server` describes the Bencher CLI's client alone, at the URL the API is reached at
 
 ## `v0.6.17`
 - **BREAKING CHANGE** The MCP `query_perf` tool now returns the plot the console draws, at most 64 lines with a `total` of every line the query names, takes an optional `metrics` list of the metric names to draw, and links to the plot in Bencher; MCP Apps hosts, such as Claude and ChatGPT, show it as an interactive plot

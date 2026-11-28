@@ -3,7 +3,7 @@
 此部分让 ChatGPT、claude.ai 和 Claude Code 等 MCP 客户端可以通过 OAuth [登录 Bencher MCP](/zh/docs/how-to/mcp/)。
 API 服务器会成为它们的 OAuth 授权服务器，用户在位于 `console.url` 的 Bencher Console 上批准每个应用。
 整个部分是可选的。
-如果未指定，则 OAuth 处于关闭状态：其端点返回 `404 Not Found`，并且 Bencher MCP 只接受 API 密钥和匿名请求。
+如果未指定，外部应用无法登录：MCP 服务器的元数据以及用户信息、密钥和 OpenID 路由返回 `404 Not Found`，并且 Bencher MCP 只接受 API 密钥和匿名请求。Bencher CLI 仍可通过授权服务器的元数据及其授权、令牌和撤销端点登录，使用请求所到达的 URL。
 
 | 名称 | 示例 | 默认值 | 必需 | 描述 |
 | :---: | :---: | :---: | :---: | :---: |

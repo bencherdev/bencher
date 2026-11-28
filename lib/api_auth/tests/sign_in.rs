@@ -20,7 +20,7 @@ use std::{
 use async_trait::async_trait;
 use bencher_api_tests::{
     LogCapture, TestServer, TestServerOptions,
-    helpers::{oauth_server, seed_oauth_authorization, user_organizations},
+    helpers::{oauth_server, seed_cli_authorization, seed_oauth_authorization, user_organizations},
     session_cookie,
 };
 use bencher_json::{
@@ -1026,6 +1026,22 @@ async fn context_is_carried_to_the_proof() {
         user.authorization, None,
         "a request no longer pending is dropped"
     );
+}
+
+// Kills a sign-in on a server without `plus.oauth` that drops the Bencher CLI's pending request,
+// which every Plus server answers.
+#[tokio::test]
+async fn cli_request_is_carried_without_oauth_config() {
+    let (server, log) = test_server(TestServerOptions::default()).await;
+    server.signup("Member", "member@example.com").await;
+    let authorization = seed_cli_authorization(&server, DateTime::now());
+    let user = prove_with(
+        &server,
+        &log,
+        &json!({"email": "member@example.com", "authorization": authorization.to_string()}),
+    )
+    .await;
+    assert_eq!(user.authorization, Some(authorization));
 }
 
 // A sign-in finished by "Sign in as", in a browser other than the one that started it, carries

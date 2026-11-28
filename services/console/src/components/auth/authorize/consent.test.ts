@@ -6,6 +6,7 @@ import {
 	Refusal,
 	answerUrl,
 	consentRequest,
+	errorCode,
 	pastedKey,
 	refusal,
 } from "./consent";
@@ -79,6 +80,33 @@ describe("refusal", () => {
 		expect(refusal(401, undefined)).toBe(Refusal.Failed);
 		expect(refusal(500, Credential.Session)).toBe(Refusal.Failed);
 		expect(refusal(undefined, undefined)).toBe(Refusal.Failed);
+	});
+
+	// Kills a stale sign-in or a reader without server admin read as a raw
+	// failure, or a key's refusal read as either.
+	test("names the Bencher CLI's refusals by their code", () => {
+		expect(refusal(403, Credential.Session, "fresh_sign_in")).toBe(
+			Refusal.FreshSignIn,
+		);
+		expect(refusal(403, Credential.Session, "not_a_server_admin")).toBe(
+			Refusal.NotAdmin,
+		);
+		expect(refusal(403, Credential.Key, "fresh_sign_in")).toBe(
+			Refusal.KeyRefused,
+		);
+		expect(refusal(401, Credential.Session, "fresh_sign_in")).toBe(
+			Refusal.SessionEnded,
+		);
+		expect(refusal(403, Credential.Session, "other")).toBe(Refusal.Failed);
+	});
+});
+
+describe("errorCode", () => {
+	test("is the body's string error_code, if any", () => {
+		expect(errorCode('{"error_code":"fresh_sign_in"}')).toBe("fresh_sign_in");
+		expect(errorCode('{"error_code":7}')).toBeUndefined();
+		expect(errorCode("{}")).toBeUndefined();
+		expect(errorCode("not json")).toBeUndefined();
 	});
 });
 

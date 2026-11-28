@@ -11,6 +11,8 @@ const PROJECTS_WRITE: &str = "projects:write";
 const OPENID: &str = "openid";
 const EMAIL: &str = "email";
 const PROFILE: &str = "profile";
+const USER: &str = "user";
+const ADMIN: &str = "admin";
 
 /// An OAuth scope: what a client may do on the user's behalf.
 #[typeshare::typeshare]
@@ -32,6 +34,13 @@ pub enum OAuthScope {
     /// The user's name.
     #[serde(rename = "profile")]
     Profile,
+    /// Act as the user over the REST API, without server admin: the Bencher CLI's alone.
+    #[serde(rename = "user")]
+    User,
+    /// Act as the user over the REST API with their server admin, while they hold it: the Bencher
+    /// CLI's alone, approved only by a server admin.
+    #[serde(rename = "admin")]
+    Admin,
 }
 
 /// A set of OAuth scopes, written sorted and space-delimited.
@@ -59,7 +68,19 @@ impl OAuthScope {
     pub fn is_project(self) -> bool {
         match self {
             Self::ProjectsRead | Self::ProjectsWrite => true,
-            Self::Openid | Self::Email | Self::Profile => false,
+            Self::Openid | Self::Email | Self::Profile | Self::User | Self::Admin => false,
+        }
+    }
+
+    /// Whether this scope is one only the Bencher CLI is granted.
+    pub fn is_cli(self) -> bool {
+        match self {
+            Self::User | Self::Admin => true,
+            Self::ProjectsRead
+            | Self::ProjectsWrite
+            | Self::Openid
+            | Self::Email
+            | Self::Profile => false,
         }
     }
 
@@ -67,7 +88,12 @@ impl OAuthScope {
     fn covers(self, scope: Self) -> bool {
         match self {
             Self::ProjectsWrite => matches!(scope, Self::ProjectsRead | Self::ProjectsWrite),
-            Self::ProjectsRead | Self::Openid | Self::Email | Self::Profile => scope == self,
+            Self::ProjectsRead
+            | Self::Openid
+            | Self::Email
+            | Self::Profile
+            | Self::User
+            | Self::Admin => scope == self,
         }
     }
 }
@@ -88,6 +114,8 @@ impl FromStr for OAuthScope {
             OPENID => Ok(Self::Openid),
             EMAIL => Ok(Self::Email),
             PROFILE => Ok(Self::Profile),
+            USER => Ok(Self::User),
+            ADMIN => Ok(Self::Admin),
             _ => Err(ValidError::OAuthScope(scope.to_owned())),
         }
     }
@@ -101,6 +129,8 @@ impl AsRef<str> for OAuthScope {
             Self::Openid => OPENID,
             Self::Email => EMAIL,
             Self::Profile => PROFILE,
+            Self::User => USER,
+            Self::Admin => ADMIN,
         }
     }
 }

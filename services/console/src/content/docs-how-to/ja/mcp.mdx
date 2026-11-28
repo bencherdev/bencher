@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "ホスト型 MCP サーバーで AI エージェントやアシスタントを Bencher に接続し、ベンチマークデータの照会と結果の送信を行います"
 heading: "Bencher MCP の使い方"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-11-27T23:40:00Z"
+modified: "2026-11-28T03:23:37Z"
 sortOrder: 11
 ---
 
@@ -65,7 +65,7 @@ Bencher はアプリが接続するたびに確認し、プロジェクト API �
 
 アプリは最長 1 年間接続されたままになります。
 ユーザー API キーで承認したアプリは、そのキーが取り消されるか期限切れになった時点で切断されます。
-OAuth アクセストークンは Bencher MCP 用です:
+アプリの OAuth アクセストークンは Bencher MCP 用です:
 Bencher API は `401 Unauthorized` で拒否します。
 
 Bencher Self-Hosted では、API サーバーの [`plus.oauth`](/ja/docs/reference/server-config/#plusoauth) セクションを設定するとサインインできるようになります。

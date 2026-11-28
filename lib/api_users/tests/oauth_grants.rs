@@ -216,9 +216,9 @@ async fn oauth_grants_need_a_session() {
     assert_eq!(status, StatusCode::NO_CONTENT);
 }
 
-// Without OAuth configured there are no grants to manage, so the endpoints are not there
+// Without OAuth configured, the Bencher CLI still signs in, so its grants are managed there too
 #[tokio::test]
-async fn oauth_grants_not_found_without_oauth() {
+async fn oauth_grants_without_oauth_config() {
     let server = TestServer::new_with_options(TestServerOptions {
         clock: Some(Clock::Custom(Arc::new(now))),
         ..TestServerOptions::default()
@@ -229,13 +229,21 @@ async fn oauth_grants_not_found_without_oauth() {
         .await;
     let grant = grant(&server, &user, None);
 
-    for (method, path) in [
-        (Method::GET, format!("/v0/users/{}/oauth/grants", user.slug)),
-        (Method::GET, grant_path(&user, &grant)),
-        (Method::DELETE, grant_path(&user, &grant)),
+    for (method, path, expected) in [
+        (
+            Method::GET,
+            format!("/v0/users/{}/oauth/grants", user.slug),
+            StatusCode::OK,
+        ),
+        (Method::GET, grant_path(&user, &grant), StatusCode::OK),
+        (
+            Method::DELETE,
+            grant_path(&user, &grant),
+            StatusCode::NO_CONTENT,
+        ),
     ] {
         let (status, ..) = request(&server, method, &path, server.fresh_session(&user)).await;
-        assert_eq!(status, StatusCode::NOT_FOUND);
+        assert_eq!(status, expected);
     }
 }
 

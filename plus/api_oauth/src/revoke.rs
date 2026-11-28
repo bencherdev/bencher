@@ -9,9 +9,9 @@ use dropshot::{Body, HttpError, RequestContext, UntypedBody, endpoint};
 use http::{HeaderMap, Response};
 
 use crate::{
+    Authority,
     client::{CLIENT_CREDENTIALS, CLIENT_ID, authenticates_client},
     error::{InvalidRequest, TokenError, charge_address, charge_refusal},
-    oauth_server,
     params::Params,
     response::empty,
 };
@@ -35,7 +35,7 @@ const PARAMETERS: [&str; 6] = [
 pub async fn oauth_revoke_options(
     rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    oauth_server(rqctx.context())?;
+    Authority::new(&rqctx)?;
     Ok(Endpoint::cors(&[Post.into()]))
 }
 
@@ -54,11 +54,13 @@ pub async fn oauth_revoke_post(
     body: UntypedBody,
 ) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
-    let oauth = oauth_server(context)?;
+    let authority = Authority::new(&rqctx)?;
     let outcome = revoke(context, rqctx.request.headers(), body.as_bytes()).await;
     match outcome.and_then(|revocation| revocation.record(&rqctx)) {
         Ok(()) => empty(),
-        Err(error) => error.charged(&rqctx).into_response(&rqctx.log, oauth),
+        Err(error) => error
+            .charged(&rqctx)
+            .into_response(&rqctx.log, authority.issuer()),
     }
 }
 

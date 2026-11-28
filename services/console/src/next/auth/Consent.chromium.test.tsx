@@ -54,7 +54,31 @@ const effects = (
 	session: async () => session,
 	decide: vi.fn(decide),
 	signOut: vi.fn(async () => {}),
+	signInAgain: vi.fn(async () => true),
 	leave: vi.fn(),
+});
+
+const CLI: JsonOAuthAuthorization = {
+	uuid: UUID,
+	client: { id: "bencher_cli", host: "", name: "Bencher CLI", verified: true },
+	device: "ada-macbook",
+	redirect: { host: "127.0.0.1", loopback: true },
+	scopes: [OAuthScope.User],
+	expiration: "2026-11-06T00:10:00Z",
+};
+
+const ADMIN: JsonSession = {
+	...SESSION,
+	user: { ...SESSION.user, admin: true },
+};
+
+const cliEffects = (
+	authorization: JsonOAuthAuthorization,
+	session: JsonSession | undefined,
+	decide?: ConsentEffects["decide"],
+): ConsentEffects => ({
+	...effects(session, decide),
+	view: async () => ({ authorization }),
 });
 
 let dispose: (() => void) | undefined;
@@ -205,4 +229,179 @@ test("a 401 for the session forgets the reader, and one for a key does not", asy
 		await effects.decide(UUID, { approve: true, key: "k" }, Credential.Key),
 	).toEqual({ refusal: Refusal.KeyRefused });
 	expect(forget).toHaveBeenCalledTimes(2);
+});
+
+// Kills the Bencher CLI drawn as an outside app, without its device, or with
+// a pasted key to approve it, which only a browser session can.
+test("the Bencher CLI shows its device and approves with the session", async () => {
+	const fx = cliEffects(CLI, SESSION);
+	mount(fx);
+	await expect
+		.element(page.getByRole("heading", { level: 1 }))
+		.toHaveTextContent("Connect Bencher CLI");
+	await expect.element(page.getByText("Verified")).toBeVisible();
+	await expect.element(page.getByText("ada-macbook")).toBeVisible();
+	await expect
+		.element(page.getByText("Act as you, without server admin"))
+		.toBeVisible();
+	await expect.element(page.getByText("this computer")).toBeVisible();
+	await expect.element(page.getByText(EMAIL)).toBeVisible();
+	await button("Approve").click();
+	expect(fx.decide).toHaveBeenCalledExactlyOnceWith(
+		UUID,
+		{ approve: true },
+		Credential.Session,
+	);
+	expect(fx.leave).toHaveBeenCalledExactlyOnceWith(TO);
+});
+
+test("signed out, the Bencher CLI offers no pasted key", async () => {
+	mount(cliEffects(CLI, undefined));
+	await expect
+		.element(
+			page.getByRole("heading", { level: 2, name: "Sign in to approve" }),
+		)
+		.toBeVisible();
+	await expect
+		.element(page.getByLabelText("Or approve with a user API key"))
+		.not.toBeInTheDocument();
+	await expect.element(button("Deny")).toBeVisible();
+});
+
+// Kills an admin request a reader without server admin can approve, or one
+// that reads as an ordinary grant.
+test("as admin, only a server admin can approve", async () => {
+	const admin = { ...CLI, scopes: [OAuthScope.Admin, OAuthScope.User] };
+	mount(cliEffects(admin, SESSION));
+	await expect
+		.element(page.getByRole("heading", { level: 1 }))
+		.toHaveTextContent("Connect Bencher CLI as admin");
+	await expect
+		.element(page.getByText("Act as you, with server admin"))
+		.toBeVisible();
+	await expect
+		.element(page.getByRole("alert"))
+		.toHaveTextContent("Not a server admin");
+	await expect.element(button("Approve")).toBeDisabled();
+	dispose?.();
+	document.body.replaceChildren();
+
+	const fx = cliEffects(admin, ADMIN);
+	mount(fx);
+	await expect.element(button("Approve")).toBeEnabled();
+	await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
+	await button("Approve").click();
+	expect(fx.decide).toHaveBeenCalledOnce();
+});
+
+// Kills an approval that a stale sign-in leaves refused, or that asks to sign
+// in again more than once.
+test("a stale sign-in signs in again, then approves", async () => {
+	let answers = 0;
+	const fx = cliEffects(CLI, SESSION, async (): Promise<Answer> => {
+		answers += 1;
+		return answers === 1 ? { refusal: Refusal.FreshSignIn } : { to: TO };
+	});
+	mount(fx);
+	await button("Approve").click();
+	await expect
+		.element(page.getByRole("status"))
+		.toHaveTextContent("Returning you to this computer");
+	expect(fx.signInAgain).toHaveBeenCalledOnce();
+	expect(fx.decide).toHaveBeenCalledTimes(2);
+	expect(fx.leave).toHaveBeenCalledExactlyOnceWith(TO);
+});
+
+test("a sign-in not done again leaves the approval to retry", async () => {
+	const fx = cliEffects(
+		CLI,
+		SESSION,
+		async (): Promise<Answer> => ({ refusal: Refusal.FreshSignIn }),
+	);
+	fx.signInAgain = vi.fn(async () => false);
+	mount(fx);
+	await button("Approve").click();
+	await expect
+		.element(page.getByRole("alert"))
+		.toHaveTextContent("Sign in again to approve.");
+	expect(fx.decide).toHaveBeenCalledOnce();
+	await expect.element(button("Approve")).toBeEnabled();
+});
+
+// Kills a refusal for a stale sign-in read as a raw failure.
+test("a 403 for a stale sign-in reads as one", async () => {
+	const fetch = vi.fn(
+		async () =>
+			new Response(JSON.stringify({ error_code: "fresh_sign_in" }), {
+				status: 403,
+			}),
+	);
+	const effects = consentEffects(async () => {}, vi.fn(), fetch);
+	expect(
+		await effects.decide(UUID, { approve: true }, Credential.Session),
+	).toEqual({ refusal: Refusal.FreshSignIn });
+});
+
+// Kills a session that ended at the Bencher CLI's Approve told to paste a
+// key, which its page never takes.
+test("a session that ended at the Bencher CLI's Approve asks only to sign in", async () => {
+	mount(
+		cliEffects(
+			CLI,
+			SESSION,
+			async (): Promise<Answer> => ({ refusal: Refusal.SessionEnded }),
+		),
+	);
+	await button("Approve").click();
+	await expect
+		.element(page.getByRole("alert"))
+		.toHaveTextContent("Your session ended. Sign in again.");
+	await expect
+		.element(page.getByRole("alert"))
+		.not.toHaveTextContent("user API key");
+});
+
+// Kills a Deny of the Bencher CLI's request bound for the code page that
+// sends the browser there, where only a code belongs, a Console on localhost
+// included, whose code page the API calls a loopback redirect, and one bound
+// for the CLI's own listener that does not leave for it.
+test("Deny of the CLI's code page request ends here", async () => {
+	const codePage = {
+		...CLI,
+		redirect: { host: "localhost", loopback: true },
+	};
+	const fx = cliEffects(
+		codePage,
+		SESSION,
+		async (): Promise<Answer> => ({
+			to: `${location.origin}/auth/cli?error=access_denied&state=s`,
+		}),
+	);
+	mount(fx);
+	await button("Deny").click();
+	expect(fx.decide).toHaveBeenCalledExactlyOnceWith(
+		UUID,
+		{ approve: false },
+		undefined,
+	);
+	await expect
+		.element(page.getByRole("heading", { level: 1 }))
+		.toHaveTextContent("Connect an app to Bencher");
+	await expect
+		.element(page.getByRole("alert"))
+		.toHaveTextContent("This request to connect was already answered.");
+	expect(fx.leave).not.toHaveBeenCalled();
+	dispose?.();
+	document.body.replaceChildren();
+
+	const listener =
+		"http://127.0.0.1:53682/callback?error=access_denied&state=s";
+	const loopback = cliEffects(
+		CLI,
+		SESSION,
+		async (): Promise<Answer> => ({ to: listener }),
+	);
+	mount(loopback);
+	await button("Deny").click();
+	expect(loopback.leave).toHaveBeenCalledExactlyOnceWith(listener);
 });

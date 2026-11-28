@@ -3,8 +3,8 @@ use std::net::IpAddr;
 use bencher_cimd::{OAuthClientError, Throttled};
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
 use bencher_json::{
-    OAuthAuthorizationUuid, OAuthClientId, OAuthCodeChallenge, OAuthMaxAge, OAuthNonce,
-    OAuthRedirectUri, OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes,
+    NonEmpty, OAuthAuthorizationUuid, OAuthClientId, OAuthCodeChallenge, OAuthDevice, OAuthMaxAge,
+    OAuthNonce, OAuthRedirectUri, OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes,
 };
 use bencher_schema::{
     context::{ApiContext, OAuthServer},
@@ -15,10 +15,10 @@ use bencher_schema::{
 use dropshot::{Body, HttpError, RequestContext, endpoint};
 use http::Response;
 use slog::Logger;
-use url::Url;
+use url::{Host, Url};
 
 use crate::{
-    AUTHORIZATION_CODE_RESPONSE, S256, oauth_server,
+    AUTHORIZATION_CODE_RESPONSE, Authority, S256, bencher_cli_name, cli_scopes,
     params::Params,
     response::{client_redirect, consent_page, found},
     supported_scopes,
@@ -35,7 +35,10 @@ const RESOURCE: &str = "resource";
 const NONCE: &str = "nonce";
 const MAX_AGE: &str = "max_age";
 const PROMPT: &str = "prompt";
-const PARAMETERS: [&str; 11] = [
+const DEVICE: &str = "device";
+/// The console page that shows the Bencher CLI its code, when it cannot listen on loopback.
+const CODE_PAGE_PATH: &str = "/auth/cli";
+const PARAMETERS: [&str; 12] = [
     RESPONSE_TYPE,
     CLIENT_ID,
     REDIRECT_URI,
@@ -47,6 +50,7 @@ const PARAMETERS: [&str; 11] = [
     NONCE,
     MAX_AGE,
     PROMPT,
+    DEVICE,
 ];
 
 #[endpoint {
@@ -57,7 +61,7 @@ const PARAMETERS: [&str; 11] = [
 pub async fn oauth_authorize_options(
     rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    oauth_server(rqctx.context())?;
+    Authority::new(&rqctx)?;
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
@@ -75,10 +79,10 @@ pub async fn oauth_authorize_get(
     rqctx: RequestContext<ApiContext>,
 ) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
-    let oauth = oauth_server(context)?;
+    let authority = Authority::new(&rqctx)?;
     let remote_ip = context.remote_ip(&rqctx.log, rqctx.request.headers());
     let query = rqctx.request.uri().query().unwrap_or_default();
-    let location = match authorize(&rqctx.log, context, oauth, remote_ip, query).await {
+    let location = match authorize(&rqctx.log, context, &authority, remote_ip, query).await {
         Ok(uuid) => {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthAuthorize);
@@ -108,7 +112,7 @@ pub async fn oauth_authorize_get(
 async fn authorize(
     log: &Logger,
     context: &ApiContext,
-    oauth: &OAuthServer,
+    authority: &Authority<'_>,
     remote_ip: Option<IpAddr>,
     query: &str,
 ) -> Result<OAuthAuthorizationUuid, Refusal> {
@@ -127,36 +131,21 @@ async fn authorize(
     let client_id = client_id
         .parse::<OAuthClientId>()
         .map_err(|_err| Refusal::Page(AuthorizeError::Client))?;
-    let charge = || {
-        remote_ip.map_or(Ok(()), |remote_ip| {
-            context
-                .rate_limiting
-                .public_auth_attempt(remote_ip)
-                .map_err(|_err| Throttled)
-        })
+    let client = if client_id.is_bencher_cli() {
+        Client::cli(&context.console_url, redirect_uri)?
+    } else {
+        // Outside apps sign in only where OAuth is configured.
+        let oauth = authority
+            .configured()
+            .ok_or(Refusal::Page(AuthorizeError::Client))?;
+        Client::outside(log, context, oauth, remote_ip, &client_id, redirect_uri).await?
     };
-    let metadata = oauth
-        .clients()
-        .resolve(&client_id, &context.clock, charge)
-        .await
-        .map_err(|error| {
-            // Only the log may say why, since the reason can tell a client which internal
-            // names resolve.
-            slog::warn!(log, "OAuth client refused";
-                "client_id" => %client_id,
-                "error" => bencher_egress::error_chain(&error),
-            );
-            Refusal::Page(AuthorizeError::from(error))
-        })?;
-    let redirect_uri = redirect_uri
-        .parse::<OAuthRedirectUri>()
-        .ok()
-        .filter(|redirect_uri| metadata.admits(redirect_uri))
-        .ok_or(Refusal::Page(AuthorizeError::RedirectUri))?;
+    let redirect_uri = &client.redirect_uri;
 
     // The client and its redirect URI are trusted from here on.
+    let issuer = authority.configured().map(OAuthServer::issuer);
     let refuse_with =
-        |state, error| Refusal::client(oauth, &client_id, &redirect_uri, state, error);
+        |state, error| Refusal::client(client.vouched, redirect_uri, state, issuer, error);
     let state = params
         .value::<OAuthRequestState>(STATE)
         .map_err(|()| refuse_with(None, AuthorizeError::State))?;
@@ -172,15 +161,6 @@ async fn authorize(
     let Ok(Some(code_challenge)) = params.value::<OAuthCodeChallenge>(CODE_CHALLENGE) else {
         return Err(refuse(AuthorizeError::CodeChallenge));
     };
-    let resource = if let Some(resource) = params.get(RESOURCE) {
-        resource
-            .parse::<OAuthResource>()
-            .ok()
-            .filter(|resource| oauth.serves(resource))
-            .ok_or_else(|| refuse(AuthorizeError::Resource))?
-    } else {
-        oauth.canonical_resource().clone()
-    };
     let nonce = params
         .value::<OAuthNonce>(NONCE)
         .map_err(|()| refuse(AuthorizeError::Nonce))?;
@@ -190,18 +170,26 @@ async fn authorize(
     if let Some(error) = prompt_refusal(params.get(PROMPT)) {
         return Err(refuse(error));
     }
+    let Asked {
+        resource,
+        scope,
+        device,
+        nonce,
+        max_age,
+    } = Asked::new(authority, &client_id, &params, nonce, max_age).map_err(refuse)?;
 
     let authorization = NewOAuthAuthorization {
         client_id: client_id.clone(),
-        client_name: metadata.name.clone(),
+        client_name: client.name.clone(),
+        device,
         redirect_uri: redirect_uri.clone(),
-        scope: scopes(oauth, params.get(SCOPE)),
+        scope,
         resource,
         code_challenge,
         state: state.clone(),
         nonce,
         max_age,
-        refresh: metadata.refresh,
+        refresh: client.refresh,
     };
     let now = context.clock.now();
     write_transaction!(context, |conn| authorization.insert(conn, now)).map_err(|error| {
@@ -212,6 +200,66 @@ async fn authorize(
         );
         refuse(AuthorizeError::Server)
     })
+}
+
+/// What a request asks of the user, as this server grants it to its client.
+struct Asked {
+    resource: OAuthResource,
+    scope: OAuthScopes,
+    device: Option<OAuthDevice>,
+    nonce: Option<OAuthNonce>,
+    max_age: Option<OAuthMaxAge>,
+}
+
+impl Asked {
+    fn new(
+        authority: &Authority<'_>,
+        client_id: &OAuthClientId,
+        params: &Params<'_>,
+        nonce: Option<OAuthNonce>,
+        max_age: Option<OAuthMaxAge>,
+    ) -> Result<Self, AuthorizeError> {
+        let requested_resource = params.get(RESOURCE);
+        // Set for an outside app alone, which signs in only where OAuth is configured.
+        let outside = authority
+            .configured()
+            .filter(|_oauth| !client_id.is_bencher_cli());
+        if let Some(oauth) = outside {
+            let resource = if let Some(resource) = requested_resource {
+                resource
+                    .parse::<OAuthResource>()
+                    .ok()
+                    .filter(|resource| oauth.serves(resource))
+                    .ok_or(AuthorizeError::Resource)?
+            } else {
+                oauth.canonical_resource().clone()
+            };
+            return Ok(Self {
+                resource,
+                scope: scopes(oauth, params.get(SCOPE)),
+                device: None,
+                nonce,
+                max_age,
+            });
+        }
+        // The Bencher CLI acts for the REST API, which is no resource it names, and it signs in
+        // with no ID token to bind a nonce or a sign in time to.
+        if requested_resource.is_some() {
+            return Err(AuthorizeError::Resource);
+        }
+        let device = params
+            .value::<OAuthDevice>(DEVICE)
+            .ok()
+            .flatten()
+            .ok_or(AuthorizeError::Device)?;
+        Ok(Self {
+            resource: OAuthResource::rest(authority.issuer()),
+            scope: cli_scopes(params.get(SCOPE)),
+            device: Some(device),
+            nonce: None,
+            max_age: None,
+        })
+    }
 }
 
 /// Why consent cannot do what a request's `prompt` asks, if it cannot.
@@ -239,6 +287,102 @@ fn scopes(oauth: &OAuthServer, scope: Option<&str>) -> OAuthScopes {
     }
 }
 
+/// A client and the redirect URI it asked for, once both are trusted.
+struct Client {
+    name: NonEmpty,
+    redirect_uri: OAuthRedirectUri,
+    refresh: bool,
+    /// Whether the consent page vouches for the client at this redirect URI, so a refusal may go
+    /// back to it there.
+    vouched: bool,
+}
+
+impl Client {
+    /// The Bencher CLI, at a loopback address on any port (RFC 8252, section 7.3), or at the
+    /// console's code page. Only the CLI's own listener hears a refusal: the code page is the
+    /// console's, so a refusal shows on the consent page.
+    fn cli(console_url: &Url, redirect_uri: &str) -> Result<Self, Refusal> {
+        let redirect_uri = redirect_uri
+            .parse::<OAuthRedirectUri>()
+            .ok()
+            .filter(|redirect_uri| {
+                is_cli_loopback(redirect_uri)
+                    || redirect_uri.as_ref() == code_page(console_url).as_str()
+            })
+            .ok_or(Refusal::Page(AuthorizeError::RedirectUri))?;
+        Ok(Self {
+            name: bencher_cli_name(),
+            vouched: is_cli_loopback(&redirect_uri),
+            redirect_uri,
+            refresh: true,
+        })
+    }
+
+    /// An outside app, by the metadata it registered, fetched unless it is configured or cached.
+    async fn outside(
+        log: &Logger,
+        context: &ApiContext,
+        oauth: &OAuthServer,
+        remote_ip: Option<IpAddr>,
+        client_id: &OAuthClientId,
+        redirect_uri: &str,
+    ) -> Result<Self, Refusal> {
+        let charge = || {
+            remote_ip.map_or(Ok(()), |remote_ip| {
+                context
+                    .rate_limiting
+                    .public_auth_attempt(remote_ip)
+                    .map_err(|_err| Throttled)
+            })
+        };
+        let metadata = oauth
+            .clients()
+            .resolve(client_id, &context.clock, charge)
+            .await
+            .map_err(|error| {
+                // Only the log may say why, since the reason can tell a client which internal
+                // names resolve.
+                slog::warn!(log, "OAuth client refused";
+                    "client_id" => %client_id,
+                    "error" => bencher_egress::error_chain(&error),
+                );
+                Refusal::Page(AuthorizeError::from(error))
+            })?;
+        let redirect_uri = redirect_uri
+            .parse::<OAuthRedirectUri>()
+            .ok()
+            .filter(|redirect_uri| metadata.admits(redirect_uri))
+            .ok_or(Refusal::Page(AuthorizeError::RedirectUri))?;
+        Ok(Self {
+            name: metadata.name.clone(),
+            vouched: oauth.clients().is_verified(client_id, &redirect_uri),
+            redirect_uri,
+            refresh: metadata.refresh,
+        })
+    }
+}
+
+/// A loopback IP literal over `http` (RFC 8252, section 8.3): `localhost` could resolve elsewhere,
+/// and a listener on one of the two families would miss a browser that picks the other.
+fn is_cli_loopback(redirect_uri: &OAuthRedirectUri) -> bool {
+    let url = redirect_uri.url();
+    url.scheme() == "http"
+        && match url.host() {
+            Some(Host::Ipv4(ip)) => ip == std::net::Ipv4Addr::LOCALHOST,
+            Some(Host::Ipv6(ip)) => ip == std::net::Ipv6Addr::LOCALHOST,
+            Some(Host::Domain(_)) | None => false,
+        }
+}
+
+/// The console's code page, exactly: its origin and path, with no query or fragment.
+pub(crate) fn code_page(console_url: &Url) -> Url {
+    let mut url = console_url.clone();
+    url.set_path(CODE_PAGE_PATH);
+    url.set_query(None);
+    url.set_fragment(None);
+    url
+}
+
 /// Why an authorization request is refused, and who hears about it.
 enum Refusal {
     /// The console's error page, for a client or redirect URI that is untrusted or unverified.
@@ -248,16 +392,16 @@ enum Refusal {
 }
 
 impl Refusal {
-    /// To the client at its trusted redirect URI, only when the consent page vouches for it:
+    /// To the client at its trusted redirect URI, only when the consent page vouches for it there:
     /// anyone can register a client, so any other client's redirect could lead anywhere.
     fn client(
-        oauth: &OAuthServer,
-        client_id: &OAuthClientId,
+        vouched: bool,
         redirect_uri: &OAuthRedirectUri,
         state: Option<&OAuthRequestState>,
+        issuer: Option<&bencher_json::OAuthIssuer>,
         error: AuthorizeError,
     ) -> Self {
-        if !oauth.clients().is_verified(client_id, redirect_uri) {
+        if !vouched {
             return Self::Page(error);
         }
         let location = client_redirect(
@@ -267,7 +411,7 @@ impl Refusal {
                 ("error_description", error.description()),
             ],
             state,
-            oauth.issuer(),
+            issuer,
         );
         Self::Client(error, location)
     }
@@ -297,6 +441,7 @@ enum AuthorizeError {
     Resource,
     Nonce,
     MaxAge,
+    Device,
     ConsentRequired,
     LoginRequired,
     Server,
@@ -325,7 +470,8 @@ impl AuthorizeError {
             | Self::CodeChallengeMethod
             | Self::CodeChallenge
             | Self::Nonce
-            | Self::MaxAge => "invalid_request",
+            | Self::MaxAge
+            | Self::Device => "invalid_request",
             Self::Client | Self::ClientFetch | Self::ClientDocument => "invalid_client",
             Self::Throttled | Self::ClientBusy => "temporarily_unavailable",
             Self::RedirectUri => "invalid_redirect_uri",
@@ -355,6 +501,9 @@ impl AuthorizeError {
             Self::Resource => "The resource is not one this server issues tokens for",
             Self::Nonce => "The nonce parameter is longer than 256 bytes",
             Self::MaxAge => "The max_age parameter must be a number of seconds",
+            Self::Device => {
+                "The device parameter must be the device's hostname: 1 to 64 ASCII letters, digits, ., -, or _, starting with a letter or digit"
+            },
             Self::ConsentRequired => "The user is always asked for consent",
             Self::LoginRequired => "The user cannot be asked to sign in again",
             Self::Server => "The request could not be recorded, please try again",
@@ -372,7 +521,8 @@ impl AuthorizeError {
             | Self::CodeChallengeMethod
             | Self::CodeChallenge
             | Self::Nonce
-            | Self::MaxAge => Reason::InvalidRequest,
+            | Self::MaxAge
+            | Self::Device => Reason::InvalidRequest,
             Self::Client => Reason::InvalidClient,
             Self::ClientFetch => Reason::ClientFetch,
             Self::ClientDocument => Reason::ClientDocument,
@@ -408,28 +558,31 @@ mod tests {
         .unwrap();
         let state = "af0ifjsldkj".parse().unwrap();
 
-        let refusal = Refusal::client(
-            &oauth,
-            &"https://anyone.example/oauth/client.json".parse().unwrap(),
-            &"https://anyone.example/landing".parse().unwrap(),
-            Some(&state),
-            AuthorizeError::ResponseType,
+        let refusal = |client_id: &str, redirect_uri: &str| {
+            let client_id = client_id.parse().unwrap();
+            let redirect_uri = redirect_uri.parse().unwrap();
+            Refusal::client(
+                oauth.clients().is_verified(&client_id, &redirect_uri),
+                &redirect_uri,
+                Some(&state),
+                Some(oauth.issuer()),
+                AuthorizeError::ResponseType,
+            )
+        };
+
+        let refusal_to_anyone = refusal(
+            "https://anyone.example/oauth/client.json",
+            "https://anyone.example/landing",
         );
         assert!(matches!(
-            refusal,
+            refusal_to_anyone,
             Refusal::Page(AuthorizeError::ResponseType)
         ));
 
-        let refusal = Refusal::client(
-            &oauth,
-            &"https://chatgpt.com/oauth/client.json".parse().unwrap(),
-            &"https://chatgpt.com/connector_platform_oauth_redirect"
-                .parse()
-                .unwrap(),
-            Some(&state),
-            AuthorizeError::ResponseType,
-        );
-        let Refusal::Client(AuthorizeError::ResponseType, location) = refusal else {
+        let Refusal::Client(AuthorizeError::ResponseType, location) = refusal(
+            "https://chatgpt.com/oauth/client.json",
+            "https://chatgpt.com/connector_platform_oauth_redirect",
+        ) else {
             panic!("Expected the verified client to hear the refusal");
         };
         assert_eq!(

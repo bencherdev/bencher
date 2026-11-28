@@ -6,10 +6,10 @@ use bencher_github_client::GitHubClient;
 use bencher_google_client::GoogleClient;
 use bencher_json::{
     BranchName, BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, JwtHash, MetricName,
-    MetricUuid, OAuthAccessToken, OAuthAuthorizationUuid, OAuthGrantUuid, OAuthRefreshToken,
-    OAuthResource, OAuthScopes, OAuthTokenHash, OrganizationUuid, ParameterSet, PlanLevel,
-    ReportUuid, ResourceName, TestbedUuid, TokenUuid, UserKeyUuid, UserUuid, VariantUuid,
-    VersionUuid, system::config::JsonOAuthServer,
+    MetricUuid, OAuthAccessToken, OAuthAuthorizationUuid, OAuthClientId, OAuthGrantUuid,
+    OAuthRefreshToken, OAuthResource, OAuthScopes, OAuthTokenHash, OrganizationUuid, ParameterSet,
+    PlanLevel, ReportUuid, ResourceName, TestbedUuid, TokenUuid, UserKeyUuid, UserUuid,
+    VariantUuid, VersionUuid, system::config::JsonOAuthServer,
 };
 use bencher_rbac::project::Role;
 use bencher_schema::{
@@ -348,6 +348,7 @@ pub fn seed_oauth_authorization(server: &TestServer, now: DateTime) -> OAuthAuth
             .parse()
             .expect("Invalid client ID"),
         client_name: "Example Client".parse().expect("Invalid client name"),
+        device: None,
         redirect_uri: "https://client.example/callback"
             .parse()
             .expect("Invalid redirect URI"),
@@ -360,6 +361,34 @@ pub fn seed_oauth_authorization(server: &TestServer, now: DateTime) -> OAuthAuth
         nonce: None,
         max_age: None,
         refresh: false,
+    }
+    .insert(&mut server.db_conn(), now)
+    .expect("Failed to insert OAuth authorization")
+}
+
+/// The Bencher CLI's request to connect, seeded directly into the database as `/oauth/authorize`
+/// leaves one, pending from `now`.
+#[expect(
+    clippy::expect_used,
+    reason = "test helper inserting an OAuth authorization"
+)]
+pub fn seed_cli_authorization(server: &TestServer, now: DateTime) -> OAuthAuthorizationUuid {
+    NewOAuthAuthorization {
+        client_id: OAuthClientId::bencher_cli(),
+        client_name: "Bencher CLI".parse().expect("Invalid client name"),
+        device: Some("ada-macbook".parse().expect("Invalid device")),
+        redirect_uri: "http://127.0.0.1:53682/callback"
+            .parse()
+            .expect("Invalid redirect URI"),
+        scope: "user".parse().expect("Invalid scope"),
+        resource: "http://localhost:6610".parse().expect("Invalid resource"),
+        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+            .parse()
+            .expect("Invalid code challenge"),
+        state: None,
+        nonce: None,
+        max_age: None,
+        refresh: true,
     }
     .insert(&mut server.db_conn(), now)
     .expect("Failed to insert OAuth authorization")

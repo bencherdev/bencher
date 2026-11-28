@@ -3,7 +3,7 @@ use schemars::JsonSchema;
 
 use serde::{Deserialize, Serialize};
 
-/// An OAuth access token, accepted only by the MCP server.
+/// An OAuth access token: an outside app's for the MCP server, or the Bencher CLI's for the REST API.
 #[typeshare::typeshare]
 #[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

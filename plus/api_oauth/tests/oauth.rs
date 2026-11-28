@@ -1055,38 +1055,23 @@ async fn protocol_responses_allow_any_origin() {
     }
 }
 
-// Every new route is absent until OAuth is configured.
+// The MCP server's own routes are absent until OAuth is configured. The authorization server's
+// routes answer the Bencher CLI on every server, which `tests/cli.rs` covers.
 #[tokio::test]
 async fn oauth_unset_is_not_found() {
     let server = TestServer::new().await;
-    let authorization = format!("/v0/oauth/authorizations/{}", OAuthAuthorizationUuid::new());
-    let authorize = format!(
-        "/oauth/authorize?{}",
-        form_urlencoded::Serializer::new(String::new())
-            .extend_pairs(request())
-            .finish()
-    );
     for (method, path) in [
-        (Method::GET, authorize.as_str()),
-        (Method::OPTIONS, "/oauth/authorize"),
-        (Method::GET, authorization.as_str()),
-        (Method::POST, authorization.as_str()),
-        (Method::OPTIONS, authorization.as_str()),
-        (Method::POST, "/oauth/token"),
-        (Method::OPTIONS, "/oauth/token"),
-        (Method::POST, "/oauth/revoke"),
-        (Method::OPTIONS, "/oauth/revoke"),
         (Method::GET, "/.well-known/oauth-protected-resource"),
         (Method::OPTIONS, "/.well-known/oauth-protected-resource"),
         (Method::GET, "/.well-known/oauth-protected-resource/mcp"),
         (Method::OPTIONS, "/.well-known/oauth-protected-resource/mcp"),
-        (Method::GET, "/.well-known/oauth-authorization-server"),
-        (Method::OPTIONS, "/.well-known/oauth-authorization-server"),
+        (Method::GET, "/.well-known/openid-configuration"),
+        (Method::GET, "/oauth/jwks.json"),
+        (Method::GET, "/oauth/userinfo"),
     ] {
         let resp = server
             .client
             .request(method.clone(), server.api_url(path))
-            .json(&json!({"approve": false}))
             .send()
             .await
             .expect("Request failed");
@@ -2562,6 +2547,7 @@ impl Harness {
         NewOAuthAuthorization {
             client_id: client_id.parse().expect("Invalid client ID"),
             client_name: "Pending".parse().expect("Invalid client name"),
+            device: None,
             redirect_uri: redirect_uri.parse().expect("Invalid redirect URI"),
             scope: "projects:read".parse().expect("Invalid scope"),
             resource: oauth_resource(),

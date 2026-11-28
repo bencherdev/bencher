@@ -111,8 +111,7 @@ impl bencher_endpoint::Registrar for Api {
     }
 }
 
-/// The app's request to connect a sign-in returns to, dropped unless apps can connect and it
-/// still waits for an answer.
+/// The app's request to connect a sign-in returns to, dropped unless it still waits for an answer.
 #[cfg(feature = "plus")]
 async fn pending_authorization(
     context: &bencher_schema::ApiContext,
@@ -123,9 +122,6 @@ async fn pending_authorization(
     let Some(uuid) = authorization else {
         return Ok(None);
     };
-    if context.oauth.is_none() {
-        return Ok(None);
-    }
     let pending = QueryOAuthAuthorization::is_pending(
         bencher_schema::public_conn!(context),
         uuid,

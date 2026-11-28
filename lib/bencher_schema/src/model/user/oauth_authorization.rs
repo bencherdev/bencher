@@ -1,8 +1,8 @@
 use bencher_json::{
     DateTime, JsonOAuthAuthorization, JsonOAuthAuthorizationClient, JsonOAuthAuthorizationRedirect,
     NonEmpty, OAuthAuthorizationUuid, OAuthClientId, OAuthCodeChallenge, OAuthCodeHash,
-    OAuthGrantUuid, OAuthMaxAge, OAuthNonce, OAuthRedirectUri, OAuthRequestState, OAuthResource,
-    OAuthScopes,
+    OAuthDevice, OAuthGrantUuid, OAuthMaxAge, OAuthNonce, OAuthRedirectUri, OAuthRequestState,
+    OAuthResource, OAuthScopes,
 };
 use chrono::TimeDelta;
 use diesel::{
@@ -38,6 +38,8 @@ pub struct QueryOAuthAuthorization {
     pub uuid: OAuthAuthorizationUuid,
     pub client_id: OAuthClientId,
     pub client_name: NonEmpty,
+    /// The device the Bencher CLI asks from, by its hostname.
+    pub device: Option<OAuthDevice>,
     /// Where the client asked to receive the answer, which it registered.
     pub redirect_uri: OAuthRedirectUri,
     pub scope: OAuthScopes,
@@ -228,6 +230,7 @@ impl QueryOAuthAuthorization {
                 schema::oauth_grant::user_key_id.eq(self.user_key_id),
                 schema::oauth_grant::client_id.eq(&self.client_id),
                 schema::oauth_grant::client_name.eq(&self.client_name),
+                schema::oauth_grant::device.eq(&self.device),
                 schema::oauth_grant::scope.eq(&self.scope),
                 schema::oauth_grant::resource.eq(&self.resource),
                 schema::oauth_grant::created.eq(now),
@@ -246,12 +249,15 @@ impl QueryOAuthAuthorization {
         Ok(query_grant)
     }
 
-    pub fn into_json(self, oauth: &OAuthServer) -> JsonOAuthAuthorization {
+    /// The request as the consent page shows it. The Bencher CLI is always verified, and an outside
+    /// app only by the configured `oauth` server.
+    pub fn into_json(self, oauth: Option<&OAuthServer>) -> JsonOAuthAuthorization {
         let Self {
             id: _,
             uuid,
             client_id,
             client_name,
+            device,
             redirect_uri,
             scope,
             resource: _,
@@ -272,10 +278,14 @@ impl QueryOAuthAuthorization {
             uuid,
             client: JsonOAuthAuthorizationClient {
                 host: client_id.host(),
-                verified: oauth.clients().is_verified(&client_id, &redirect_uri),
+                verified: client_id.is_bencher_cli()
+                    || oauth.is_some_and(|oauth| {
+                        oauth.clients().is_verified(&client_id, &redirect_uri)
+                    }),
                 id: client_id,
                 name: client_name,
             },
+            device,
             redirect: JsonOAuthAuthorizationRedirect {
                 host: redirect_uri.host(),
                 loopback: redirect_uri.is_loopback(),
@@ -318,6 +328,7 @@ pub enum OAuthAnswer {
 pub struct NewOAuthAuthorization {
     pub client_id: OAuthClientId,
     pub client_name: NonEmpty,
+    pub device: Option<OAuthDevice>,
     pub redirect_uri: OAuthRedirectUri,
     pub scope: OAuthScopes,
     pub resource: OAuthResource,
@@ -344,6 +355,7 @@ impl NewOAuthAuthorization {
         let Self {
             client_id,
             client_name,
+            device,
             redirect_uri,
             scope,
             resource,
@@ -359,6 +371,7 @@ impl NewOAuthAuthorization {
                 uuid,
                 client_id,
                 client_name,
+                device,
                 redirect_uri,
                 scope,
                 resource,
@@ -381,6 +394,7 @@ struct InsertOAuthAuthorization {
     uuid: OAuthAuthorizationUuid,
     client_id: OAuthClientId,
     client_name: NonEmpty,
+    device: Option<OAuthDevice>,
     redirect_uri: OAuthRedirectUri,
     scope: OAuthScopes,
     resource: OAuthResource,

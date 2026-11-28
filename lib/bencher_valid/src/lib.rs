@@ -73,9 +73,9 @@ pub use plus::{
     ExpirationYear, GitHubAppSlug, GitHubInstallationId, GitHubInstallationPermission,
     GitHubRepositoryId, GitHubRepositoryName, GracePeriod, HeartbeatTimeout, ImageReference,
     LastFour, LicensedPlanId, Memory, MeteredPlanId, OAuthAccessToken, OAuthClientId, OAuthCode,
-    OAuthCodeChallenge, OAuthCodeHash, OAuthCodeVerifier, OAuthIssuer, OAuthMaxAge, OAuthNonce,
-    OAuthRedirectUri, OAuthRefreshToken, OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes,
-    OAuthTokenHash, OperatingSystem, PkceVerifier, PlanLevel, PlanStatus, PollTimeout,
+    OAuthCodeChallenge, OAuthCodeHash, OAuthCodeVerifier, OAuthDevice, OAuthIssuer, OAuthMaxAge,
+    OAuthNonce, OAuthRedirectUri, OAuthRefreshToken, OAuthRequestState, OAuthResource, OAuthScope,
+    OAuthScopes, OAuthTokenHash, OperatingSystem, PkceVerifier, PlanLevel, PlanStatus, PollTimeout,
     ProviderAccountId, ProviderNonce, ProviderState, ProviderStateHash, RunnerKey, RunnerKeyHash,
     Sandbox, Sha256, Timeout, UpdateChannel,
 };
