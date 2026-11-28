@@ -1,13 +1,11 @@
 #![cfg(feature = "plus")]
 
-use bencher_valid::{
-    CardCvc, CardNumber, Email, Entitlements, ExpirationMonth, ExpirationYear, NonEmpty, PlanLevel,
-};
+use bencher_valid::{CardCvc, CardNumber, Email, ExpirationMonth, ExpirationYear, NonEmpty};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{OrganizationResourceId, OrganizationUuid, UserUuid};
+use crate::{OrganizationResourceId, UserUuid};
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,10 +29,8 @@ pub struct JsonCard {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewCheckout {
+    /// The organization a Pro checkout is for.
     pub organization: OrganizationResourceId,
-    pub level: PlanLevel,
-    pub entitlements: Option<Entitlements>,
-    pub self_hosted: Option<OrganizationUuid>,
 }
 
 #[typeshare::typeshare]

@@ -32,6 +32,7 @@ import {
 	away,
 	bandIndex,
 	bands,
+	bareMetalRate,
 	bareMetalUsd,
 	cardExpiry,
 	cardName,
@@ -103,14 +104,14 @@ const OrgBilling = () => {
 			</div>
 			<Show when={enrollment()?.status === "enrolled"}>
 				<Banner status="success" role="status">
-					Enrolled in {levelName(enrollment()?.level ?? "")}
+					Enrolled in Pro
 				</Banner>
 			</Show>
 			<Show when={enrollment()?.status === "failed"}>
 				<Banner status="error" role="alert">
 					{failureOf(
 						enrollment()?.error,
-						`Bencher did not record the ${levelName(enrollment()?.level ?? "")} plan`,
+						"Bencher did not record the Pro plan",
 					)}
 				</Banner>
 			</Show>
@@ -162,10 +163,9 @@ const useCheckoutReturn = (organization: () => string) => {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const search = location.search;
-	const level = new URLSearchParams(search).get("level") ?? "";
 	const [enrollment, setEnrollment] = createSignal<Enrollment | undefined>(
 		new URLSearchParams(search).has("checkout")
-			? { status: "enrolling", level }
+			? { status: "enrolling" }
 			: undefined,
 	);
 	const [recorded, setRecorded] = createSignal(false);
@@ -194,7 +194,7 @@ const useCheckoutReturn = (organization: () => string) => {
 					setEnrollment,
 				),
 			)
-			.catch((error) => setEnrollment({ status: "failed", level, error }));
+			.catch((error) => setEnrollment({ status: "failed", error }));
 	});
 	return { enrollment, recorded };
 };
@@ -220,6 +220,7 @@ const UsageView = (props: { usage: Usage; name: string }) => {
 								<Payment
 									organization={props.usage.organization}
 									card={plan().card}
+									collectionMethod={plan().collection_method}
 								/>
 							)}
 						</Show>
@@ -266,6 +267,15 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 	const client = useQueryClient();
 	const params = useParams();
 	const level = () => levelName(props.plan.level);
+	// Only Pro's price is a conversation where it stops.
+	const contact = () =>
+		props.plan.level === "pro" ? (
+			<a class="lnk" href={CONTACT}>
+				Get in touch
+			</a>
+		) : (
+			"-"
+		);
 	const used = () => props.usage.active_series ?? 0;
 	const minutes = () => props.usage.runner_minutes ?? 0;
 	const tiers = () => props.plan.tiers ?? [];
@@ -372,19 +382,18 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 							<span class="figure">
 								{formatCount(minutes())} <small class="muted">min</small>
 							</span>
-							<span class="muted sm">
-								{usd(bareMetalUsd(minutes()))} at {BARE_METAL_RATE}
-							</span>
+							<Show when={props.plan.runner_minute}>
+								{(rate) => (
+									<span class="muted sm">
+										{usd(bareMetalUsd(minutes(), rate()))} at{" "}
+										{bareMetalRate(rate())}
+									</span>
+								)}
+							</Show>
 						</Stat>
 						<Stat label="Estimated bill">
 							<span class="figure">
-								{bill() === undefined ? (
-									<a class="lnk" href={CONTACT}>
-										Get in touch
-									</a>
-								) : (
-									usd(bill() ?? 0)
-								)}
+								{bill() === undefined ? contact() : usd(bill() ?? 0)}
 							</span>
 							<span class="muted sm">Charged {shortDay(end())}</span>
 						</Stat>
@@ -401,19 +410,13 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 								</tr>
 							</thead>
 							<tbody>
-								<For each={bands(tiers())}>
+								<For each={bands(tiers(), props.plan.level)}>
 									{(band, index) => {
 										const now = () => index() === bandIndex(tiers(), used());
 										return (
 											<tr>
 												<td>{now() ? <b>{band.range}</b> : band.range}</td>
-												<td>
-													{band.price ?? (
-														<a class="lnk" href={CONTACT}>
-															Get in touch
-														</a>
-													)}
-												</td>
+												<td>{band.price ?? contact()}</td>
 												<td class="act">
 													<Show when={now()}>
 														<span class="newtag">This period</span>
@@ -428,7 +431,11 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 					</Show>
 				</div>
 			</section>
-			<Payment organization={props.usage.organization} card={props.plan.card} />
+			<Payment
+				organization={props.usage.organization}
+				card={props.plan.card}
+				collectionMethod={props.plan.collection_method}
+			/>
 			<Show when={!props.plan.cancel_at_period_end}>
 				<section class="setcard danger" aria-labelledby="sec-danger">
 					<div class="setcard-head">
@@ -503,7 +510,12 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 	);
 };
 
-const Payment = (props: { organization: string; card: JsonCardDetails }) => {
+const Payment = (props: {
+	organization: string;
+	card?: JsonCardDetails | null | undefined;
+	/** Compared as text, so the generated enums stay out of the page. */
+	collectionMethod: string;
+}) => {
 	const { api } = useAccount();
 	const [opening, setOpening] = createSignal(false);
 	const [failure, setFailure] = createSignal<string>();
@@ -530,13 +542,26 @@ const Payment = (props: { organization: string; card: JsonCardDetails }) => {
 			</div>
 			<div class="setcard-body">
 				<div class="toolbar">
-					<div>
-						<b>{cardName(props.card)}</b>
-						<div class="muted sm">{cardExpiry(props.card)}</div>
-					</div>
+					<Show
+						when={props.card}
+						fallback={
+							<b>
+								{props.collectionMethod === "send_invoice"
+									? "Invoice"
+									: "Automatic payment"}
+							</b>
+						}
+					>
+						{(card) => (
+							<div>
+								<b>{cardName(card())}</b>
+								<div class="muted sm">{cardExpiry(card())}</div>
+							</div>
+						)}
+					</Show>
 					<span class="spacer" />
 					<Button disabled={opening()} onClick={update}>
-						Update card
+						{props.card ? "Update card" : "Manage billing"}
 					</Button>
 				</div>
 				<Show when={failure()}>
@@ -563,7 +588,6 @@ const Plans = (props: { organization: string }) => {
 		try {
 			const { data } = await api.send<JsonCheckout>("POST", "/v0/checkout", {
 				organization: props.organization,
-				level: "pro",
 			});
 			away.to(data.url);
 		} catch (error) {
