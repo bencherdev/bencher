@@ -15,6 +15,10 @@ targets = [
 ]
 
 [advisories]
+# A transitive unmaintained crate has no known bug and only its parent can replace it
+unmaintained = "workspace"
+# A transitive unsound crate can cause undefined behavior in our process
+unsound = "all"
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
 # rustsec advisory exemptions
@@ -24,11 +28,12 @@ ignore = [
     "RUSTSEC-2023-0071",
     # https://rustsec.org/advisories/RUSTSEC-2024-0436.html
     "RUSTSEC-2024-0436",
-    # https://rustsec.org/advisories/RUSTSEC-2025-0134.html
-    "RUSTSEC-2025-0134",
     # https://rustsec.org/advisories/RUSTSEC-2026-0387.html
     # `p256` signs in the API only for a Self-Hosted license at plan creation, one per organization with a Stripe call in the same request, and every verification uses a public key
     "RUSTSEC-2026-0387",
+    # https://rustsec.org/advisories/RUSTSEC-2026-0543.html
+    # `chrono` is unmaintained with no known vulnerability, the workspace and many of its dependencies use it directly, and a chrono vulnerability comes as a new advisory ID that still fails
+    "RUSTSEC-2026-0543",
 ]
 
 [bans]
