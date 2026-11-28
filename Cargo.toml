@@ -102,8 +102,8 @@ criterion = "0.8"
 css-inline = { version = "0.23", default-features = false }
 dashmap = "6.1"
 derive_more = { version = "2.1", features = ["display"] }
-diesel = { version = "2.3", default-features = false, features = ["r2d2", "serde_json", "with-deprecated"] }
-diesel_migrations = "2.3"
+diesel = { version = "2.4", default-features = false, features = ["r2d2", "serde_json", "std", "with-deprecated"] }
+diesel_migrations = "2.4"
 dotenvy = "0.15"
 email_address = "0.2"
 flate2 = "1.1"
@@ -125,10 +125,10 @@ icu_properties = "2.4"
 jsonschema = { version = "0.60", default-features = false }
 jsonwebtoken = { version = "11.1", features = ["rust_crypto"] }
 libc = "0.2"
-# https://github.com/diesel-rs/diesel/blob/4007d771b1e808839f771a693f6bae9f821f0e64/diesel/Cargo.toml#L53
+# https://github.com/diesel-rs/diesel/blob/48acdc824d1eb93beaf169541b8dab3d3e5eaf3c/diesel/Cargo.toml#L61
 # https://github.com/tauri-apps/tauri/discussions/6183
 # Always needed for Windows and all other targets when building a distroless image
-libsqlite3-sys = { version = "0.38.2", features = ["bundled"] }
+libsqlite3-sys = { version = "0.40.0", features = ["bundled"] }
 literally = "0.1"
 mail-send = { version = "0.6", default-features = false, features = ["builder", "aws_lc_rs", "tls12"] }
 minijinja = "3.0"

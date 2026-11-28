@@ -189,17 +189,23 @@ impl Fixture {
         let key = server.create_user_key(&user, "live").await;
         let project_key = server.create_project_key(&user, &project, "live").await.key;
         let revoked_key = server.create_user_key(&user, "revoked").await;
-        set_user_key(
-            server,
-            &revoked_key,
-            schema::user_key::revoked.eq(Some(now(server))),
-        );
+        let rows = diesel::update(
+            schema::user_key::table
+                .filter(schema::user_key::key_hash.eq(UserKeyHash::from(&revoked_key).as_ref())),
+        )
+        .set(schema::user_key::revoked.eq(Some(now(server))))
+        .execute(&mut server.db_conn())
+        .expect("Failed to revoke the user key");
+        assert_eq!(rows, 1);
         let expired_key = server.create_user_key(&user, "expired").await;
-        set_user_key(
-            server,
-            &expired_key,
-            schema::user_key::expiration.eq(now(server)),
-        );
+        let rows = diesel::update(
+            schema::user_key::table
+                .filter(schema::user_key::key_hash.eq(UserKeyHash::from(&expired_key).as_ref())),
+        )
+        .set(schema::user_key::expiration.eq(now(server)))
+        .execute(&mut server.db_conn())
+        .expect("Failed to expire the user key");
+        assert_eq!(rows, 1);
         let locked_key = server.create_user_key(&locked, "locked").await;
 
         let rowless_legacy = mint(server, &user.email, 1);
@@ -357,19 +363,4 @@ fn mint(server: &TestServer, email: &Email, nonce: u32) -> Jwt {
         .token_key()
         .new_api_key(email.clone(), u32::MAX - nonce)
         .expect("Failed to mint a token")
-}
-
-fn set_user_key<V>(server: &TestServer, key: &UserKey, value: V)
-where
-    V: diesel::query_builder::AsChangeset<Target = schema::user_key::table>,
-    V::Changeset: diesel::query_builder::QueryFragment<diesel::sqlite::Sqlite>,
-{
-    let hash = UserKeyHash::from(key);
-    let rows = diesel::update(
-        schema::user_key::table.filter(schema::user_key::key_hash.eq(hash.as_ref())),
-    )
-    .set(value)
-    .execute(&mut server.db_conn())
-    .expect("Failed to update the user key");
-    assert_eq!(rows, 1);
 }
