@@ -2,14 +2,17 @@
 
 ## Basic Usage
 
+First, the user signs in to the Bencher Console, creates an API key, and sets
+`BENCHER_API_KEY` to it in their own shell (see [Authentication](./SKILL.md#authentication)).
+Every example below assumes it is set.
+
 Run a benchmark command and submit results:
 ```bash
 bencher run "cargo bench"
 ```
 
-Without an API key, results go to a public `unclaimed` project that anyone can
-view and post results to. With a user API key, the project goes under the user's
-personal organization.
+With a user API key, the project goes under the user's personal organization.
+With a project API key, add `--project`.
 
 The default adapter (`magic`) auto-detects the output format.
 To verify your setup without a real benchmark harness:

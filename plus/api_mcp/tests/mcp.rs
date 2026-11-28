@@ -845,8 +845,9 @@ async fn mcp_tool_results_match_output_schemas() {
 }
 
 // With OAuth on, every tool declares the scope it needs and whether an anonymous caller may use it,
-// and means it: a tool that declares `noauth` works anonymously on a public project (or, for
-// `submit_run`, an unclaimed one) without a challenge, and every other tool asks to sign in
+// and means it: only the read tools other than `list_projects` declare `noauth` and work
+// anonymously on a public project without a challenge, and every other tool, `submit_run` to an
+// unclaimed project included, asks to sign in
 #[tokio::test]
 async fn mcp_tools_declare_how_to_sign_in() {
     let server = TestServer::new_with_options(TestServerOptions {
@@ -881,6 +882,18 @@ async fn mcp_tools_declare_how_to_sign_in() {
             schemes.contains(&json!({"type": "oauth2", "scopes": [scope]})),
             "{name}: {schemes:?}"
         );
+        assert_eq!(
+            schemes.contains(&json!({"type": "noauth"})),
+            scope == "projects:read" && name != "list_projects",
+            "{name}: {schemes:?}"
+        );
+        if name == "submit_run" {
+            assert_eq!(
+                schemes,
+                &[json!({"type": "oauth2", "scopes": ["projects:write"]})],
+                "{name}"
+            );
+        }
 
         let arguments = if name == "submit_run" {
             json!({

@@ -662,6 +662,91 @@ async fn oauth_anonymous_caller_signs_in() {
     assert!(message["result"].get("_meta").is_none(), "{message}");
 }
 
+// An anonymous `submit_run` is asked to sign in like every other tool that writes, in either style,
+// and creates nothing, even for a run that names no claimed project
+#[tokio::test]
+async fn oauth_anonymous_submit_run_signs_in() {
+    let server = server_with(Some(oauth_server())).await;
+    let before = run_rows(&server);
+    let submit_run = tool_call("submit_run", &unclaimed_run());
+
+    let resp = post(&server, None, &submit_run).await;
+    assert_sign_in(
+        resp,
+        "projects:read projects:write",
+        "Sign in to Bencher to change projects",
+    )
+    .await;
+    let resp = post_as_chatgpt(&server, None, submit_run).await;
+    assert_chatgpt_challenge(
+        resp,
+        &format!(
+            r#"Bearer resource_metadata="{RESOURCE_METADATA}", error="insufficient_scope", error_description="Sign in to Bencher to change projects", scope="projects:read projects:write""#
+        ),
+    )
+    .await;
+
+    assert_eq!(run_rows(&server), before);
+}
+
+// Without OAuth, an anonymous `submit_run` is refused with a `401` and no challenge,
+// and creates nothing
+#[tokio::test]
+async fn anonymous_submit_run_refused_without_oauth() {
+    let server = server_with(None).await;
+    let before = run_rows(&server);
+
+    let resp = post(&server, None, &tool_call("submit_run", &unclaimed_run())).await;
+    assert!(
+        resp.headers().get(WWW_AUTHENTICATE).is_none(),
+        "Unexpected challenge: {resp:?}"
+    );
+    let error = tool_error(resp).await;
+    assert!(error.starts_with("401"), "Expected 401 error: {error}");
+
+    assert_eq!(run_rows(&server), before);
+}
+
+// A signed-in `submit_run` still runs: an OAuth token that may write, a project key, and a user key
+#[tokio::test]
+async fn oauth_signed_in_submit_run() {
+    let server = server_with(Some(oauth_server())).await;
+    let user = server
+        .signup("OAuth Runner", "oauth-runner@example.com")
+        .await;
+    let org = server.create_org(&user, "OAuth Runner Org").await;
+    let project = server
+        .create_project(&user, &org, "OAuth Runner Project")
+        .await;
+    let key = server
+        .create_project_key(&user, &project, "oauth-runner-key")
+        .await;
+    let grant = grant(&server, &user, "projects:write");
+    let slug: &str = project.slug.as_ref();
+    let mut run = unclaimed_run();
+    run["project"] = json!(slug);
+
+    for bearer in [
+        grant.access_token.as_ref(),
+        key.key.as_ref(),
+        user.token.as_str(),
+    ] {
+        let report = tool_content(call_tool(&server, bearer, "submit_run", &run).await).await;
+        assert_eq!(report["project"]["slug"], slug, "{report}");
+    }
+    let reports = tool_content(
+        call_tool(
+            &server,
+            &user.token,
+            "list_reports",
+            &json!({"project": slug}),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(reports["total_count"], 3, "{reports}");
+}
+
 // The server instructions mention signing in only once OAuth is configured
 #[tokio::test]
 async fn oauth_instructions_mention_sign_in() {
@@ -1127,6 +1212,36 @@ async fn answer(resp: reqwest::Response) -> (StatusCode, Option<String>, Vec<u8>
         .map(str::to_owned);
     let body = resp.bytes().await.expect("Missing body").to_vec();
     (status, challenge, body)
+}
+
+/// A run that names a project no one has claimed, which anyone may post to over REST.
+fn unclaimed_run() -> Value {
+    json!({
+        "project": "oauth-unclaimed",
+        "context": {"bencher.dev/v0/repo/name": "oauth-unclaimed"},
+        "start_time": "2025-01-01T00:00:00Z",
+        "end_time": "2025-01-01T00:01:00Z",
+        "results": ["{\"oauth_bench\": {\"latency\": {\"value\": 88.0}}}"]
+    })
+}
+
+/// How many organizations, projects, and reports the server holds.
+#[expect(clippy::expect_used, reason = "test helper counting rows")]
+fn run_rows(server: &TestServer) -> (i64, i64, i64) {
+    let mut conn = server.db_conn();
+    let organizations = schema::organization::table
+        .count()
+        .get_result(&mut conn)
+        .expect("Failed to count organizations");
+    let projects = schema::project::table
+        .count()
+        .get_result(&mut conn)
+        .expect("Failed to count projects");
+    let reports = schema::report::table
+        .count()
+        .get_result(&mut conn)
+        .expect("Failed to count reports");
+    (organizations, projects, reports)
 }
 
 #[expect(clippy::expect_used, reason = "test helper hiding a project")]

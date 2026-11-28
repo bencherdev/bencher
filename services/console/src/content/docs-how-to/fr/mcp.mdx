@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "Connectez des agents et assistants IA à Bencher avec le serveur MCP hébergé pour interroger les données de benchmark et soumettre des résultats"
 heading: "Comment utiliser Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-28T19:00:00Z"
+modified: "2026-11-27T23:40:00Z"
 sortOrder: 11
 ---
 
@@ -112,7 +112,7 @@ Les requêtes anonymes partagent une limite de débit par adresse IP, tandis que
 Lorsqu'OAuth est configuré sur le serveur, Bencher MCP demande à votre client de se connecter lorsqu'un appel d'outil anonyme le nécessite :
 
 - Lire un projet privé. Un projet qui n'existe pas reçoit la même réponse, donc un projet ou un ID mal saisi, même au sein d'un projet public, vous demande aussi de vous connecter.
-- Appeler un outil qui écrit, sauf `submit_run` vers un [projet `unclaimed`](/fr/docs/how-to/claim/#projets-unclaimed).
+- Appeler un outil qui écrit, y compris `submit_run`.
 - Lister les projets d'une organisation avec `list_projects`.
 - Dépasser la limite de débit anonyme.
 

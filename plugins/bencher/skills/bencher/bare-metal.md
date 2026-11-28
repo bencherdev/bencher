@@ -5,6 +5,9 @@ eliminating noisy-neighbor effects from shared CI runners.
 
 ## Quick Start
 
+Every example here assumes the user has signed in to the Bencher Console and set
+`BENCHER_API_KEY` to an API key (see [Authentication](./SKILL.md#authentication)).
+
 The simplest bare metal run uses the built-in noise measurement tool:
 ```bash
 bencher run --image alpine:latest "bencher noise"
