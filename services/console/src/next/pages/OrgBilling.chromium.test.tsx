@@ -406,8 +406,8 @@ describe("a paid plan", () => {
 	});
 
 	// Kills an Enterprise plan drawn as Pro, its own overage band drawn as a
-	// conversation, its bill estimated as a volume price, or its bare metal billed at
-	// the published rate.
+	// conversation, its bill estimated as a volume price, its bare metal billed at
+	// the published rate, or a cancel offered in place of the Enterprise contact.
 	test("an Enterprise plan prices its own bands, bill, and bare metal", async () => {
 		open({
 			...PRO,
@@ -430,12 +430,32 @@ describe("a paid plan", () => {
 			"0 to 1,000$2,500 a month",
 			"1,001 or more$0.40 a seriesThis period",
 		]);
+		const danger = region("Danger");
 		await expect
-			.element(region("Danger"))
-			.toHaveTextContent(
-				"Enterprise ends with this period on Nov 1, 2026, and Pompeii LLC moves to the Free plan.",
-			);
+			.element(danger.getByRole("link", { name: "Contact us" }))
+			.toHaveAttribute("href", "mailto:enterprise@bencher.dev");
+		expect(
+			danger.getByRole("button", { name: "Cancel plan" }).query(),
+		).toBeNull();
+		expect(danger.element().textContent).not.toContain("ends with this period");
 		expect(region("Pro Plan").query()).toBeNull();
+	});
+
+	// Kills a Resume plan offered for an Enterprise plan whose end staff scheduled,
+	// a contact link in its place that is not the Enterprise mailto, or a request sent.
+	test("an Enterprise plan that ends offers Contact us in place of Resume plan", async () => {
+		const { sent } = open({
+			...PRO,
+			plan: { ...ENTERPRISE, cancel_at_period_end: true },
+		} as unknown as JsonUsage);
+		const plan = region("Enterprise Plan");
+		await expect.element(plan).toHaveTextContent("Ends Nov 1, 2026");
+		await expect
+			.element(plan.getByRole("link", { name: "Contact us" }))
+			.toHaveAttribute("href", "mailto:enterprise@bencher.dev");
+		expect(button("Resume plan").query()).toBeNull();
+		expect(region("Danger").query()).toBeNull();
+		expect(sent).toEqual([]);
 	});
 
 	// Kills an Enterprise price without bands estimated as a conversation, which only

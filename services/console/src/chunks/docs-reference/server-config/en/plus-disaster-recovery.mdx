@@ -2,6 +2,10 @@
 
 This section specifies the disaster recovery configuration.
 Bencher supports continuously replicating all database changes.
+On Bencher Self-Hosted, disaster recovery requires a valid Bencher Plus _Enterprise_ license for at least one organization on the server.
+The API server checks for a valid license when it starts,
+and with this section and without a valid license, it refuses to start.
+A running API server keeps replicating until it restarts.
 
 There are two replication `scheme`s:
 - `file`: Replicate to a local file path

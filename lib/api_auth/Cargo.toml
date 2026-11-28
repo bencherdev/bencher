@@ -24,7 +24,7 @@ plus = [
     "bencher_schema/plus",
     "bencher_token?/plus",
 ]
-sentry = ["bencher_schema/sentry"]
+sentry = ["dep:sentry", "bencher_schema/sentry"]
 otel = ["dep:bencher_otel", "bencher_schema/otel"]
 
 [dependencies]
@@ -42,6 +42,7 @@ diesel.workspace = true
 dropshot.workspace = true
 http.workspace = true
 schemars.workspace = true
+sentry = { workspace = true, optional = true }
 serde.workspace = true
 serde_json = { workspace = true, optional = true }
 serde_urlencoded = { workspace = true, optional = true }

@@ -568,6 +568,25 @@ async fn confirm_refuses_a_locked_user() {
     assert_eq!(confirmed(&server, &ada), None);
 }
 
+// Fails if a confirmed email joins the organization with its single sign-on domain when that
+// organization has no valid license.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn confirm_joins_no_unlicensed_single_sign_on() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "admin@example.com").await;
+    let org = server.create_org(&admin, "Unlicensed Sso Org").await;
+    bencher_api_tests::helpers::insert_sso(&server, &org, "unlicensed.example.com");
+    let ada = server.signup("Ada", ADA).await;
+    let asking = server.session(&ada);
+    let secret = server.email_change(&ada, Some(&asking), "ada@unlicensed.example.com");
+
+    let (status, json) = post(&server, CONFIRM, &secret, Some(&asking), SAME_ORIGIN).await;
+    assert_eq!(status, StatusCode::OK, "{json}");
+    assert_eq!(email_of(&server, &ada), "ada@unlicensed.example.com");
+    assert!(!bencher_api_tests::helpers::user_organizations(&server, ada.uuid).contains(&org.uuid));
+}
+
 // A confirmed email joins the organization whose single sign-on domain it has, as an email proof
 // at sign-in does, and the user's OAuth grants and provider pins stay.
 #[cfg(feature = "plus")]

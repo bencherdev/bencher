@@ -25,8 +25,9 @@ afterEach(() => {
 const open = (
 	answer?: Parameters<typeof fakeApi>[0],
 	flush?: () => Promise<void>,
+	read?: Parameters<typeof fakeApi>[1],
 ) => {
-	const { api, sent } = fakeApi(answer);
+	const { api, sent } = fakeApi(answer, read);
 	const left: string[] = [];
 	const mounted = mount(
 		() => (
@@ -135,6 +136,53 @@ test("a refused delete says why and keeps everything", async () => {
 	expect(localStorage.getItem(CLASSIC_ORGANIZATION)).toBe(
 		JSON.stringify(ORGANIZATION),
 	);
+});
+
+/** A plan read that answers with a plan at `level` in `status`, as the API's usage does. */
+const planned = (level: string, status: string) => async () =>
+	({
+		data: { kind: "cloud_metered", plan: { level, status } },
+		headers: new Headers(),
+	}) as never;
+
+const contact = () =>
+	page.getByRole("alertdialog").getByRole("link", { name: "Contact us" });
+
+// Kills a delete offered for an organization whose Enterprise plan is live,
+// which the API refuses, a contact link in its place that is not the
+// Enterprise mailto, and a Pro organization that loses its delete to it.
+test("a live Enterprise plan offers Contact us in place of the delete", async () => {
+	const enterprise = open(
+		undefined,
+		undefined,
+		planned("enterprise", "active"),
+	);
+	await expect
+		.element(contact())
+		.toHaveAttribute("href", "mailto:enterprise@bencher.dev");
+	expect(enterprise.confirm.query()).toBeNull();
+	dispose?.();
+
+	const pro = open(undefined, undefined, planned("pro", "active"));
+	await pro.typed.fill("pompeii-llc");
+	await expect.element(pro.confirm).toBeEnabled();
+	expect(contact().query()).toBeNull();
+});
+
+// Kills a refusal for an Enterprise plan, sent before the plan read answers,
+// that says nothing or not the API's reason.
+test("a delete the API refuses for its Enterprise plan shows the API's message", async () => {
+	const message =
+		"An organization with an Enterprise plan cannot be deleted while its contract runs. To end it, contact enterprise@bencher.dev";
+	const { left, typed, confirm } = open(async () => {
+		throw new ApiError(403, "forbidden", JSON.stringify({ message }));
+	});
+	await typed.fill("pompeii-llc");
+	await confirm.click();
+	await expect
+		.element(page.getByRole("alert"))
+		.toHaveTextContent(`Bencher did not delete the organization: ${message}`);
+	expect(left).toEqual([]);
 });
 
 // Kills a confirm that sends the delete again while the first is in flight.

@@ -20,7 +20,7 @@ use std::{
 use async_trait::async_trait;
 use bencher_api_tests::{
     LogCapture, TestServer, TestServerOptions,
-    helpers::{oauth_server, seed_oauth_authorization, user_organizations},
+    helpers::{insert_sso, oauth_server, seed_oauth_authorization, user_organizations},
     session_cookie,
 };
 use bencher_json::{
@@ -1218,34 +1218,36 @@ async fn locked_account_is_refused_at_proof() {
     assert_ended(redeem_link(&server, None, &link, true).await).await;
 }
 
-// A proof joins the organization whose SSO domain is the address's domain, for a new account and
-// for an existing one.
+// A proof joins the organization whose SSO domain is the address's domain while that organization
+// is Enterprise, for a new account and for an existing one, by a code and by a link, and never one
+// without a valid license.
+// Kills a proof that joins no SSO organization, one that joins an organization that is not
+// Enterprise, or a link that skips the join.
 #[tokio::test]
 async fn proof_joins_the_sso_organization() {
     let (server, log) = test_server(TestServerOptions::default()).await;
     let leader = server.signup("Leader", "leader@other.example").await;
     let existing = server.signup("Grace", "grace@example.com").await;
     let org = server.create_org(&leader, "Example").await;
-    let org_id: i32 = schema::organization::table
-        .filter(schema::organization::uuid.eq(org.uuid))
-        .select(schema::organization::id)
-        .first(&mut server.db_conn())
-        .expect("No organization");
-    diesel::insert_into(schema::sso::table)
-        .values((
-            schema::sso::uuid.eq("00000000-0000-4000-8000-0000000055a0"),
-            schema::sso::organization_id.eq(org_id),
-            schema::sso::domain.eq("example.com"),
-            schema::sso::created.eq(0i64),
-        ))
-        .execute(&mut server.db_conn())
-        .expect("Failed to add an SSO domain");
+    server.license_org(&leader, &org).await;
+    insert_sso(&server, &org, "example.com");
+    let unlicensed = server.create_org(&leader, "Unlicensed").await;
+    insert_sso(&server, &unlicensed, "unlicensed.example");
 
     let new = prove_with(&server, &log, &json!({"email": "ada@example.com"})).await;
     assert!(user_organizations(&server, new.user.uuid).contains(&org.uuid));
     assert!(!user_organizations(&server, existing.uuid).contains(&org.uuid));
     prove_with(&server, &log, &json!({"email": "grace@example.com"})).await;
     assert!(user_organizations(&server, existing.uuid).contains(&org.uuid));
+
+    let pending = start(&server, "linus@example.com", None).await;
+    let (_code, link) = log.sign_in();
+    let resp = redeem_link(&server, Some(&pending), &link, false).await;
+    let linked = assert_signed_in(&server, &resp).await;
+    assert!(user_organizations(&server, linked.user.uuid).contains(&org.uuid));
+
+    let outside = prove_with(&server, &log, &json!({"email": "ada@unlicensed.example"})).await;
+    assert!(!user_organizations(&server, outside.user.uuid).contains(&unlicensed.uuid));
 }
 
 // Where Turnstile is configured, it guards a start and a Resend, with the address the relay

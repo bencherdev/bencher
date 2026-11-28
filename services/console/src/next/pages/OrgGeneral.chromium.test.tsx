@@ -27,8 +27,9 @@ const open = (
 		...ORGANIZATION,
 		...(body as object),
 	}),
+	read?: Parameters<typeof fakeApi>[1],
 ) => {
-	const { api, sent } = fakeApi(answer);
+	const { api, sent } = fakeApi(answer, read);
 	const mounted = mount(() => <OrgGeneral />, { api, ...options });
 	dispose = mounted.dispose;
 	const bootstrap = () =>
@@ -164,6 +165,35 @@ test("Delete organization in the Danger box opens its confirmation", async () =>
 	await expect
 		.element(page.getByRole("alertdialog", { name: "Delete pompeii-llc?" }))
 		.toBeVisible();
+});
+
+// Kills a plan read on the page's cold load, which costs every reader a second
+// round, one for a reader who may not delete, and a delete started without it.
+test("General reads the plan only once a reader who may delete starts a delete", async () => {
+	const reads: string[] = [];
+	const read = (path: string) => {
+		reads.push(path);
+		return new Promise<never>(() => {});
+	};
+	const plan = () => reads.filter((path) => path.endsWith("/usage"));
+
+	open({ allowed: { edit: true, delete: false } }, undefined, read);
+	await expect.element(textbox("Name")).toBeVisible();
+	expect(document.querySelector('[aria-labelledby="sec-danger"]')).toBeNull();
+	expect(plan()).toEqual([]);
+	dispose?.();
+
+	open({}, undefined, read);
+	const danger = page.getByRole("region", { name: "Danger" });
+	await danger.getByRole("button", { name: "Delete organization" }).hover();
+	await expect.element(textbox("Name")).toBeVisible();
+	expect(plan()).toEqual([]);
+
+	await danger.getByRole("button", { name: "Delete organization" }).click();
+	await expect
+		.element(page.getByRole("alertdialog", { name: "Delete pompeii-llc?" }))
+		.toBeVisible();
+	await expect.poll(plan).toEqual(["/v0/organizations/o1/usage"]);
 });
 
 // Kills a copy of anything but the organization's UUID.

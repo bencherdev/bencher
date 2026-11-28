@@ -10,6 +10,7 @@ publish = false
 default = ["plus", "sentry", "otel"]
 plus = [
     "dep:api_mcp",
+    "dep:nix",
     "dep:api_oauth",
     "dep:api_oci",
     "dep:api_runners",
@@ -96,8 +97,16 @@ sentry = { workspace = true, optional = true }
 serde_json.workspace = true
 slog.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread", "signal", "sync", "time"] }
 tokio-rustls.workspace = true
+
+# Unix dependencies (SIGTERM for Litestream)
+[target.'cfg(unix)'.dependencies]
+nix = { workspace = true, features = ["signal"], optional = true }
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["io-util", "macros", "net", "process", "test-util", "time"] }
 
 [lints]
 workspace = true

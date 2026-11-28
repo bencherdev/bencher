@@ -1,9 +1,10 @@
 import type { Resource } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, expect, test } from "vitest";
+import type { Reader } from "../../../next/reader";
 import type { JsonUsage } from "../../../types/bencher";
 import { fmtDate } from "../../../util/convert";
-import { CloudSelfHostedLicensedPanel } from "./BillingPanel";
+import { CloudSelfHostedLicensedPanel, PlanCancelResume } from "./BillingPanel";
 
 let dispose: (() => void) | undefined;
 
@@ -58,4 +59,58 @@ test("a plan whose license the read left out shows its term and no license", () 
 	expect(kept.textContent).not.toContain("No license");
 	expect(kept.textContent).toContain("s1");
 	expect(copies(kept)).toBe(2);
+});
+
+/** The classic cancel and resume control, for a metered plan at `level` whose end is scheduled when `ending`. */
+const control = (level: string, ending: boolean) => {
+	const usage = (() => ({
+		kind: "cloud_metered",
+		organization: "o1",
+		plan: {
+			level,
+			cancel_at_period_end: ending,
+			current_period_end: "2026-11-01T12:00:00Z",
+		},
+	})) as unknown as Resource<null | JsonUsage>;
+	const element = document.createElement("div");
+	document.body.append(element);
+	dispose = render(
+		() => (
+			<PlanCancelResume
+				user={{} as Reader}
+				usage={usage}
+				handleRefresh={() => {}}
+			/>
+		),
+		element,
+	);
+	return element;
+};
+
+const buttons = (element: HTMLElement) =>
+	[...element.querySelectorAll("button")].map((button) => button.textContent);
+const contact = (element: HTMLElement) =>
+	element.querySelector('a[href="mailto:enterprise@bencher.dev"]')?.textContent;
+
+// Kills a cancel or resume offered for an Enterprise plan, a contact link in its place that is
+// not the Enterprise mailto, or a Pro plan that loses its controls to it.
+test("an Enterprise plan offers Contact us in place of Cancel plan and Resume plan", () => {
+	const pro = control("pro", false);
+	expect(buttons(pro)).toEqual(["Cancel plan"]);
+	expect(contact(pro)).toBeUndefined();
+	dispose?.();
+
+	const proEnding = control("pro", true);
+	expect(buttons(proEnding)).toEqual(["Resume plan"]);
+	expect(contact(proEnding)).toBeUndefined();
+	dispose?.();
+
+	const enterprise = control("enterprise", false);
+	expect(buttons(enterprise)).toEqual([]);
+	expect(contact(enterprise)).toBe("Contact us");
+	dispose?.();
+
+	const enterpriseEnding = control("enterprise", true);
+	expect(buttons(enterpriseEnding)).toEqual([]);
+	expect(contact(enterpriseEnding)).toBe("Contact us");
 });

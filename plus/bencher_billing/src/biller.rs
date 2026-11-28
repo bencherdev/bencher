@@ -453,6 +453,22 @@ impl Biller {
         Ok(session.url)
     }
 
+    /// The plan level and status of the subscription for `plan_id`, or `None` when Stripe reports
+    /// it gone (404). A transient Stripe error is returned as is.
+    pub async fn plan_level_status(
+        &self,
+        plan_id: PlanId,
+    ) -> Result<Option<(PlanLevel, PlanStatus)>, BillingError> {
+        let subscription = match self.get_subscription(&plan_id.into()).await {
+            Ok(subscription) => subscription,
+            Err(BillingError::Stripe(stripe::StripeError::Stripe(_, 404))) => return Ok(None),
+            Err(e) => return Err(e),
+        };
+        let (level, _) = plan_item(&self.products, &subscription.items.data)
+            .map_err(|e| BillingError::PlanItem(subscription.id.clone(), e))?;
+        Ok(Some((level, Self::map_status(&subscription.status))))
+    }
+
     pub async fn get_or_create_customer(
         &self,
         customer: &JsonCustomer,
@@ -1234,8 +1250,8 @@ mod tests {
     use std::collections::HashMap;
 
     use bencher_json::{
-        DateTime, Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, Secret,
-        UserUuid,
+        DateTime, Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel,
+        PlanStatus, Secret, UserUuid,
         organization::plan::{
             ACTIVE_SERIES_METER_NAME, CollectionMethod, DEFAULT_PRICE_NAME, JsonNewPlan, JsonPlan,
             JsonPlanCheckout, JsonPlanSubscription, RUNNER_MINUTES_METER_NAME, TiersMode,
@@ -1249,7 +1265,10 @@ mod tests {
     use literally::hmap;
     use pretty_assertions::assert_eq;
     use serde_json::{Value, json};
-    use stripe_billing::subscription::{CreateSubscription, CreateSubscriptionItems};
+    use stripe_billing::{
+        subscription::{CreateSubscription, CreateSubscriptionItems},
+        subscription_item::UpdateSubscriptionItem,
+    };
     use stripe_core::customer::CreateCustomer;
     use stripe_product::price::{
         CreatePrice, CreatePriceRecurring, CreatePriceRecurringInterval,
@@ -1263,11 +1282,11 @@ mod tests {
     use bencher_license::{Audience, GRACE_PERIOD, LicenseClaims, Licensor};
 
     use crate::{
-        AttachError, AttachRefusal, Attachment, Biller, HeldLicense, LicenseTerm, LicenseTermError,
-        PlanItemError, RenewalError,
+        AttachError, AttachRefusal, Attachment, Biller, BillingError, HeldLicense, LicenseTerm,
+        LicenseTermError, PlanId, PlanItemError, RenewalError,
         stripe_stub::{
             self as stub, BARE_METAL_PRODUCT, DAY, ENTERPRISE_PRODUCT, NOW, PRO_PRODUCT,
-            StripeStub, StubObjects,
+            StripeStub, StubObjects, bare_metal_item, deal_item, pro_item,
         },
     };
 
@@ -1452,7 +1471,7 @@ mod tests {
         unpriced.unit_amount = None;
         assert!(matches!(
             plan_price(&unpriced).unwrap_err(),
-            crate::BillingError::NoUnitAmount(_)
+            BillingError::NoUnitAmount(_)
         ));
     }
 
@@ -2050,40 +2069,6 @@ mod tests {
         Biller::for_stub(stub).unwrap()
     }
 
-    /// The bare metal item at two dollars an hour, in cents per minute.
-    fn bare_metal_item() -> Value {
-        stub::item(&stub::price(
-            "price_bare_metal",
-            BARE_METAL_PRODUCT,
-            "3.3333333333",
-        ))
-    }
-
-    /// A deal of 1,000 series for $2,500 a month, then $0.40 a series.
-    fn deal_item() -> Value {
-        stub::item(&stub::tiered_price(
-            "price_deal",
-            ENTERPRISE_PRODUCT,
-            "graduated",
-            &json!([
-                { "up_to": 1_000, "flat_amount": 250_000 },
-                { "up_to": null, "unit_amount": 40 },
-            ]),
-        ))
-    }
-
-    fn pro_item() -> Value {
-        stub::item(&stub::tiered_price(
-            "price_pro",
-            PRO_PRODUCT,
-            "volume",
-            &json!([
-                { "up_to": 250, "flat_amount": 10_000 },
-                { "up_to": null, "flat_amount": 0 },
-            ]),
-        ))
-    }
-
     /// A customer that Bencher made, for a Bencher user.
     fn bencher_customer(payment_method: Option<&Value>) -> Value {
         stub::customer(
@@ -2275,7 +2260,7 @@ mod tests {
                 .get_metered_plan(&"sub_bad_customer".parse().unwrap())
                 .await
                 .unwrap_err(),
-            crate::BillingError::BadUserUuid(..)
+            BillingError::BadUserUuid(..)
         ));
     }
 
@@ -2530,7 +2515,7 @@ mod tests {
                 .attach(&plan, OrganizationUuid::new(), &licensor())
                 .await
                 .unwrap_err(),
-            AttachError::Billing(crate::BillingError::BadUserUuid(..))
+            AttachError::Billing(BillingError::BadUserUuid(..))
         ));
         assert_eq!(metadata_writes(&stub).len(), 0);
         assert_eq!(stub.subscription("sub_bad_customer")["metadata"], json!({}));
@@ -2792,6 +2777,46 @@ mod tests {
             .unwrap();
         assert_eq!(unseries.plan.status, PlanStatus::Canceled);
         assert_eq!(unseries.term, Err(LicenseTermError::NoSeries));
+    }
+
+    // Fails if a subscription's plan level or status reads wrong, or one that Stripe no longer has
+    // reads as anything but gone.
+    #[tokio::test]
+    async fn plan_level_status_reads_the_level_and_status() {
+        let organization = OrganizationUuid::new();
+        let named = organization.to_string();
+        let stub = StripeStub::new(objects(
+            vec![
+                stub::cloud_plan("sub_pro", "trialing", pro_item(), &named),
+                stub::cloud_plan("sub_enterprise", "past_due", deal_item(), &named),
+                stub::self_hosted_deal("sub_deal", "active", &named),
+            ],
+            vec![],
+        ))
+        .await;
+        let biller = stub_biller(&stub);
+        let read = |id: &str| {
+            let plan_id = if id == "sub_deal" {
+                PlanId::from(id.parse::<LicensedPlanId>().unwrap())
+            } else {
+                PlanId::from(id.parse::<MeteredPlanId>().unwrap())
+            };
+            biller.plan_level_status(plan_id)
+        };
+
+        assert_eq!(
+            read("sub_pro").await.unwrap(),
+            Some((PlanLevel::Pro, PlanStatus::Trialing))
+        );
+        assert_eq!(
+            read("sub_enterprise").await.unwrap(),
+            Some((PlanLevel::Enterprise, PlanStatus::PastDue))
+        );
+        assert_eq!(
+            read("sub_deal").await.unwrap(),
+            Some((PlanLevel::Enterprise, PlanStatus::Active))
+        );
+        assert_eq!(read("sub_gone").await.unwrap(), None);
     }
 
     const TEST_BILLING_KEY: &str = "TEST_BILLING_KEY";
@@ -3285,6 +3310,71 @@ mod tests {
             .unwrap();
     }
 
+    /// A Pro plan that becomes Enterprise when staff replace its Pro price with a deal's
+    /// Enterprise price on the same subscription: with no step in Bencher, the plan reads as
+    /// Enterprise at the deal's price, keeps its bare metal item, and its active series still
+    /// post. A hosted checkout cannot be completed through the API, so the Pro plan is attached
+    /// by its subscription.
+    async fn pro_to_enterprise(
+        biller: &Biller,
+        organization: OrganizationUuid,
+        customer_id: CustomerId,
+        payment_method_id: PaymentMethodId,
+    ) {
+        let subscription_id = biller
+            .create_metered_subscription(
+                organization,
+                customer_id,
+                payment_method_id,
+                DEFAULT_PRICE_NAME.into(),
+            )
+            .await
+            .unwrap()
+            .id;
+        let metered_plan_id = attach_pro(biller, &subscription_id, organization).await;
+
+        let subscription = biller.get_subscription(&subscription_id).await.unwrap();
+        let pro_item = subscription
+            .items
+            .data
+            .iter()
+            .find(|item| {
+                biller.products.plan_level(item.price.product.id()) == Some(PlanLevel::Pro)
+            })
+            .expect("the Pro plan item");
+        UpdateSubscriptionItem::new(pro_item.id.clone())
+            .price(deal_price(biller).await)
+            .send(&biller.client)
+            .await
+            .unwrap();
+
+        let json_plan = biller.get_metered_plan(&metered_plan_id).await.unwrap();
+        assert_eq!(json_plan.level, PlanLevel::Enterprise);
+        assert_eq!(json_plan.organization, organization);
+        assert_eq!(u64::from(json_plan.unit_amount), DEAL_CENTS.unsigned_abs());
+        assert!(json_plan.runner_minute.is_some());
+        let subscription = biller.get_subscription(&subscription_id).await.unwrap();
+        assert_eq!(subscription.items.data.len(), 2);
+        assert!(
+            subscription
+                .items
+                .data
+                .iter()
+                .any(|item| biller.products.is_bare_metal(item.price.product.id()))
+        );
+
+        let billing = biller
+            .get_metered_plan_billing(&metered_plan_id)
+            .await
+            .unwrap();
+        record_series_usage(biller, &billing.customer_id, 13).await;
+
+        biller
+            .cancel_metered_subscription(&metered_plan_id)
+            .await
+            .unwrap();
+    }
+
     async fn open_portal(biller: &Biller, metered_plan_id: &MeteredPlanId) {
         let portal = biller
             .new_portal_session(metered_plan_id.clone().into(), "https://bencher.dev")
@@ -3435,6 +3525,15 @@ mod tests {
             DEFAULT_PRICE_NAME.into(),
             3,
             7,
+        ))
+        .await;
+
+        // Pro becomes Enterprise by a price swap in Stripe
+        Box::pin(pro_to_enterprise(
+            &biller,
+            OrganizationUuid::new(),
+            customer_id.clone(),
+            payment_method_id.clone(),
         ))
         .await;
 

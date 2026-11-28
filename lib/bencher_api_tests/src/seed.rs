@@ -73,27 +73,42 @@ pub struct TestProjectKey {
 
 impl TestServer {
     /// Sign up a new user, the server admin if they are the first, with a user API key.
-    /// The account is made as a sign-in that proves the email makes one, on the API's own writer.
+    /// The account is made as a sign-in that proves the email makes one, on the API's own writer,
+    /// and then joins the SSO organization at the email's domain if it is Enterprise, as a sign-in
+    /// does once its write transaction is in.
     #[expect(clippy::expect_used, reason = "test helper for user signup flow")]
     pub async fn signup(&self, name: &str, email: &str) -> TestUser {
         let email: Email = email.parse().expect("Invalid email");
         let name: UserName = name.parse().expect("Invalid name");
         let now = self.context().clock.now();
-        let mut conn = self.context().database.connection.lock().await;
-        let user = sign_up(&mut conn, name, &email, now);
-        let (insert_key, key) = InsertUserKey::from_json(
-            user.id,
-            JsonNewUserKey {
-                name: TEST_USER_KEY_NAME.parse().expect("Invalid user key name"),
-                ttl: None,
-            },
-            now,
-        )
-        .expect("Failed to make a user key");
-        diesel::insert_into(schema::user_key::table)
-            .values(&insert_key)
-            .execute(&mut *conn)
-            .expect("Failed to insert the user key");
+        let (user, key) = {
+            let mut conn = self.context().database.connection.lock().await;
+            let user = sign_up(&mut conn, name, &email, now);
+            let (insert_key, key) = InsertUserKey::from_json(
+                user.id,
+                JsonNewUserKey {
+                    name: TEST_USER_KEY_NAME.parse().expect("Invalid user key name"),
+                    ttl: None,
+                },
+                now,
+            )
+            .expect("Failed to make a user key");
+            diesel::insert_into(schema::user_key::table)
+                .values(&insert_key)
+                .execute(&mut *conn)
+                .expect("Failed to insert the user key");
+            (user, key)
+        };
+        // Boxed, since the read of whether the organization is Enterprise may call Stripe.
+        #[cfg(feature = "plus")]
+        Box::pin(QuerySso::join_domain(
+            self.log(),
+            self.context(),
+            &user,
+            &email.domain(),
+        ))
+        .await
+        .expect("Failed to join by SSO");
 
         TestUser {
             uuid: user.uuid,
@@ -408,8 +423,7 @@ impl TestServer {
 }
 
 /// Make the account a sign-in that proves `email` makes: the user, the server admin if the first,
-/// who leads a personal organization, with the email verified and every organization its SSO
-/// domain names joined.
+/// who leads a personal organization, with the email verified.
 #[expect(clippy::expect_used, reason = "test helper making an account")]
 fn sign_up(conn: &mut DbConnection, name: UserName, email: &Email, now: DateTime) -> QueryUser {
     let (_insert_user, user) =
@@ -417,8 +431,6 @@ fn sign_up(conn: &mut DbConnection, name: UserName, email: &Email, now: DateTime
     InsertUser::personal_organization(conn, &user)
         .expect("Failed to make the personal organization");
     QueryUser::verify_email(conn, user.id, email, now).expect("Failed to verify the email");
-    #[cfg(feature = "plus")]
-    QuerySso::join_all_with(conn, &user, now).expect("Failed to join by SSO");
     user
 }
 

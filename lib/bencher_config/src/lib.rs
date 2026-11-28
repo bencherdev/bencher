@@ -14,6 +14,11 @@ use bencher_json::{
 use bencher_token::DEFAULT_SECRET_KEY;
 use slog::{Logger, error, info};
 use url::Url;
+// Needed for the tests, which use them only with Bencher Plus
+#[cfg(all(test, not(feature = "plus")))]
+use diesel_migrations as _;
+#[cfg(all(test, not(feature = "plus")))]
+use tempfile as _;
 
 mod config_tx;
 mod plus;
@@ -249,6 +254,12 @@ impl Default for Config {
 impl From<Config> for JsonConfig {
     fn from(config: Config) -> Self {
         config.0
+    }
+}
+
+impl From<JsonConfig> for Config {
+    fn from(json: JsonConfig) -> Self {
+        Self(json)
     }
 }
 

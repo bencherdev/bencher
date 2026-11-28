@@ -141,6 +141,7 @@ pub async fn auth_email_change_confirm_post(
 
     #[cfg(feature = "plus")]
     QuerySso::join_all(
+        &rqctx.log,
         context,
         &query_user,
         #[cfg(feature = "otel")]

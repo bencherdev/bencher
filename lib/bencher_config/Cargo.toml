@@ -21,6 +21,8 @@ plus = [
     "bencher_schema/plus",
     "bencher_token/plus",
 ]
+# Bencher Plus with a Stripe stand-in, for the test that starts Bencher Cloud
+test-stub = ["plus", "bencher_billing/test-stub"]
 sentry = ["bencher_schema/sentry"]
 otel = ["bencher_endpoint/otel"]
 
@@ -48,6 +50,9 @@ url.workspace = true
 
 [dev-dependencies]
 bencher_github_client = { workspace = true, features = ["test-base-url"] }
+diesel_migrations.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
 
 [lints]
 workspace = true

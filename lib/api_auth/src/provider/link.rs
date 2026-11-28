@@ -8,10 +8,7 @@ use bencher_schema::{
     context::{ApiContext, DbConnection},
     error::issue_error,
     model::{
-        organization::{
-            invite::{InviteId, QueryInvite},
-            sso::QuerySso,
-        },
+        organization::invite::{InviteId, QueryInvite},
         user::{InsertUser, QueryUser, sign_in::SignInContext},
     },
     public_conn, write_transaction,
@@ -95,7 +92,7 @@ impl Rule<'_> {
     }
 
     /// Sign the user in by the provider: join what the sign-in carries, record the address the
-    /// provider verified, join by Google's hosted domain, and begin the session.
+    /// provider verified, name Google's hosted domain for the SSO join, and begin the session.
     fn sign_in(
         &self,
         conn: &mut DbConnection,
@@ -115,11 +112,11 @@ impl Rule<'_> {
             InsertUser::personal_organization(conn, &user)?;
         }
         QueryUser::verify_email(conn, user.id, &account.email, *now)?;
-        let sso_joined = if let Some(domain) = &account.hosted_domain {
-            QuerySso::join_domain_with(conn, &user, domain.as_ref(), *now)?
-        } else {
-            false
-        };
+        // Google's hosted domain; a GitHub sign-in has none.
+        let sso_domain = account
+            .hosted_domain
+            .as_ref()
+            .map(|domain| domain.as_ref().to_owned());
         let provider = Some(account.pin.provider);
         let token = begin_session(conn, &user, presented, provider, *now)?;
         Ok(Linked::SignedIn(Box::new(SignedIn {
@@ -127,7 +124,7 @@ impl Rule<'_> {
             new,
             invited,
             claimed,
-            sso_joined,
+            sso_domain,
             provider,
             token,
             context: (*carried).clone(),

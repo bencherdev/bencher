@@ -61,8 +61,9 @@ pub(super) async fn stop_container(
         .is_ok()
     {
         cli_println!("Stopping existing `{container}` container...");
+        // Room for the API to drain and then wait up to 5 s for Litestream's last sync.
         let options = Some(StopContainerOptions {
-            t: Some(5),
+            t: Some(15),
             ..Default::default()
         });
         docker

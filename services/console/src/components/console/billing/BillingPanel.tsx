@@ -360,22 +360,33 @@ const ResumePlanButton = (props: {
 	);
 };
 
-// Shared cancel/resume control for any Bencher Cloud metered plan.
-const PlanCancelResume = (props: {
+// Shared cancel/resume control for any Bencher Cloud metered plan. An Enterprise plan ends with
+// its contract, so its contact takes the place of the control.
+export const PlanCancelResume = (props: {
 	user: undefined | Reader;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
 }) => {
+	// Compared as text, so the generated enums stay out of this control.
+	const enterprise = () =>
+		(props.usage()?.plan?.level as string | undefined) === "enterprise";
+	const contactUs = () => (
+		<a class="button is-small" href={BENCHER_ENTERPRISE_URL}>
+			Contact us
+		</a>
+	);
 	return (
 		<Show
 			when={props.usage()?.plan?.cancel_at_period_end}
 			fallback={
-				<CancelPlanButton
-					user={props.user}
-					organization={props.usage()?.organization}
-					level={props.usage()?.plan?.level}
-					handleRefresh={props.handleRefresh}
-				/>
+				<Show when={!enterprise()} fallback={contactUs()}>
+					<CancelPlanButton
+						user={props.user}
+						organization={props.usage()?.organization}
+						level={props.usage()?.plan?.level}
+						handleRefresh={props.handleRefresh}
+					/>
+				</Show>
 			}
 		>
 			<p class="has-text-grey">
@@ -383,12 +394,14 @@ const PlanCancelResume = (props: {
 				{fmtDate(props.usage()?.plan?.current_period_end)}. You keep access
 				until then.
 			</p>
-			<ResumePlanButton
-				user={props.user}
-				organization={props.usage()?.organization}
-				level={props.usage()?.plan?.level}
-				handleRefresh={props.handleRefresh}
-			/>
+			<Show when={!enterprise()} fallback={contactUs()}>
+				<ResumePlanButton
+					user={props.user}
+					organization={props.usage()?.organization}
+					level={props.usage()?.plan?.level}
+					handleRefresh={props.handleRefresh}
+				/>
+			</Show>
 		</Show>
 	);
 };
